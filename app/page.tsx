@@ -5,7 +5,6 @@ import Problem from "@/components/Problem";
 import Features from "@/components/Features";
 import AiTerminal from "@/components/AiTerminal";
 import HowItWorks from "@/components/HowItWorks";
-import DashboardPreview from "@/components/DashboardPreview";
 import Integrations from "@/components/Integrations";
 import Waitlist from "@/components/Waitlist";
 import Footer from "@/components/Footer";
@@ -26,7 +25,6 @@ export default function Home() {
         <Features />
         <AiTerminal />
         <HowItWorks />
-        <DashboardPreview />
         <Integrations />
         <Waitlist />
       </main>
