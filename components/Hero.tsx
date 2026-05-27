@@ -56,7 +56,7 @@ const menuNotifications = {
 export default function Hero() {
   const [activityIdx, setActivityIdx] = useState(0);
   const [eventIdx, setEventIdx] = useState(0);
-  const [activeMenu, setActiveMenu] = useState('Overview');
+  const [activeMenu, setActiveMenu] = useState<keyof typeof menuNotifications>('Overview');
   const [isBookDemoOpen, setIsBookDemoOpen] = useState(false);
 
   useEffect(() => {
@@ -173,7 +173,7 @@ export default function Hero() {
                 ].map((item, i) => (
                   <button 
                     key={i} 
-                    onClick={() => setActiveMenu(item.label)}
+                    onClick={() => setActiveMenu(item.label as keyof typeof menuNotifications)}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${activeMenu === item.label ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-white hover:bg-white/5'}`}>
                     {item.icon} {item.label}
                   </button>
