@@ -86,7 +86,7 @@ export default function CompareHubspotPage() {
                 <tr>
                   <td className="p-4 font-semibold text-white">Outbound Prospecting</td>
                   <td className="p-4 text-neutral-400">Manual sales sequences</td>
-                  <td className="p-4 text-purple-300 font-medium">Autonomous AI SDR agents</td>
+                  <td className="p-4 text-purple-300 font-medium">Automated outbound workflows</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-semibold text-white">AI Personalization</td>

@@ -14,8 +14,8 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LeadGennie | AI SDR Agent & Outbound Platform",
-  description: "LeadGennie is an AI-native outbound platform + AI SDR agent that helps teams turn spreadsheets into booked meetings.",
+  title: "LeadGennie | Automated Outbound Platform",
+  description: "LeadGennie is an automated outbound platform that helps teams turn spreadsheets into booked meetings.",
 };
 
 export default function RootLayout({

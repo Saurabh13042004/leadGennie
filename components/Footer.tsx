@@ -18,7 +18,7 @@ export default function Footer() {
             <span className="text-white font-bold tracking-tight">LeadGennie</span>
           </Link>
           <p className="text-neutral-400 text-sm font-medium max-w-xs leading-relaxed">
-            Outbound on autopilot. Turn spreadsheets into booked meetings with autonomous AI SDR systems.
+            Outbound on autopilot. Turn spreadsheets into booked meetings with automated outbound systems.
           </p>
           <div className="text-xs text-neutral-600 mt-2 font-mono">
             A product by <a href="/about" className="hover:text-neutral-400 underline transition-colors">DICE Solutions</a>

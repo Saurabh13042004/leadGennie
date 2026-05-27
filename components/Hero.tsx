@@ -25,7 +25,7 @@ const menuNotifications = {
     { type: 'success', title: 'Meeting Booked', description: 'Sarah Chen - Acme Corp', time: '2 min ago', color: 'green' },
     { type: 'info', title: 'Reply Received', description: 'Michael Park - TechFlow', time: '5 min ago', color: 'blue' },
     { type: 'success', title: 'Campaign Deployed', description: '356 emails scheduled', time: '12 min ago', color: 'purple' },
-    { type: 'warning', title: 'Inbox Health Alert', description: '98.2% deliverability', time: '18 min ago', color: 'orange' }
+    { type: 'warning', title: 'Inbox Health Alert', description: 'Monitoring deliverability', time: '18 min ago', color: 'orange' }
   ],
   'Campaign Sequences': [
     { type: 'info', title: 'Campaign Updated', description: 'Fintech CTOs - Q2 2024', time: '3 min ago', color: 'blue' },
@@ -33,11 +33,11 @@ const menuNotifications = {
     { type: 'info', title: 'A/B Test Results', description: 'Variant B: 42% higher CTR', time: '15 min ago', color: 'purple' },
     { type: 'success', title: 'Sequence Step Executed', description: '512 emails sent in sequence', time: '22 min ago', color: 'green' }
   ],
-  'AI SDR Agent': [
-    { type: 'success', title: 'Agent Thinking', description: 'Analyzing lead intent signals', time: '1 min ago', color: 'green' },
+  'Outbound Workflows': [
+    { type: 'success', title: 'Workflow Thinking', description: 'Analyzing lead intent signals', time: '1 min ago', color: 'green' },
     { type: 'info', title: 'Personalization Generated', description: '128 custom email variants', time: '4 min ago', color: 'blue' },
     { type: 'success', title: 'Lead Scoring Complete', description: '245 leads scored 90+/100', time: '9 min ago', color: 'green' },
-    { type: 'warning', title: 'AI Agent Status', description: 'Processing: 89% utilization', time: '11 min ago', color: 'orange' }
+    { type: 'warning', title: 'Workflow Status', description: 'Processing: 89% utilization', time: '11 min ago', color: 'orange' }
   ],
   'CRM Sync': [
     { type: 'success', title: 'Sync Complete', description: 'Updated 1,248 contacts', time: '1 min ago', color: 'green' },
@@ -46,7 +46,7 @@ const menuNotifications = {
     { type: 'info', title: 'CRM Field Mapped', description: '42 custom fields updated', time: '21 min ago', color: 'blue' }
   ],
   'Inbox Health': [
-    { type: 'success', title: 'Deliverability Up', description: '98.7% inbox placement', time: '2 min ago', color: 'green' },
+    { type: 'success', title: 'Deliverability Up', description: 'Consistent inbox placement', time: '2 min ago', color: 'green' },
     { type: 'warning', title: 'Warming Campaign', description: 'Reputation score: 8.9/10', time: '7 min ago', color: 'orange' },
     { type: 'info', title: 'Domain Health Check', description: 'SPF, DKIM, DMARC: All Pass', time: '13 min ago', color: 'blue' },
     { type: 'success', title: 'Spam Alert Cleared', description: 'Zero complaints detected', time: '19 min ago', color: 'green' }
@@ -167,7 +167,7 @@ export default function Hero() {
                 {[
                   { icon: <PieChart className="w-4 h-4" />, label: "Overview" },
                   { icon: <Send className="w-4 h-4" />, label: "Campaign Sequences" },
-                  { icon: <Bot className="w-4 h-4" />, label: "AI SDR Agent" },
+                  { icon: <Bot className="w-4 h-4" />, label: "Outbound Workflows" },
                   { icon: <RefreshCw className="w-4 h-4" />, label: "CRM Sync" },
                   { icon: <Activity className="w-4 h-4" />, label: "Inbox Health" }
                 ].map((item, i) => (
@@ -189,7 +189,7 @@ export default function Hero() {
                   <div className="text-xl font-bold text-white">
                     {activeMenu === 'Overview' && 'Overview'}
                     {activeMenu === 'Campaign Sequences' && 'Campaigns'}
-                    {activeMenu === 'AI SDR Agent' && 'AI SDR Agent'}
+                    {activeMenu === 'Outbound Workflows' && 'Outbound Workflows'}
                     {activeMenu === 'CRM Sync' && 'CRM Sync'}
                     {activeMenu === 'Inbox Health' && 'Inbox Health'}
                   </div>
@@ -443,17 +443,17 @@ export default function Hero() {
                 </div>
               )}
 
-              {/* AI SDR Agent Content */}
-              {activeMenu === 'AI SDR Agent' && (
+              {/* Outbound Workflows Content */}
+              {activeMenu === 'Outbound Workflows' && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-neutral-400">Upload leads and let AI turn them into booked meetings.</span>
                     <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">Online</span>
                   </div>
                   <div className="rounded-md bg-[#0A0A0A] border border-white/10 p-4 text-center">
-                    <div className="text-xs text-neutral-400 mb-2">AI Activity</div>
+                    <div className="text-xs text-neutral-400 mb-2">Workflow Activity</div>
                     <div className="text-2xl font-bold text-white mb-1">0/12 steps</div>
-                    <div className="text-xs text-neutral-500">Your AI SDR is standing by</div>
+                    <div className="text-xs text-neutral-500">Your outbound workflows are standing by</div>
                   </div>
                   <div className="space-y-2">
                     {[
@@ -515,7 +515,7 @@ export default function Hero() {
                       className="rounded-md bg-[#0A0A0A] border border-white/10 p-4"
                     >
                       <div className="text-xs text-neutral-400 mb-1">Deliverability</div>
-                      <div className="text-2xl font-bold text-green-400">98.7%</div>
+                      <div className="text-2xl font-bold text-green-400">High</div>
                     </motion.div>
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}

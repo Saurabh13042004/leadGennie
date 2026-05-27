@@ -16,7 +16,7 @@ export default function CompareClayPage() {
             <div className="text-purple-400 font-mono text-xs mb-3 tracking-wider uppercase">[ LeadGennie vs Clay ]</div>
             <h1 className="text-4xl font-bold tracking-tight mb-4">LeadGennie vs Clay</h1>
             <p className="text-neutral-400 text-lg leading-relaxed">
-              Clay is an incredible tool for data enrichment and list building. LeadGennie builds on top of data operations by running as a fully autonomous AI SDR outbound engine.
+              Clay is an incredible tool for data enrichment and list building. LeadGennie builds on top of data operations by running as a fully automated outbound engine.
             </p>
           </div>
           
@@ -49,7 +49,7 @@ export default function CompareClayPage() {
               <ul className="space-y-3 text-sm text-neutral-200">
                 <li className="flex items-start gap-2">
                   <span className="text-purple-500 font-mono mt-0.5">•</span>
-                  <span><strong>AI SDR automation:</strong> Conversing and researching 24/7.</span>
+                  <span><strong>Workflows automation:</strong> Conversing and researching 24/7.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-500 font-mono mt-0.5">•</span>
@@ -57,7 +57,7 @@ export default function CompareClayPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-500 font-mono mt-0.5">•</span>
-                  <span><strong>Outbound execution:</strong> Booking meetings autonomously on your calendar.</span>
+                  <span><strong>Outbound execution:</strong> Booking meetings automatically on your calendar.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-500 font-mono mt-0.5">•</span>
@@ -91,7 +91,7 @@ export default function CompareClayPage() {
                 <tr>
                   <td className="p-4 font-semibold text-white">AI Content Flow</td>
                   <td className="p-4 text-neutral-400">Raw prompts in cells</td>
-                  <td className="p-4 text-purple-300 font-medium">Autonomous campaign writer</td>
+                  <td className="p-4 text-purple-300 font-medium">Automated campaign writer</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-semibold text-white">CRM Integration</td>

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Check } from "lucide-react";
 
 export default function Waitlist() {
   return (
@@ -25,8 +25,7 @@ export default function Waitlist() {
           transition={{ delay: 0.1 }}
           className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-6"
         >
-          Your future SDR team <br />
-          is almost ready.
+          Outbound is becoming autonomous.
         </motion.h2>
 
         <motion.p 
@@ -36,7 +35,7 @@ export default function Waitlist() {
           transition={{ delay: 0.2 }}
           className="text-lg text-neutral-400 mb-10 max-w-2xl mx-auto font-medium"
         >
-          Outbound is becoming autonomous. Join ambitious founders and revenue teams getting early access to LeadGennie.
+          Join founders and revenue teams using LeadGennie to launch personalized campaigns, improve deliverability, and book more meetings — without scaling SDR headcount.
         </motion.p>
 
         <motion.div 
@@ -58,10 +57,10 @@ export default function Waitlist() {
           </form>
 
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-8 text-sm text-neutral-500 font-mono">
-            <span>[+] Early access</span>
-            <span>[+] Priority onboarding</span>
-            <span>[+] Founder community</span>
-            <span>[+] Onboarding credits</span>
+            <span className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center"><Check className="w-3 h-3 text-white" /></div> Early access</span>
+            <span className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center"><Check className="w-3 h-3 text-white" /></div> Priority onboarding</span>
+            <span className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center"><Check className="w-3 h-3 text-white" /></div> Founder community</span>
+            <span className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center"><Check className="w-3 h-3 text-white" /></div> Onboarding credits</span>
           </div>
         </motion.div>
       </div>

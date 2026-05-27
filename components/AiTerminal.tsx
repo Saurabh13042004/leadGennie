@@ -154,7 +154,7 @@ export default function AiTerminal() {
             viewport={{ once: true }}
             className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-6"
           >
-            Meet your AI SDR.
+            Meet your automated engine.
           </motion.h2>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
@@ -228,7 +228,7 @@ export default function AiTerminal() {
                       <div key={i} className="flex justify-start">
                         <div className="max-w-[85%] rounded-md px-4 py-3 text-sm font-mono bg-[#111111] text-neutral-350 border border-white/5 text-left">
                           <div className="flex items-center gap-2 mb-2 text-[10px] text-blue-400 font-medium tracking-wider uppercase">
-                            <Cpu className="w-3 h-3" /> AI SDR Output
+                            <Cpu className="w-3 h-3" /> System Output
                           </div>
                           {isCurrent ? (
                             <TypingText text={step.content} onComplete={handleNext} />
@@ -288,7 +288,7 @@ export default function AiTerminal() {
                 <div className="text-3xl font-extrabold text-white tracking-tight">92%</div>
                 <div className="text-xs font-semibold text-neutral-400 mt-0.5">Inbox Placement</div>
               </div>
-              <div className="text-[9px] font-mono text-neutral-600">99.4% Avg placement rate</div>
+              <div className="text-[9px] font-mono text-neutral-600">High placement rate</div>
             </motion.div>
 
             {/* Metric 2 */}
@@ -306,7 +306,7 @@ export default function AiTerminal() {
                 <div className="text-3xl font-extrabold text-white tracking-tight">412</div>
                 <div className="text-xs font-semibold text-neutral-400 mt-0.5">Qualified Leads</div>
               </div>
-              <div className="text-[9px] font-mono text-neutral-600">98% Match accuracy</div>
+              <div className="text-[9px] font-mono text-neutral-600">High match accuracy</div>
             </motion.div>
 
             {/* Metric 3 */}

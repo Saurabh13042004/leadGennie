@@ -23,7 +23,7 @@ export default function AboutPage() {
               LeadGennie is building the AI-native outbound stack for modern revenue teams. We believe outbound sales should feel intelligent, automated, personalized, and fast—not like manual spreadsheet busywork.
             </p>
             <p>
-              Our mission is to replace repetitive SDR workflows with autonomous AI systems that help teams generate high-quality pipelines faster with significantly less manual effort. By letting AI handle data parsing, profile analysis, and sequence writing, human sales teams can focus on what they do best: building trust and closing deals.
+              Our mission is to replace repetitive workflows with intelligent automated systems that help teams generate high-quality pipelines faster with significantly less manual effort. By handling data parsing, profile analysis, and sequence writing via platform rules, human sales teams can focus on what they do best: building trust and closing deals.
             </p>
 
             <hr className="border-white/10 my-8" />
@@ -52,7 +52,7 @@ export default function AboutPage() {
                   </p>
                 </div>
                 <div className="bg-white/5 border border-white/10 p-5 rounded-lg">
-                  <h3 className="text-white font-semibold mb-2 font-mono text-sm">[ Autonomous Scale ]</h3>
+                  <h3 className="text-white font-semibold mb-2 font-mono text-sm">[ Automated Scale ]</h3>
                   <p className="text-sm text-neutral-400">
                     A single sales operator should be equipped with the outbound leverage of a ten-person SDR agency through smart AI systems.
                   </p>
@@ -60,7 +60,7 @@ export default function AboutPage() {
                 <div className="bg-white/5 border border-white/10 p-5 rounded-lg">
                   <h3 className="text-white font-semibold mb-2 font-mono text-sm">[ Data-Driven Workflows ]</h3>
                   <p className="text-sm text-neutral-400">
-                    AI SDR loops should feed directly into HubSpot, Salesforce, and other CRM tools, keeping lead data fresh with zero manual sync delays.
+                    Outbound workflow loops should feed directly into HubSpot, Salesforce, and other CRM tools, keeping lead data fresh with zero manual sync delays.
                   </p>
                 </div>
                 <div className="bg-white/5 border border-white/10 p-5 rounded-lg">

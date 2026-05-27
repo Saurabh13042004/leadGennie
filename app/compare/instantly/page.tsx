@@ -16,7 +16,7 @@ export default function CompareInstantlyPage() {
             <div className="text-purple-400 font-mono text-xs mb-3 tracking-wider uppercase">[ LeadGennie vs Instantly ]</div>
             <h1 className="text-4xl font-bold tracking-tight mb-4">LeadGennie vs Instantly</h1>
             <p className="text-neutral-400 text-lg leading-relaxed">
-              Instantly is focused primarily on bulk email delivery and inbox warming infrastructure. LeadGennie combines deliverability infrastructure with AI SDR outreach, qualification, and CRM sync.
+              Instantly is focused primarily on bulk email delivery and inbox warming infrastructure. LeadGennie combines deliverability infrastructure with automated outreach, qualification, and CRM sync.
             </p>
           </div>
           
@@ -49,7 +49,7 @@ export default function CompareInstantlyPage() {
               <ul className="space-y-3 text-sm text-neutral-200">
                 <li className="flex items-start gap-2">
                   <span className="text-purple-500 font-mono mt-0.5">•</span>
-                  <span><strong>AI SDR workflows:</strong> Automatic lead research and categorization.</span>
+                  <span><strong>Intelligent workflows:</strong> Automatic lead research and categorization.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-500 font-mono mt-0.5">•</span>
@@ -95,7 +95,7 @@ export default function CompareInstantlyPage() {
                 <tr>
                   <td className="p-4 font-semibold text-white">AI Personalization</td>
                   <td className="p-4 text-neutral-400">Basic template spintax</td>
-                  <td className="p-4 text-purple-300 font-medium">Autonomous news-driven writer</td>
+                  <td className="p-4 text-purple-300 font-medium">Automated news-driven writer</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-semibold text-white">CRM Integrations</td>
@@ -121,7 +121,7 @@ export default function CompareInstantlyPage() {
                 Instantly is a useful platform for setting up large mailbox grids, but it leaves sales operators responsible for sourcing, validating, writing, and executing the actual content. This results in standard email campaigns without personalization.
               </p>
               <p>
-                LeadGennie combines email infrastructure with AI sales brains. It not only monitors mailbox health and deliverability metrics, but acts as a complete AI SDR. It qualifies leads based on custom rules, writes emails that mention recent updates, coordinates LinkedIn sequences, and updates CRM dashboards automatically.
+                LeadGennie combines email infrastructure with intelligent sales workflows. It not only monitors mailbox health and deliverability metrics, but acts as a complete automated engine. It qualifies leads based on custom rules, writes emails that mention recent updates, coordinates LinkedIn sequences, and updates CRM dashboards automatically.
               </p>
             </div>
           </section>

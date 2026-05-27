@@ -49,7 +49,7 @@ export default function CompareApolloPage() {
               <ul className="space-y-3 text-sm text-neutral-200">
                 <li className="flex items-start gap-2">
                   <span className="text-purple-500 font-mono mt-0.5">•</span>
-                  <span><strong>Autonomous AI SDR loops:</strong> Real-time ICP mapping.</span>
+                  <span><strong>Automated workflows loops:</strong> Real-time ICP mapping.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-500 font-mono mt-0.5">•</span>
@@ -81,12 +81,12 @@ export default function CompareApolloPage() {
                 <tr>
                   <td className="p-4 font-semibold text-white">Focus Area</td>
                   <td className="p-4 text-neutral-400">Lead Directory / Database</td>
-                  <td className="p-4">AI SDR Outbound Orchestration</td>
+                  <td className="p-4">Automated Outbound Orchestration</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-semibold text-white">Target ICP Matching</td>
                   <td className="p-4 text-neutral-400">Manual filter attributes</td>
-                  <td className="p-4 text-purple-300 font-medium">Plain-English AI Scoring (98% accuracy)</td>
+                  <td className="p-4 text-purple-300 font-medium">Plain-English AI Scoring (High Accuracy)</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-semibold text-white">Sequence Writing</td>
@@ -117,7 +117,7 @@ export default function CompareApolloPage() {
                 Apollo.io provides a massive contact list directory, but because everyone filters by the same attributes, target accounts get bombarded with generic templates. This reduces your domain reputation and drives down reply rates.
               </p>
               <p>
-                LeadGennie bypasses database limitations by using real-time scrapers to build highly targeted list coordinates based on recent hire signals, funding news, or intent variables. The AI SDR then handles list validation, scores accounts based on custom plain-English instructions, and writes unique personalized copies to book meetings.
+                LeadGennie bypasses database limitations by using real-time scrapers to build highly targeted list coordinates based on recent hire signals, funding news, or intent variables. The outbound engine then handles list validation, scores accounts based on custom plain-English instructions, and writes unique personalized copies to book meetings.
               </p>
             </div>
           </section>

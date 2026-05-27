@@ -30,7 +30,7 @@ export default function TermsPage() {
                 <span className="text-purple-400 text-sm">01.</span> Scope of Service
               </h2>
               <p>
-                LeadGennie provides an AI-powered sales outreach, outbound sequence orchestration, and lead database management dashboard operating under the management of DICE Solutions.
+                LeadGennie provides an intelligent sales outreach, outbound sequence orchestration, and lead database management dashboard operating under the management of DICE Solutions.
               </p>
               <div className="bg-white/5 border border-white/10 rounded-lg p-6 space-y-3">
                 <h3 className="text-white font-semibold">Prohibited Platform Behaviors:</h3>

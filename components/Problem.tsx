@@ -21,9 +21,9 @@ export default function Problem() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="text-lg text-neutral-400 font-medium"
+            className="text-lg text-neutral-400 font-medium max-w-2xl mx-auto"
           >
-            Replace manual SDR tasks and fragmented systems with an autonomous AI sales assistant.
+            Outbound teams are drowning in fragmented tools and repetitive workflows. LeadGennie replaces manual SDR execution with one unified outbound system.
           </motion.p>
         </div>
 
@@ -77,11 +77,11 @@ export default function Problem() {
             
             <ul className="space-y-5 font-mono text-sm">
               {[
-                "AI-powered ICP filtering (98% Match Rate)",
+                "Smart intelligence filtering (High Accuracy)",
                 "Personalized outreach (Scale outbound without scaling headcount)",
                 "Multi-channel campaigns (Launch campaigns in minutes, not weeks)",
                 "Automated lead qualification",
-                "AI SDR workflows (Run outbound with a team of one)",
+                "Automated outbound workflows (Run outbound with a team of one)",
                 "Unified outbound system replacing fragmented tools"
               ].map((text, i) => (
                 <li key={i} className="flex items-start gap-4 text-neutral-300">
