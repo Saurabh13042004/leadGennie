@@ -23,6 +23,7 @@ export default function BookDemoModal({ isOpen, onClose }: BookDemoModalProps) {
   });
   const [submitted, setSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const challenges = [
     "Deliverability",
@@ -63,24 +64,40 @@ export default function BookDemoModal({ isOpen, onClose }: BookDemoModalProps) {
     }
 
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1200));
-    setIsLoading(false);
-    setSubmitted(true);
-
-    setTimeout(() => {
-      setSubmitted(false);
-      setStep(1);
-      setFormData({
-        name: "",
-        email: "",
-        company: "",
-        companySize: "",
-        outboundVolume: "",
-        challenges: [],
-        crmUsed: ""
+    setError(null);
+    try {
+      const res = await fetch("/api/book-demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
-      onClose();
-    }, 2500);
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Something went wrong. Please try again.");
+      }
+
+      setSubmitted(true);
+      setIsLoading(false);
+
+      setTimeout(() => {
+        setSubmitted(false);
+        setStep(1);
+        setFormData({
+          name: "",
+          email: "",
+          company: "",
+          companySize: "",
+          outboundVolume: "",
+          challenges: [],
+          crmUsed: ""
+        });
+        onClose();
+      }, 2500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   const companySize = formData.companySize;
@@ -371,6 +388,11 @@ export default function BookDemoModal({ isOpen, onClose }: BookDemoModalProps) {
                             </select>
                           </div>
                         </motion.div>
+                      )}
+
+                      {/* Error */}
+                      {error && (
+                        <p className="text-sm text-red-400 mt-4 text-center">{error}</p>
                       )}
 
                       {/* Button */}
