@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { sql } from "@/lib/db/client";
 
 export type User = {
   id: string;
@@ -8,20 +9,33 @@ export type User = {
   company?: string;
 };
 
-// In-memory mock user store. Resets on server restart — replace with a real
-// database (e.g. Postgres/Supabase) when moving beyond the demo.
-const users: User[] = [
-  {
-    id: "1",
-    name: "Demo User",
-    email: "demo@leadgennie.ai",
-    passwordHash: bcrypt.hashSync("demo1234", 10),
-    company: "Juntrax Solutions",
-  },
-];
+type UserRow = {
+  id: number;
+  name: string;
+  email: string;
+  password_hash: string;
+  company: string | null;
+};
 
-export function findUserByEmail(email: string): User | undefined {
-  return users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+function toUser(row: UserRow): User {
+  return {
+    id: String(row.id),
+    name: row.name,
+    email: row.email,
+    passwordHash: row.password_hash,
+    company: row.company ?? undefined,
+  };
+}
+
+export async function findUserByEmail(email: string): Promise<User | undefined> {
+  const rows = await sql`
+    select id, name, email, password_hash, company
+    from users
+    where lower(email) = lower(${email})
+    limit 1
+  `;
+  const row = rows[0] as UserRow | undefined;
+  return row ? toUser(row) : undefined;
 }
 
 export async function createUser(input: {
@@ -31,15 +45,12 @@ export async function createUser(input: {
   company?: string;
 }): Promise<User> {
   const passwordHash = await bcrypt.hash(input.password, 10);
-  const user: User = {
-    id: String(users.length + 1),
-    name: input.name,
-    email: input.email,
-    passwordHash,
-    company: input.company,
-  };
-  users.push(user);
-  return user;
+  const rows = await sql`
+    insert into users (name, email, password_hash, company)
+    values (${input.name}, ${input.email}, ${passwordHash}, ${input.company ?? null})
+    returning id, name, email, password_hash, company
+  `;
+  return toUser(rows[0] as UserRow);
 }
 
 export async function verifyPassword(user: User, password: string) {

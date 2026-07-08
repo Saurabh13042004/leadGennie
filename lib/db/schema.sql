@@ -69,3 +69,59 @@ create table if not exists demo_requests (
 );
 
 create index if not exists demo_requests_email_idx on demo_requests (email);
+
+create table if not exists crm_connections (
+  id bigserial primary key,
+  owner_email text not null,
+  provider text not null,
+  label text,
+  portal_id text,
+  access_token text not null,
+  refresh_token text not null,
+  scope text,
+  expires_at timestamptz not null,
+  status text not null default 'connected',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists crm_connections_owner_email_idx on crm_connections (owner_email);
+create unique index if not exists crm_connections_owner_provider_portal_idx
+  on crm_connections (owner_email, provider, portal_id);
+
+create table if not exists users (
+  id bigserial primary key,
+  name text not null,
+  email text not null unique,
+  password_hash text not null,
+  company text,
+  pitch text,
+  created_at timestamptz not null default now()
+);
+
+alter table users add column if not exists pitch text;
+
+create table if not exists campaign_sends (
+  id bigserial primary key,
+  campaign_id bigint not null references campaigns (id) on delete cascade,
+  lead_id bigint not null references leads (id) on delete cascade,
+  step_id bigint not null references campaign_steps (id) on delete cascade,
+  channel text not null,
+  status text not null default 'pending',
+  scheduled_at timestamptz not null,
+  sent_at timestamptz,
+  subject text,
+  body text not null,
+  error_message text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists campaign_sends_due_idx on campaign_sends (channel, status, scheduled_at);
+create index if not exists campaign_sends_campaign_id_idx on campaign_sends (campaign_id);
+
+create table if not exists api_tokens (
+  id bigserial primary key,
+  owner_email text not null unique,
+  token text not null unique,
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz
+);

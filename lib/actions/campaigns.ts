@@ -3,6 +3,15 @@
 import { auth } from "@/auth";
 import { sql } from "@/lib/db/client";
 import { revalidatePath } from "next/cache";
+import {
+  fetchAllLeads,
+  fetchMatchingLeads,
+  hasStructuredCriteria,
+  type FilterCriteria,
+  type MatchedLead,
+} from "@/lib/db/lead-matching";
+
+const MAX_CAMPAIGN_LEADS = 500;
 
 async function requireOwnerEmail() {
   const session = await auth();
@@ -65,13 +74,14 @@ export type AudienceOption = {
   name: string;
   leadCount: number;
   updatedLabel: string;
+  prompt: string | null;
 };
 
 export async function listAudienceOptions(): Promise<AudienceOption[]> {
   const owner = await requireOwnerEmail();
 
   const segmentRows = await sql`
-    select id, name, lead_count, created_at
+    select id, name, lead_count, prompt, created_at
     from segments
     where owner_email = ${owner}
     order by created_at desc
@@ -83,11 +93,14 @@ export async function listAudienceOptions(): Promise<AudienceOption[]> {
   `;
   const totalLeads = (totalRows[0]?.count as number) ?? 0;
 
-  const segments: AudienceOption[] = (segmentRows as SegmentOption[]).map((s) => ({
+  const segments: AudienceOption[] = (
+    segmentRows as (SegmentOption & { prompt: string | null })[]
+  ).map((s) => ({
     id: s.id,
     name: s.name,
     leadCount: s.lead_count,
     updatedLabel: "saved segment",
+    prompt: s.prompt,
   }));
 
   return [
@@ -97,8 +110,30 @@ export async function listAudienceOptions(): Promise<AudienceOption[]> {
       name: "All qualified leads",
       leadCount: totalLeads,
       updatedLabel: "live count",
+      prompt: null,
     },
   ];
+}
+
+async function resolveLeadsForAudience(
+  owner: string,
+  audienceSegmentId: number | null
+): Promise<MatchedLead[]> {
+  if (audienceSegmentId === null) {
+    return fetchAllLeads(owner, MAX_CAMPAIGN_LEADS);
+  }
+
+  const rows = await sql`
+    select criteria from segments where id = ${audienceSegmentId} and owner_email = ${owner}
+  `;
+  const criteria = rows[0]?.criteria as FilterCriteria | undefined;
+
+  if (!criteria || !hasStructuredCriteria(criteria)) {
+    return fetchAllLeads(owner, MAX_CAMPAIGN_LEADS);
+  }
+
+  const matched = await fetchMatchingLeads(owner, criteria, MAX_CAMPAIGN_LEADS);
+  return matched.length > 0 ? matched : fetchAllLeads(owner, MAX_CAMPAIGN_LEADS);
 }
 
 export type CampaignStepInput = {
@@ -123,6 +158,8 @@ export type CreateCampaignInput = {
 export async function createCampaign(input: CreateCampaignInput) {
   const owner = await requireOwnerEmail();
 
+  const leads = await resolveLeadsForAudience(owner, input.audienceSegmentId);
+
   const inserted = await sql`
     insert into campaigns (
       owner_email, name, status, audience_label, audience_segment_id,
@@ -130,22 +167,59 @@ export async function createCampaign(input: CreateCampaignInput) {
     )
     values (
       ${owner}, ${input.name}, 'running', ${input.audienceLabel}, ${input.audienceSegmentId},
-      ${input.channels}, ${input.fromEmail}, ${input.dailyEmailLimit}, ${input.dailyDmLimit}, ${input.totalLeads}
+      ${input.channels}, ${input.fromEmail}, ${input.dailyEmailLimit}, ${input.dailyDmLimit}, ${leads.length}
     )
     returning id
   `;
   const campaignId = inserted[0].id as number;
 
+  let cumulativeDays = 0;
+  const stepSchedules: {
+    id: number;
+    channel: string;
+    subject: string | null;
+    body: string;
+    scheduledAt: string;
+  }[] = [];
+
   for (let i = 0; i < input.steps.length; i++) {
     const step = input.steps[i];
-    await sql`
+    cumulativeDays += step.waitDays;
+    const stepInserted = await sql`
       insert into campaign_steps (campaign_id, step_order, channel, wait_days, subject, body)
       values (${campaignId}, ${i + 1}, ${step.channel}, ${step.waitDays}, ${step.subject ?? null}, ${step.body})
+      returning id
     `;
+    const scheduledAt = new Date(Date.now() + cumulativeDays * 24 * 60 * 60 * 1000);
+    stepSchedules.push({
+      id: stepInserted[0].id as number,
+      channel: step.channel,
+      subject: step.subject ?? null,
+      body: step.body,
+      scheduledAt: scheduledAt.toISOString(),
+    });
+  }
+
+  if (leads.length > 0) {
+    const leadIds = leads.map((l) => l.id);
+    for (const step of stepSchedules) {
+      const campaignIds = leadIds.map(() => campaignId);
+      const stepIds = leadIds.map(() => step.id);
+      const channels = leadIds.map(() => step.channel);
+      const scheduledAts = leadIds.map(() => step.scheduledAt);
+      const subjects = leadIds.map(() => step.subject);
+      const bodies = leadIds.map(() => step.body);
+
+      await sql.query(
+        `insert into campaign_sends (campaign_id, lead_id, step_id, channel, scheduled_at, subject, body)
+         select * from unnest($1::bigint[], $2::bigint[], $3::bigint[], $4::text[], $5::timestamptz[], $6::text[], $7::text[])`,
+        [campaignIds, leadIds, stepIds, channels, scheduledAts, subjects, bodies]
+      );
+    }
   }
 
   revalidatePath("/dashboard/campaigns");
-  return { id: campaignId };
+  return { id: campaignId, leadCount: leads.length };
 }
 
 export async function updateCampaignStatus(id: number, status: CampaignStatus) {

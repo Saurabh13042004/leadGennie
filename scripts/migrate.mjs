@@ -2,6 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import bcrypt from "bcryptjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -24,3 +25,16 @@ for (const statement of statements) {
 }
 
 console.log(`Migration complete (${statements.length} statements).`);
+
+const demoEmail = "demo@leadgennie.ai";
+const existingUser = await sql`select id from users where email = ${demoEmail}`;
+if (existingUser.length === 0) {
+  const passwordHash = bcrypt.hashSync("demo1234", 10);
+  await sql`
+    insert into users (name, email, password_hash, company)
+    values ('Demo User', ${demoEmail}, ${passwordHash}, 'Juntrax Solutions')
+  `;
+  console.log("Seeded demo user.");
+} else {
+  console.log("Demo user already present.");
+}

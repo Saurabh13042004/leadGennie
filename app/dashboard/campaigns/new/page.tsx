@@ -1,4 +1,5 @@
 import { listAudienceOptions } from "@/lib/actions/campaigns";
+import { getSenderProfile } from "@/lib/actions/profile";
 import CampaignWizard from "@/components/campaigns/wizard/CampaignWizard";
 
 export const metadata = {
@@ -6,7 +7,7 @@ export const metadata = {
 };
 
 export default async function NewCampaignPage() {
-  const audiences = await listAudienceOptions();
+  const [audiences, profile] = await Promise.all([listAudienceOptions(), getSenderProfile()]);
 
-  return <CampaignWizard audiences={audiences} />;
+  return <CampaignWizard audiences={audiences} initialPitch={profile.pitch ?? ""} />;
 }

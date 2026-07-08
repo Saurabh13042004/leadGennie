@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -8,8 +8,6 @@ import {
   Sparkles,
   Plus,
   Trash2,
-  Mail,
-  Link2,
   Newspaper,
   UserCheck,
   Globe,
@@ -21,7 +19,9 @@ import { cn } from "@/lib/utils";
 import WizardStepper from "./WizardStepper";
 import type { AudienceOption } from "@/lib/actions/campaigns";
 import { createCampaign } from "@/lib/actions/campaigns";
-import { generateAiMessage, type Channel } from "@/lib/mock/ai-write";
+import { generateSequenceStepMessage } from "@/lib/actions/ai";
+import { updateSenderPitch } from "@/lib/actions/profile";
+import type { Channel } from "@/lib/ai/messages";
 
 type SequenceStep = {
   channel: Channel;
@@ -31,9 +31,9 @@ type SequenceStep = {
 };
 
 const DEFAULT_STEPS: SequenceStep[] = [
-  { channel: "email", waitDays: 0, ...generateAiMessage(0, "email") },
-  { channel: "linkedin_dm", waitDays: 2, body: generateAiMessage(0, "linkedin_dm").body },
-  { channel: "email", waitDays: 4, ...generateAiMessage(1, "email") },
+  { channel: "email", waitDays: 0, subject: "", body: "" },
+  { channel: "linkedin_dm", waitDays: 2, body: "" },
+  { channel: "email", waitDays: 4, subject: "", body: "" },
 ];
 
 const PERSONALIZATION_OPTIONS = [
@@ -69,11 +69,19 @@ function hashRate(seed: string) {
   return 20 + (hash % 8); // 20-27%
 }
 
-export default function CampaignWizard({ audiences }: { audiences: AudienceOption[] }) {
+export default function CampaignWizard({
+  audiences,
+  initialPitch,
+}: {
+  audiences: AudienceOption[];
+  initialPitch: string;
+}) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [audienceIdx, setAudienceIdx] = useState<number | null>(audiences.length > 0 ? 0 : null);
+  const [pitch, setPitch] = useState(initialPitch);
+  const [savingPitch, setSavingPitch] = useState(false);
   const [steps, setSteps] = useState<SequenceStep[]>(DEFAULT_STEPS);
   const [personalization, setPersonalization] = useState<string[]>(["news", "tone"]);
   const [fromEmail, setFromEmail] = useState("jane@leadforge.io");
@@ -81,6 +89,7 @@ export default function CampaignWizard({ audiences }: { audiences: AudienceOptio
   const [dailyDmLimit, setDailyDmLimit] = useState(25);
   const [launching, setLaunching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiLoadingIdx, setAiLoadingIdx] = useState<Set<number>>(new Set());
 
   const audience = audienceIdx !== null ? audiences[audienceIdx] : null;
 
@@ -97,20 +106,55 @@ export default function CampaignWizard({ audiences }: { audiences: AudienceOptio
     setSteps((prev) => prev.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
   }
 
+  async function writeStep(idx: number, channel: Channel) {
+    setAiLoadingIdx((prev) => new Set(prev).add(idx));
+    try {
+      const draft = await generateSequenceStepMessage({
+        channel,
+        stepIndex: idx,
+        audienceLabel: audience?.name ?? "your target audience",
+        audiencePrompt: audience?.prompt ?? null,
+        campaignName: name || audience?.name,
+      });
+      updateStep(idx, draft);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not generate AI draft");
+    } finally {
+      setAiLoadingIdx((prev) => {
+        const next = new Set(prev);
+        next.delete(idx);
+        return next;
+      });
+    }
+  }
+
+  useEffect(() => {
+    if (step !== 2) return;
+    steps.forEach((s, idx) => {
+      if (!s.body.trim()) writeStep(idx, s.channel);
+    });
+    // Only auto-draft once when the sequence step is first shown.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
   function addStep() {
-    setSteps((prev) => [
-      ...prev,
-      { channel: "email", waitDays: 3, ...generateAiMessage(prev.length, "email") },
-    ]);
+    const newIdx = steps.length;
+    setSteps((prev) => [...prev, { channel: "email", waitDays: 3, subject: "", body: "" }]);
+    writeStep(newIdx, "email");
   }
 
   function removeStep(idx: number) {
     setSteps((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  function aiWrite(idx: number) {
-    const s = steps[idx];
-    updateStep(idx, generateAiMessage(idx, s.channel));
+  async function handleContinueFromStep1() {
+    setSavingPitch(true);
+    try {
+      await updateSenderPitch(pitch);
+    } finally {
+      setSavingPitch(false);
+    }
+    setStep(2);
   }
 
   async function handleLaunch() {
@@ -165,6 +209,28 @@ export default function CampaignWizard({ audiences }: { audiences: AudienceOptio
           </div>
 
           <div>
+            <label className="block text-sm text-neutral-300 mb-1.5">
+              What do you sell, and why should this audience care?
+            </label>
+            <p className="text-xs text-neutral-500 mb-2">
+              This grounds every AI-written message in your actual pitch instead of generic filler. Saved to your
+              profile and reused across campaigns.
+            </p>
+            <textarea
+              value={pitch}
+              onChange={(e) => setPitch(e.target.value)}
+              rows={3}
+              placeholder="e.g. We build an AI code-review tool for engineering teams. Cuts PR review time in half and catches bugs before they hit prod. Best for eng teams 20-200 people shipping fast."
+              className="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-2.5 text-white text-sm placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
+            />
+            {!pitch.trim() && (
+              <p className="text-xs text-amber-400/80 mt-1.5">
+                Leave this empty and the AI will avoid inventing fake product claims — but the copy will be generic.
+              </p>
+            )}
+          </div>
+
+          <div>
             <h3 className="text-sm font-medium text-white mb-1">Choose your audience</h3>
             <p className="text-xs text-neutral-500 mb-3">Pick a saved segment or build a new one with AI.</p>
 
@@ -204,10 +270,11 @@ export default function CampaignWizard({ audiences }: { audiences: AudienceOptio
 
           <div className="flex justify-end">
             <button
-              onClick={() => setStep(2)}
-              disabled={!audience}
-              className="bg-white text-black font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50"
+              onClick={handleContinueFromStep1}
+              disabled={!audience || savingPitch}
+              className="flex items-center gap-2 bg-white text-black font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50"
             >
+              {savingPitch && <Loader2 className="w-4 h-4 animate-spin" />}
               Continue
             </button>
           </div>
@@ -246,10 +313,15 @@ export default function CampaignWizard({ audiences }: { audiences: AudienceOptio
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => aiWrite(idx)}
-                    className="flex items-center gap-1 text-xs text-blue-300 hover:text-blue-200 transition-colors"
+                    onClick={() => writeStep(idx, s.channel)}
+                    disabled={aiLoadingIdx.has(idx)}
+                    className="flex items-center gap-1 text-xs text-blue-300 hover:text-blue-200 transition-colors disabled:opacity-50"
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
+                    {aiLoadingIdx.has(idx) ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5" />
+                    )}
                     AI write
                   </button>
                   {steps.length > 1 && (
@@ -291,6 +363,7 @@ export default function CampaignWizard({ audiences }: { audiences: AudienceOptio
                 value={s.body}
                 onChange={(e) => updateStep(idx, { body: e.target.value })}
                 rows={s.channel === "email" ? 5 : 3}
+                placeholder={aiLoadingIdx.has(idx) ? "Generating with AI…" : "Write a message or click AI write"}
                 className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
               />
             </div>

@@ -1,16 +1,11 @@
-import { KeyRound } from "lucide-react";
-import ComingSoon from "@/components/dashboard/ComingSoon";
+import { getOrCreateApiToken } from "@/lib/actions/api-tokens";
+import ApiCredentialsPanel from "@/components/dashboard/ApiCredentialsPanel";
 
 export const metadata = {
   title: "API Credentials | LeadGennie",
 };
 
-export default function Page() {
-  return (
-    <ComingSoon
-      title="API Credentials"
-      description="Secure API access"
-      icon={KeyRound}
-    />
-  );
+export default async function Page() {
+  const token = await getOrCreateApiToken();
+  return <ApiCredentialsPanel initialToken={token} />;
 }
