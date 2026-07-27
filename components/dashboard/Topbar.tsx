@@ -1,14 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { Menu, LogOut, ChevronDown } from "lucide-react";
+
+const ROLE_LABEL: Record<string, string> = {
+  owner: "Owner",
+  admin: "Admin",
+  member: "Member",
+  viewer: "Viewer",
+};
 
 export default function Topbar({
   user,
   onMenuClick,
 }: {
-  user: { name?: string | null; email?: string | null; company?: string | null };
+  user: {
+    name?: string | null;
+    email?: string | null;
+    company?: string | null;
+    workspaceName?: string | null;
+    role?: string | null;
+  };
   onMenuClick: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -30,9 +44,17 @@ export default function Topbar({
         <Menu className="w-5 h-5" />
       </button>
 
-      <div className="hidden md:block text-sm text-neutral-500">
-        {user.company ?? "LeadGennie"}
-      </div>
+      <Link
+        href="/dashboard/workspace"
+        className="hidden md:flex items-center gap-2 text-sm text-neutral-500 hover:text-white transition-colors"
+      >
+        {user.workspaceName ?? user.company ?? "LeadGennie"}
+        {user.role && (
+          <span className="text-[11px] text-neutral-400 border border-white/10 rounded-full px-2 py-0.5">
+            {ROLE_LABEL[user.role] ?? user.role}
+          </span>
+        )}
+      </Link>
 
       <div className="relative">
         <button

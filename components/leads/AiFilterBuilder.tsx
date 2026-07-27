@@ -33,6 +33,7 @@ export default function AiFilterBuilder() {
 
   const criteriaChips = result
     ? [
+        ...result.criteria.companies,
         ...result.criteria.regions,
         ...result.criteria.industries,
         ...result.criteria.titles,
@@ -92,12 +93,21 @@ export default function AiFilterBuilder() {
 
       {result && (
         <div className="mt-5 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
             <p className="text-sm text-white font-medium">Segment created</p>
             <span className="text-sm text-blue-300 tabular-nums">
-              ≈ {result.estimatedCount.toLocaleString()} matching leads
+              {result.estimateMethod === "measured" ? "" : "≈ "}
+              {result.estimatedCount.toLocaleString()} matching leads
             </span>
           </div>
+          <p className="text-xs text-neutral-500 mb-3">
+            {result.estimateMethod === "measured" &&
+              "Measured — counted against your actual leads in this workspace."}
+            {result.estimateMethod === "no_matches" &&
+              "Measured — no leads in your workspace currently match this criteria."}
+            {result.estimateMethod === "guessed" &&
+              "Rough guess — the AI couldn't extract a structured filter, so this isn't counted against real data."}
+          </p>
           <div className="flex flex-wrap gap-1.5">
             {criteriaChips.length > 0 ? (
               criteriaChips.map((chip) => (

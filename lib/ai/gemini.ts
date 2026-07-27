@@ -21,6 +21,7 @@ function getClient(): GoogleGenAI {
 }
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+export const MODEL_NAME = MODEL;
 
 export async function generateJson<T>(prompt: string, schema: Schema): Promise<T> {
   try {

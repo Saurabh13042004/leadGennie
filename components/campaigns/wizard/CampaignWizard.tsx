@@ -21,6 +21,7 @@ import type { AudienceOption } from "@/lib/actions/campaigns";
 import { createCampaign } from "@/lib/actions/campaigns";
 import { generateSequenceStepMessage } from "@/lib/actions/ai";
 import { updateSenderPitch } from "@/lib/actions/profile";
+import type { Mailbox } from "@/lib/actions/mailboxes";
 import type { Channel } from "@/lib/ai/messages";
 
 type SequenceStep = {
@@ -72,9 +73,11 @@ function hashRate(seed: string) {
 export default function CampaignWizard({
   audiences,
   initialPitch,
+  mailboxes,
 }: {
   audiences: AudienceOption[];
   initialPitch: string;
+  mailboxes: Mailbox[];
 }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -84,7 +87,7 @@ export default function CampaignWizard({
   const [savingPitch, setSavingPitch] = useState(false);
   const [steps, setSteps] = useState<SequenceStep[]>(DEFAULT_STEPS);
   const [personalization, setPersonalization] = useState<string[]>(["news", "tone"]);
-  const [fromEmail, setFromEmail] = useState("jane@leadforge.io");
+  const [mailboxId, setMailboxId] = useState<number | null>(mailboxes[0]?.id ?? null);
   const [dailyEmailLimit, setDailyEmailLimit] = useState(80);
   const [dailyDmLimit, setDailyDmLimit] = useState(25);
   const [launching, setLaunching] = useState(false);
@@ -158,22 +161,24 @@ export default function CampaignWizard({
   }
 
   async function handleLaunch() {
-    if (!audience) return;
+    if (!audience || !mailboxId) return;
     setLaunching(true);
     setError(null);
     try {
-      await createCampaign({
+      const result = await createCampaign({
         name: name || audience.name,
         audienceLabel: audience.name,
         audienceSegmentId: audience.id,
         totalLeads: audience.leadCount,
         channels: steps.map((s) => s.channel),
-        fromEmail,
+        mailboxId,
         dailyEmailLimit,
         dailyDmLimit,
         steps: steps.map((s) => ({ channel: s.channel, waitDays: s.waitDays, subject: s.subject, body: s.body })),
       });
-      router.push("/dashboard/campaigns");
+      const params = new URLSearchParams({ launched: String(result.id) });
+      if (result.blockedCount > 0) params.set("blocked", String(result.blockedCount));
+      router.push(`/dashboard/campaigns?${params.toString()}`);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not launch campaign");
@@ -446,16 +451,18 @@ export default function CampaignWizard({
 
       {step === 4 && audience && (
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-white mb-1">Ready to launch</h3>
+          <h3 className="text-sm font-medium text-white mb-1">Ready to submit for approval</h3>
+          <p className="text-xs text-neutral-500 -mt-3">
+            An owner or admin will review the audience and a sample message before anything sends.
+          </p>
 
           <div className="rounded-xl border border-white/10 bg-[#0A0A0A] divide-y divide-white/5">
             {[
               ["Audience", `${audience.name} (${audience.leadCount.toLocaleString()})`],
               ["Channels", channels],
               ["Steps", `${steps.length} touchpoints over ${totalDays} days`],
-              ["From", fromEmail],
               ["Daily limit", `${dailyEmailLimit} emails / ${dailyDmLimit} DMs`],
-              ["Est. replies", `≈ ${predictedReplies} (${predictedRate}%)`],
+              ["Est. replies (forecast, not measured)", `≈ ${predictedReplies} (${predictedRate}%)`],
             ].map(([label, value]) => (
               <div key={label} className="flex items-center justify-between px-4 py-3">
                 <span className="text-sm text-neutral-500">{label}</span>
@@ -466,12 +473,28 @@ export default function CampaignWizard({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-neutral-500 mb-1">From email</label>
-              <input
-                value={fromEmail}
-                onChange={(e) => setFromEmail(e.target.value)}
-                className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
-              />
+              <label className="block text-xs text-neutral-500 mb-1">From mailbox</label>
+              {mailboxes.length === 0 ? (
+                <p className="text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
+                  No active, verified mailbox yet.{" "}
+                  <Link href="/dashboard/deliverability" className="underline hover:text-yellow-100">
+                    Add one in Email Deliverability
+                  </Link>
+                  .
+                </p>
+              ) : (
+                <select
+                  value={mailboxId ?? ""}
+                  onChange={(e) => setMailboxId(Number(e.target.value))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg text-sm text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white/20"
+                >
+                  {mailboxes.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.email}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="flex gap-2">
               <div className="flex-1">
@@ -496,7 +519,7 @@ export default function CampaignWizard({
           </div>
 
           <p className="text-xs text-neutral-500">
-            AI predicts {predictedRate}% reply rate based on similar campaigns.
+            Forecast only — {predictedRate}% is a rough estimate, not a guarantee based on measured outcomes.
           </p>
 
           {error && <p className="text-sm text-red-400">{error}</p>}
@@ -510,11 +533,11 @@ export default function CampaignWizard({
             </button>
             <button
               onClick={handleLaunch}
-              disabled={launching}
+              disabled={launching || !mailboxId}
               className="flex items-center gap-2 bg-white text-black font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50"
             >
               {launching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
-              Launch campaign
+              Submit for approval
             </button>
           </div>
         </div>

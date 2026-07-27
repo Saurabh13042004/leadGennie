@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { sql } from "@/lib/db/client";
 import { exchangeHubspotCode, fetchHubspotTokenInfo } from "@/lib/hubspot";
+import { encryptSecret } from "@/lib/crypto";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -9,8 +10,12 @@ export async function GET(request: Request) {
   const integrationsUrl = new URL("/dashboard/integrations", origin);
 
   const session = await auth();
-  if (!session?.user?.email) {
+  if (!session?.user?.email || !session.user.workspaceId) {
     return NextResponse.redirect(new URL("/login", origin));
+  }
+  if (session.user.role !== "owner" && session.user.role !== "admin") {
+    integrationsUrl.searchParams.set("error", "hubspot_requires_admin");
+    return NextResponse.redirect(integrationsUrl);
   }
 
   const code = url.searchParams.get("code");
@@ -38,12 +43,17 @@ export async function GET(request: Request) {
     const label = info.hub_domain ?? null;
     const scope = info.scopes ? info.scopes.join(" ") : null;
 
+    // INT-01: encrypted before it ever reaches the database — access_token/
+    // refresh_token columns hold ciphertext, never the raw OAuth tokens.
+    const encryptedAccessToken = encryptSecret(tokens.access_token);
+    const encryptedRefreshToken = encryptSecret(tokens.refresh_token);
+
     await sql`
       insert into crm_connections
-        (owner_email, provider, label, portal_id, access_token, refresh_token, scope, expires_at)
+        (workspace_id, owner_email, provider, label, portal_id, access_token, refresh_token, scope, expires_at)
       values
-        (${session.user.email}, 'hubspot', ${label}, ${portalId}, ${tokens.access_token}, ${tokens.refresh_token}, ${scope}, ${expiresAt})
-      on conflict (owner_email, provider, portal_id)
+        (${session.user.workspaceId}, ${session.user.email}, 'hubspot', ${label}, ${portalId}, ${encryptedAccessToken}, ${encryptedRefreshToken}, ${scope}, ${expiresAt})
+      on conflict (workspace_id, provider, portal_id)
       do update set
         access_token = excluded.access_token,
         refresh_token = excluded.refresh_token,

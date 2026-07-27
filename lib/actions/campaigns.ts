@@ -1,8 +1,12 @@
 "use server";
 
-import { auth } from "@/auth";
 import { sql } from "@/lib/db/client";
 import { revalidatePath } from "next/cache";
+import { requireRole } from "@/lib/auth/workspace-context";
+import { filterCompliantLeads } from "@/lib/compliance";
+import { createApprovalRequest } from "@/lib/approvals-core";
+import { logActivity } from "@/lib/activity";
+import { personalize } from "@/lib/campaigns/personalize";
 import {
   fetchAllLeads,
   fetchMatchingLeads,
@@ -13,14 +17,7 @@ import {
 
 const MAX_CAMPAIGN_LEADS = 500;
 
-async function requireOwnerEmail() {
-  const session = await auth();
-  const email = session?.user?.email;
-  if (!email) throw new Error("Not authenticated");
-  return email;
-}
-
-export type CampaignStatus = "draft" | "running" | "paused";
+export type CampaignStatus = "pending_approval" | "running" | "paused" | "rejected";
 
 export type Campaign = {
   id: number;
@@ -29,22 +26,24 @@ export type Campaign = {
   audience_label: string | null;
   channels: string[];
   total_leads: number;
+  blocked_count: number;
   sent_count: number;
   replied_count: number;
   reply_rate: number;
+  approval_id: number | null;
   created_at: string;
 };
 
 export async function listCampaigns(): Promise<Campaign[]> {
-  const owner = await requireOwnerEmail();
+  const { workspaceId } = await requireRole("viewer");
   const rows = await sql`
     select
       id, name, status, audience_label, channels,
-      total_leads, sent_count, replied_count,
+      total_leads, blocked_count, sent_count, replied_count, approval_id,
       case when sent_count > 0 then round((replied_count::numeric / sent_count) * 100, 1) else 0 end as reply_rate,
       created_at
     from campaigns
-    where owner_email = ${owner}
+    where workspace_id = ${workspaceId}
     order by created_at desc
   `;
   return rows as Campaign[];
@@ -58,11 +57,11 @@ export type SegmentOption = {
 };
 
 export async function listSegments(): Promise<SegmentOption[]> {
-  const owner = await requireOwnerEmail();
+  const { workspaceId } = await requireRole("viewer");
   const rows = await sql`
     select id, name, lead_count, created_at
     from segments
-    where owner_email = ${owner}
+    where workspace_id = ${workspaceId}
     order by created_at desc
     limit 20
   `;
@@ -78,18 +77,18 @@ export type AudienceOption = {
 };
 
 export async function listAudienceOptions(): Promise<AudienceOption[]> {
-  const owner = await requireOwnerEmail();
+  const { workspaceId } = await requireRole("viewer");
 
   const segmentRows = await sql`
     select id, name, lead_count, prompt, created_at
     from segments
-    where owner_email = ${owner}
+    where workspace_id = ${workspaceId}
     order by created_at desc
     limit 20
   `;
 
   const totalRows = await sql`
-    select count(*)::int as count from leads where owner_email = ${owner}
+    select count(*)::int as count from leads where workspace_id = ${workspaceId}
   `;
   const totalLeads = (totalRows[0]?.count as number) ?? 0;
 
@@ -116,24 +115,24 @@ export async function listAudienceOptions(): Promise<AudienceOption[]> {
 }
 
 async function resolveLeadsForAudience(
-  owner: string,
+  workspaceId: number,
   audienceSegmentId: number | null
 ): Promise<MatchedLead[]> {
   if (audienceSegmentId === null) {
-    return fetchAllLeads(owner, MAX_CAMPAIGN_LEADS);
+    return fetchAllLeads(workspaceId, MAX_CAMPAIGN_LEADS);
   }
 
   const rows = await sql`
-    select criteria from segments where id = ${audienceSegmentId} and owner_email = ${owner}
+    select criteria from segments where id = ${audienceSegmentId} and workspace_id = ${workspaceId}
   `;
   const criteria = rows[0]?.criteria as FilterCriteria | undefined;
 
   if (!criteria || !hasStructuredCriteria(criteria)) {
-    return fetchAllLeads(owner, MAX_CAMPAIGN_LEADS);
+    return fetchAllLeads(workspaceId, MAX_CAMPAIGN_LEADS);
   }
 
-  const matched = await fetchMatchingLeads(owner, criteria, MAX_CAMPAIGN_LEADS);
-  return matched.length > 0 ? matched : fetchAllLeads(owner, MAX_CAMPAIGN_LEADS);
+  const matched = await fetchMatchingLeads(workspaceId, criteria, MAX_CAMPAIGN_LEADS);
+  return matched.length > 0 ? matched : fetchAllLeads(workspaceId, MAX_CAMPAIGN_LEADS);
 }
 
 export type CampaignStepInput = {
@@ -149,85 +148,129 @@ export type CreateCampaignInput = {
   audienceSegmentId: number | null;
   totalLeads: number;
   channels: string[];
-  fromEmail: string;
+  mailboxId: number;
   dailyEmailLimit: number;
   dailyDmLimit: number;
   steps: CampaignStepInput[];
 };
 
+/**
+ * CAM-01: launching outreach always requires owner/admin approval with an
+ * audience diff and sample output — so this creates the campaign + its steps
+ * in `pending_approval`, but never schedules a single send. Sends are only
+ * created once an admin/owner approves (see lib/actions/approvals.ts).
+ */
 export async function createCampaign(input: CreateCampaignInput) {
-  const owner = await requireOwnerEmail();
+  const { workspaceId, email: owner, userId } = await requireRole("member");
 
-  const leads = await resolveLeadsForAudience(owner, input.audienceSegmentId);
+  // DEL-01: no email send may be tied to an unverified/unapproved identity —
+  // the mailbox must be active and its domain currently verified.
+  const mailboxRows = await sql`
+    select m.email, m.status as mailbox_status, d.status as domain_status
+    from mailboxes m join domains d on d.id = m.domain_id
+    where m.id = ${input.mailboxId} and m.workspace_id = ${workspaceId}
+  `;
+  const mailbox = mailboxRows[0];
+  if (!mailbox) throw new Error("Mailbox not found in this workspace.");
+  if (mailbox.mailbox_status !== "active" || mailbox.domain_status !== "verified") {
+    throw new Error("This mailbox isn't active on a verified domain — pick a different one.");
+  }
+  const fromEmail = mailbox.email as string;
+
+  const resolvedLeads = await resolveLeadsForAudience(workspaceId, input.audienceSegmentId);
+  const { allowed: leads, blocked } = await filterCompliantLeads(workspaceId, resolvedLeads);
 
   const inserted = await sql`
     insert into campaigns (
-      owner_email, name, status, audience_label, audience_segment_id,
-      channels, from_email, daily_email_limit, daily_dm_limit, total_leads
+      workspace_id, owner_email, name, status, audience_label, audience_segment_id,
+      channels, from_email, mailbox_id, daily_email_limit, daily_dm_limit, total_leads, blocked_count
     )
     values (
-      ${owner}, ${input.name}, 'running', ${input.audienceLabel}, ${input.audienceSegmentId},
-      ${input.channels}, ${input.fromEmail}, ${input.dailyEmailLimit}, ${input.dailyDmLimit}, ${leads.length}
+      ${workspaceId}, ${owner}, ${input.name}, 'pending_approval', ${input.audienceLabel}, ${input.audienceSegmentId},
+      ${input.channels}, ${fromEmail}, ${input.mailboxId}, ${input.dailyEmailLimit}, ${input.dailyDmLimit}, ${leads.length}, ${blocked.length}
     )
     returning id
   `;
   const campaignId = inserted[0].id as number;
 
-  let cumulativeDays = 0;
-  const stepSchedules: {
-    id: number;
-    channel: string;
-    subject: string | null;
-    body: string;
-    scheduledAt: string;
-  }[] = [];
-
+  let firstStep: { channel: string; subject: string | null; body: string } | null = null;
   for (let i = 0; i < input.steps.length; i++) {
     const step = input.steps[i];
-    cumulativeDays += step.waitDays;
-    const stepInserted = await sql`
+    await sql`
       insert into campaign_steps (campaign_id, step_order, channel, wait_days, subject, body)
       values (${campaignId}, ${i + 1}, ${step.channel}, ${step.waitDays}, ${step.subject ?? null}, ${step.body})
-      returning id
     `;
-    const scheduledAt = new Date(Date.now() + cumulativeDays * 24 * 60 * 60 * 1000);
-    stepSchedules.push({
-      id: stepInserted[0].id as number,
-      channel: step.channel,
-      subject: step.subject ?? null,
-      body: step.body,
-      scheduledAt: scheduledAt.toISOString(),
-    });
+    if (i === 0) firstStep = { channel: step.channel, subject: step.subject ?? null, body: step.body };
   }
 
-  if (leads.length > 0) {
-    const leadIds = leads.map((l) => l.id);
-    for (const step of stepSchedules) {
-      const campaignIds = leadIds.map(() => campaignId);
-      const stepIds = leadIds.map(() => step.id);
-      const channels = leadIds.map(() => step.channel);
-      const scheduledAts = leadIds.map(() => step.scheduledAt);
-      const subjects = leadIds.map(() => step.subject);
-      const bodies = leadIds.map(() => step.body);
+  const sampleLead = leads[0];
+  const sampleMessage =
+    firstStep && sampleLead
+      ? {
+          subject: firstStep.subject ? personalize(firstStep.subject, sampleLead) : null,
+          body: personalize(firstStep.body, sampleLead),
+          leadName: sampleLead.full_name,
+        }
+      : null;
 
-      await sql.query(
-        `insert into campaign_sends (campaign_id, lead_id, step_id, channel, scheduled_at, subject, body)
-         select * from unnest($1::bigint[], $2::bigint[], $3::bigint[], $4::text[], $5::timestamptz[], $6::text[], $7::text[])`,
-        [campaignIds, leadIds, stepIds, channels, scheduledAts, subjects, bodies]
-      );
-    }
-  }
+  const blockedReasons = {
+    do_not_contact: blocked.filter((b) => b.reason === "do_not_contact").length,
+    cooldown: blocked.filter((b) => b.reason === "cooldown").length,
+  };
+
+  const approvalId = await createApprovalRequest({
+    workspaceId,
+    type: "campaign_launch",
+    entityType: "campaign",
+    entityId: campaignId,
+    title: `Launch "${input.name}"`,
+    summary: `${leads.length} lead${leads.length === 1 ? "" : "s"} via ${input.channels.join(" + ")}${
+      blocked.length > 0 ? ` — ${blocked.length} excluded by compliance rules` : ""
+    }`,
+    payload: {
+      audienceLabel: input.audienceLabel,
+      totalLeads: leads.length,
+      blockedCount: blocked.length,
+      blockedReasons,
+      channels: input.channels,
+      sampleMessage,
+      leadIds: leads.map((l) => l.id),
+    },
+    requestedByUserId: userId,
+  });
+
+  await sql`update campaigns set approval_id = ${approvalId} where id = ${campaignId}`;
+
+  await logActivity({
+    workspaceId,
+    actorUserId: userId,
+    type: "campaign.launch_requested",
+    entityType: "campaign",
+    entityId: campaignId,
+    summary: `Requested approval to launch "${input.name}" to ${leads.length} leads`,
+  });
 
   revalidatePath("/dashboard/campaigns");
-  return { id: campaignId, leadCount: leads.length };
+  return {
+    id: campaignId,
+    status: "pending_approval" as const,
+    leadCount: leads.length,
+    blockedCount: blocked.length,
+    blockedReasons,
+    approvalId,
+  };
 }
 
-export async function updateCampaignStatus(id: number, status: CampaignStatus) {
-  const owner = await requireOwnerEmail();
+export async function updateCampaignStatus(id: number, status: "running" | "paused") {
+  const { workspaceId } = await requireRole("member");
+  // Resuming/pausing only applies to already-approved campaigns — jumping
+  // straight from pending_approval or rejected to running must go through
+  // the approval flow, never this shortcut.
+  const fromStatus = status === "running" ? "paused" : "running";
   await sql`
     update campaigns
     set status = ${status}
-    where id = ${id} and owner_email = ${owner}
+    where id = ${id} and workspace_id = ${workspaceId} and status = ${fromStatus}
   `;
   revalidatePath("/dashboard/campaigns");
 }

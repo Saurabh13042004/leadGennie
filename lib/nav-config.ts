@@ -24,6 +24,7 @@ import {
   Webhook,
   LifeBuoy,
   BarChart3,
+  UsersRound,
 } from "lucide-react";
 
 export type NavItem = {
@@ -104,6 +105,7 @@ export const navGroups: NavGroup[] = [
   {
     label: "Control & Administration",
     items: [
+      { title: "Workspace", href: "/dashboard/workspace", description: "Team members & roles", icon: UsersRound },
       { title: "Notifications", href: "/dashboard/notifications", description: "Notification preferences", icon: Bell },
       { title: "Do Not Contact", href: "/dashboard/do-not-contact", description: "Exclusion list", icon: Ban },
       { title: "Activities", href: "/dashboard/activities", description: "View activities", icon: Activity },

@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db/client";
 
 export type FilterCriteria = {
+  companies: string[];
   regions: string[];
   industries: string[];
   titles: string[];
@@ -68,6 +69,7 @@ export function extractCriteriaRegex(prompt: string): FilterCriteria {
   const minRevenueM = revenueMatch ? Number(revenueMatch[1]) : null;
 
   return {
+    companies: [],
     regions,
     industries,
     titles,
@@ -86,26 +88,54 @@ export function hashToRange(input: string, min: number, max: number) {
   return min + (hash % (max - min));
 }
 
+/**
+ * Neither the AI extraction nor the regex fallback can reliably pull a
+ * literal company name out of free text (casing is inconsistent, and no
+ * fixed keyword list can cover it). Instead, check it against ground truth:
+ * every distinct company already in this workspace's leads. A prompt that
+ * mentions "dice solutions" matches the real "Dice Solutions" lead company
+ * via a case-insensitive substring check — no guessing required.
+ */
+export async function matchKnownCompanies(workspaceId: number, prompt: string): Promise<string[]> {
+  const rows = await sql`
+    select distinct company from leads
+    where workspace_id = ${workspaceId} and company is not null and company != ''
+  `;
+  const lowerPrompt = prompt.toLowerCase();
+  return (rows as { company: string }[])
+    .map((r) => r.company)
+    .filter((company) => lowerPrompt.includes(company.toLowerCase()));
+}
+
+// Segments saved before `companies` existed on FilterCriteria have no such
+// key in their stored jsonb — normalize on read so old segments don't crash
+// instead of just filtering with fewer criteria than a fresh one would.
+function normalize(criteria: FilterCriteria): FilterCriteria {
+  return { ...criteria, companies: criteria.companies ?? [] };
+}
+
 function patterns(criteria: FilterCriteria) {
-  const titlePatterns = criteria.titles.map((t) => `%${t}%`);
-  const companyPatterns = [...criteria.industries, ...criteria.regions].map((c) => `%${c}%`);
+  const c = normalize(criteria);
+  const titlePatterns = c.titles.map((t) => `%${t}%`);
+  const companyPatterns = [...c.companies, ...c.industries, ...c.regions].map((c) => `%${c}%`);
   return { titlePatterns, companyPatterns };
 }
 
 export function hasStructuredCriteria(criteria: FilterCriteria) {
-  return criteria.titles.length > 0 || criteria.industries.length > 0 || criteria.regions.length > 0;
+  const c = normalize(criteria);
+  return c.titles.length > 0 || c.industries.length > 0 || c.regions.length > 0 || c.companies.length > 0;
 }
 
-export async function countMatchingLeads(owner: string, criteria: FilterCriteria): Promise<number> {
+export async function countMatchingLeads(workspaceId: number, criteria: FilterCriteria): Promise<number> {
   const { titlePatterns, companyPatterns } = patterns(criteria);
   if (titlePatterns.length === 0 && companyPatterns.length === 0) return 0;
 
   const rows = await sql.query(
     `select count(*)::int as count
      from leads
-     where owner_email = $1
+     where workspace_id = $1
        and (job_title ilike any($2::text[]) or company ilike any($3::text[]))`,
-    [owner, titlePatterns, companyPatterns]
+    [workspaceId, titlePatterns, companyPatterns]
   );
   return (rows[0]?.count as number) ?? 0;
 }
@@ -120,7 +150,7 @@ export type MatchedLead = {
 };
 
 export async function fetchMatchingLeads(
-  owner: string,
+  workspaceId: number,
   criteria: FilterCriteria,
   limit: number
 ): Promise<MatchedLead[]> {
@@ -130,19 +160,19 @@ export async function fetchMatchingLeads(
   const rows = await sql.query(
     `select id, full_name, email, company, job_title, linkedin_url
      from leads
-     where owner_email = $1
+     where workspace_id = $1
        and (job_title ilike any($2::text[]) or company ilike any($3::text[]))
      limit $4`,
-    [owner, titlePatterns, companyPatterns, limit]
+    [workspaceId, titlePatterns, companyPatterns, limit]
   );
   return rows as MatchedLead[];
 }
 
-export async function fetchAllLeads(owner: string, limit: number): Promise<MatchedLead[]> {
+export async function fetchAllLeads(workspaceId: number, limit: number): Promise<MatchedLead[]> {
   const rows = await sql`
     select id, full_name, email, company, job_title, linkedin_url
     from leads
-    where owner_email = ${owner}
+    where workspace_id = ${workspaceId}
     order by created_at desc
     limit ${limit}
   `;

@@ -15,7 +15,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { importLeadsCsv, type ImportRow } from "@/lib/actions/leads";
+import { importLeadsCsv, type ImportRow, type ImportResult } from "@/lib/actions/leads";
 
 const FIELDS: { key: keyof ImportRow; label: string; required?: boolean }[] = [
   { key: "full_name", label: "Full name", required: true },
@@ -45,7 +45,7 @@ export default function ImportLeadsModal({ onClose }: { onClose: () => void }) {
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [importing, setImporting] = useState(false);
-  const [importedCount, setImportedCount] = useState(0);
+  const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,8 +86,8 @@ export default function ImportLeadsModal({ onClose }: { onClose: () => void }) {
     });
 
     try {
-      const result = await importLeadsCsv(mappedRows);
-      setImportedCount(result.imported);
+      const importResult = await importLeadsCsv(mappedRows, fileName);
+      setResult(importResult);
       setStep("done");
       router.refresh();
     } catch (e) {
@@ -253,14 +253,51 @@ export default function ImportLeadsModal({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {step === "done" && (
-            <div className="flex flex-col items-center text-center py-6">
-              <CheckCircle2 className="w-12 h-12 text-green-400 mb-4" />
-              <p className="text-white font-medium">Imported {importedCount} leads</p>
-              <p className="text-sm text-neutral-500 mt-1">Your leads have been added to your lead universe.</p>
+          {step === "done" && result && (
+            <div className="space-y-5">
+              <div className="flex flex-col items-center text-center py-2">
+                <CheckCircle2 className="w-12 h-12 text-green-400 mb-4" />
+                <p className="text-white font-medium">Import complete</p>
+                <p className="text-sm text-neutral-500 mt-1">
+                  {result.total} row{result.total === 1 ? "" : "s"} processed. Safe to re-upload the same file —
+                  matching emails update existing leads instead of duplicating them.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-5 gap-2 text-center">
+                {[
+                  ["Created", result.created, "text-green-400"],
+                  ["Updated", result.updated, "text-blue-400"],
+                  ["Duplicate", result.duplicate, "text-neutral-400"],
+                  ["Skipped", result.skipped, "text-yellow-400"],
+                  ["Failed", result.failed, "text-red-400"],
+                ].map(([label, value, color]) => (
+                  <div key={label as string} className="rounded-lg border border-white/10 bg-white/[0.02] py-3">
+                    <p className={cn("text-lg font-semibold tabular-nums", color as string)}>{value}</p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {result.errors.length > 0 && (
+                <div className="rounded-lg border border-white/10 bg-white/[0.02] max-h-40 overflow-y-auto">
+                  <div className="px-3 py-2 border-b border-white/10 text-xs text-neutral-500 sticky top-0 bg-[#0A0A0A]">
+                    Row-level detail
+                  </div>
+                  <ul className="text-xs divide-y divide-white/5">
+                    {result.errors.map((e, i) => (
+                      <li key={i} className="px-3 py-1.5 flex justify-between gap-3 text-neutral-400">
+                        <span className="text-neutral-500 shrink-0">Row {e.row}</span>
+                        <span className="text-right">{e.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <button
                 onClick={onClose}
-                className="mt-6 bg-white text-black font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors"
+                className="w-full bg-white text-black font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors"
               >
                 Done
               </button>

@@ -1,21 +1,14 @@
 "use server";
 
-import { auth } from "@/auth";
 import { sql } from "@/lib/db/client";
-
-async function requireOwnerEmail() {
-  const session = await auth();
-  const email = session?.user?.email;
-  if (!email) throw new Error("Not authenticated");
-  return email;
-}
+import { requireRole } from "@/lib/auth/workspace-context";
 
 type CampaignRow = { status: string; sent_count: number; replied_count: number };
 type SendRow = {
   channel: string;
   status: string;
-  scheduled_at: string;
-  sent_at: string | null;
+  scheduled_at: string | Date;
+  sent_at: string | Date | null;
   lead_id: number;
 };
 
@@ -52,24 +45,24 @@ function last7Days() {
   return days;
 }
 
-function dayKey(iso: string | null) {
-  return iso ? iso.slice(0, 10) : null;
+function dayKey(iso: string | Date | null) {
+  if (!iso) return null;
+  return iso instanceof Date ? iso.toISOString().slice(0, 10) : iso.slice(0, 10);
 }
 
 export async function getInsightBoardData(): Promise<InsightBoardData> {
-  const owner = await requireOwnerEmail();
+  const { workspaceId } = await requireRole("viewer");
 
   const [campaignRows, sendRows, leadCountRows, segmentCountRows, csvCountRows] = await Promise.all([
-    sql`select status, sent_count, replied_count from campaigns where owner_email = ${owner}`,
+    sql`select status, sent_count, replied_count from campaigns where workspace_id = ${workspaceId}`,
     sql`
       select cs.channel, cs.status, cs.scheduled_at, cs.sent_at, cs.lead_id
       from campaign_sends cs
-      join campaigns c on c.id = cs.campaign_id
-      where c.owner_email = ${owner}
+      where cs.workspace_id = ${workspaceId}
     `,
-    sql`select count(*)::int as count from leads where owner_email = ${owner}`,
-    sql`select count(*)::int as count from segments where owner_email = ${owner}`,
-    sql`select count(*)::int as count from leads where owner_email = ${owner} and source = 'csv'`,
+    sql`select count(*)::int as count from leads where workspace_id = ${workspaceId}`,
+    sql`select count(*)::int as count from segments where workspace_id = ${workspaceId}`,
+    sql`select count(*)::int as count from leads where workspace_id = ${workspaceId} and source = 'csv'`,
   ]);
 
   const campaigns = campaignRows as CampaignRow[];

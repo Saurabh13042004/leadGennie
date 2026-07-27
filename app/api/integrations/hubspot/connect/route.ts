@@ -8,6 +8,11 @@ export async function GET(request: Request) {
   if (!session?.user?.email) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
+  if (session.user.role !== "owner" && session.user.role !== "admin") {
+    const integrationsUrl = new URL("/dashboard/integrations", request.url);
+    integrationsUrl.searchParams.set("error", "hubspot_requires_admin");
+    return NextResponse.redirect(integrationsUrl);
+  }
 
   const origin = new URL(request.url).origin;
   const redirectUri = `${origin}/api/integrations/hubspot/callback`;

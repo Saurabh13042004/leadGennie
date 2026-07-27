@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { sql } from "@/lib/db/client";
+import { ensureUserWorkspace } from "@/lib/workspace";
 
 export type User = {
   id: string;
@@ -50,7 +51,9 @@ export async function createUser(input: {
     values (${input.name}, ${input.email}, ${passwordHash}, ${input.company ?? null})
     returning id, name, email, password_hash, company
   `;
-  return toUser(rows[0] as UserRow);
+  const user = toUser(rows[0] as UserRow);
+  await ensureUserWorkspace(Number(user.id), user.email, user.name, user.company);
+  return user;
 }
 
 export async function verifyPassword(user: User, password: string) {

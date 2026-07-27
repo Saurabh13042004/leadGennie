@@ -3,21 +3,21 @@ import { sql } from "@/lib/db/client";
 
 export const dynamic = "force-dynamic";
 
-async function ownerFromRequest(request: Request): Promise<string | null> {
+async function workspaceIdFromRequest(request: Request): Promise<number | null> {
   const authHeader = request.headers.get("authorization");
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if (!token) return null;
 
-  const rows = await sql`select owner_email from api_tokens where token = ${token}`;
+  const rows = await sql`select workspace_id from api_tokens where token = ${token}`;
   if (rows.length === 0) return null;
 
   await sql`update api_tokens set last_used_at = now() where token = ${token}`;
-  return rows[0].owner_email as string;
+  return rows[0].workspace_id as number;
 }
 
 export async function GET(request: Request) {
-  const owner = await ownerFromRequest(request);
-  if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const workspaceId = await workspaceIdFromRequest(request);
+  if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const rows = await sql`
     select
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     from campaign_sends cs
     join leads l on l.id = cs.lead_id
     join campaigns c on c.id = cs.campaign_id
-    where c.owner_email = ${owner}
+    where cs.workspace_id = ${workspaceId}
       and cs.channel = 'linkedin_dm'
       and cs.status = 'queued'
     order by cs.scheduled_at asc
@@ -38,8 +38,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const owner = await ownerFromRequest(request);
-  if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const workspaceId = await workspaceIdFromRequest(request);
+  if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
   const { id, status, error } = body as { id?: number; status?: "sent" | "failed"; error?: string };
@@ -51,8 +51,7 @@ export async function POST(request: Request) {
   const rows = await sql`
     select cs.id, cs.campaign_id
     from campaign_sends cs
-    join campaigns c on c.id = cs.campaign_id
-    where cs.id = ${id} and c.owner_email = ${owner}
+    where cs.id = ${id} and cs.workspace_id = ${workspaceId}
   `;
   if (rows.length === 0) {
     return NextResponse.json({ error: "Send not found" }, { status: 404 });

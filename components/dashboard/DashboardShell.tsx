@@ -9,7 +9,13 @@ export default function DashboardShell({
   user,
   children,
 }: {
-  user: { name?: string | null; email?: string | null; company?: string | null };
+  user: {
+    name?: string | null;
+    email?: string | null;
+    company?: string | null;
+    workspaceName?: string | null;
+    role?: string | null;
+  };
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);

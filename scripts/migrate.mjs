@@ -14,7 +14,15 @@ if (!process.env.DATABASE_URL) {
 const sql = neon(process.env.DATABASE_URL);
 const schema = readFileSync(join(__dirname, "../lib/db/schema.sql"), "utf-8");
 
-const statements = schema
+// Strip full-line `--` comments before splitting on `;` — a semicolon inside
+// a comment (e.g. "does X; does Y") otherwise fragments the statement that
+// follows it, since this splitter has no notion of SQL comment syntax.
+const withoutComments = schema
+  .split("\n")
+  .filter((line) => !line.trim().startsWith("--"))
+  .join("\n");
+
+const statements = withoutComments
   .split(";")
   .map((s) => s.trim())
   .filter(Boolean);
