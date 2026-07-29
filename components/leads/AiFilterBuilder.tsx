@@ -36,10 +36,10 @@ export default function AiFilterBuilder() {
 
   const criteriaChips = result
     ? [
-        ...result.criteria.companies,
-        ...result.criteria.regions,
-        ...result.criteria.industries,
-        ...result.criteria.titles,
+        ...(result.criteria.companies ?? []),
+        ...(result.criteria.regions ?? []),
+        ...(result.criteria.industries ?? []),
+        ...(result.criteria.titles ?? []),
         result.criteria.fundingStage,
         result.criteria.minEmployees
           ? `${result.criteria.minEmployees}${result.criteria.maxEmployees ? `-${result.criteria.maxEmployees}` : "+"} employees`

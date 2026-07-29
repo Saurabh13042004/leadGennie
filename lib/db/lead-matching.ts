@@ -110,7 +110,7 @@ export async function matchKnownCompanies(workspaceId: number, prompt: string): 
 // Segments saved before `companies` existed on FilterCriteria have no such
 // key in their stored jsonb — normalize on read so old segments don't crash
 // instead of just filtering with fewer criteria than a fresh one would.
-function normalize(criteria: FilterCriteria): FilterCriteria {
+export function normalize(criteria: FilterCriteria): FilterCriteria {
   return { ...criteria, companies: criteria.companies ?? [] };
 }
 

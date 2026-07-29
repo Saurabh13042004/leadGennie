@@ -11,6 +11,7 @@ import {
   hashToRange,
   hasStructuredCriteria,
   matchKnownCompanies,
+  normalize as normalizeCriteria,
   type FilterCriteria,
 } from "@/lib/db/lead-matching";
 
@@ -372,7 +373,7 @@ export async function listSegments(): Promise<SegmentSummary[]> {
 
   const segments: SegmentSummary[] = [];
   for (const r of rows) {
-    let criteria = r.criteria as FilterCriteria;
+    let criteria = normalizeCriteria(r.criteria as FilterCriteria);
     const prompt = r.prompt as string | null;
     if (prompt) {
       const knownCompanyMatches = await matchKnownCompanies(workspaceId, prompt);

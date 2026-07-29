@@ -60,10 +60,10 @@ export default function AudienceList({
       )}
       {items.map((s) => {
         const chips = [
-          ...s.criteria.companies,
-          ...s.criteria.regions,
-          ...s.criteria.industries,
-          ...s.criteria.titles,
+          ...(s.criteria.companies ?? []),
+          ...(s.criteria.regions ?? []),
+          ...(s.criteria.industries ?? []),
+          ...(s.criteria.titles ?? []),
           s.criteria.fundingStage,
           s.criteria.minEmployees
             ? `${s.criteria.minEmployees}${s.criteria.maxEmployees ? `-${s.criteria.maxEmployees}` : "+"} employees`
