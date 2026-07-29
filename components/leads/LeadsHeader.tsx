@@ -1,11 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Users, Upload, Plus } from "lucide-react";
 import ImportLeadsModal from "./ImportLeadsModal";
+import LeadFormModal from "./LeadFormModal";
 
-export default function LeadsHeader() {
+export default function LeadsHeader({ canEdit }: { canEdit: boolean }) {
+  const router = useRouter();
   const [importOpen, setImportOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
 
   return (
     <>
@@ -20,16 +24,36 @@ export default function LeadsHeader() {
           </div>
         </div>
 
-        <button
-          onClick={() => setImportOpen(true)}
-          className="flex items-center gap-2 bg-white text-black font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors"
-        >
-          <Upload className="w-4 h-4" />
-          Import leads
-        </button>
+        {canEdit && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setAddOpen(true)}
+              className="flex items-center gap-2 border border-white/10 text-white font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-white/5 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add lead
+            </button>
+            <button
+              onClick={() => setImportOpen(true)}
+              className="flex items-center gap-2 bg-white text-black font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              Import leads
+            </button>
+          </div>
+        )}
       </div>
 
       {importOpen && <ImportLeadsModal onClose={() => setImportOpen(false)} />}
+      {addOpen && (
+        <LeadFormModal
+          onClose={() => setAddOpen(false)}
+          onSaved={() => {
+            setAddOpen(false);
+            router.refresh();
+          }}
+        />
+      )}
     </>
   );
 }

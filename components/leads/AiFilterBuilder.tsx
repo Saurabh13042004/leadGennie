@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Sparkles, Loader2 } from "lucide-react";
 import { generateAiFilter, type AiFilterResult } from "@/lib/actions/leads";
 
@@ -12,6 +13,7 @@ const EXAMPLES = [
 ];
 
 export default function AiFilterBuilder() {
+  const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiFilterResult | null>(null);
@@ -24,6 +26,7 @@ export default function AiFilterBuilder() {
     try {
       const res = await generateAiFilter(prompt);
       setResult(res);
+      router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not generate filter");
     } finally {

@@ -61,7 +61,7 @@ export const navGroups: NavGroup[] = [
     label: "CRM Core",
     items: [
       { title: "All Leads", href: "/dashboard/leads", description: "Manage your leads", icon: Users },
-      { title: "Lead Lists", href: "/dashboard/lead-lists", description: "Organize lead groups", icon: List },
+      { title: "Audience", href: "/dashboard/lead-lists", description: "AI-built audiences & saved segments", icon: List },
       { title: "Accounts", href: "/dashboard/accounts", description: "View accounts", icon: Building2 },
       { title: "Deals", href: "/dashboard/deals", description: "View deals", icon: Handshake },
       { title: "Tasks", href: "/dashboard/tasks", description: "CRM tasks & follow-ups", icon: CheckSquare },

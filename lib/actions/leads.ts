@@ -38,6 +38,100 @@ export async function listLeads(): Promise<Lead[]> {
   return rows as Lead[];
 }
 
+export type LeadInput = {
+  full_name: string;
+  email?: string;
+  company?: string;
+  job_title?: string;
+  linkedin_url?: string;
+  stage?: string;
+};
+
+function normalizeLeadInput(input: LeadInput) {
+  const full_name = input.full_name.trim();
+  if (!full_name) throw new Error("Full name is required.");
+  return {
+    full_name,
+    email: input.email?.trim() || null,
+    company: input.company?.trim() || null,
+    job_title: input.job_title?.trim() || null,
+    linkedin_url: input.linkedin_url?.trim() || null,
+    stage: input.stage?.trim() || "new",
+  };
+}
+
+async function assertEmailAvailable(workspaceId: number, email: string | null, excludeId?: number) {
+  if (!email) return;
+  const rows = excludeId
+    ? await sql`
+        select id from leads
+        where workspace_id = ${workspaceId} and lower(email) = lower(${email}) and id != ${excludeId}
+      `
+    : await sql`select id from leads where workspace_id = ${workspaceId} and lower(email) = lower(${email})`;
+  if (rows.length > 0) throw new Error("A lead with this email already exists.");
+}
+
+export async function createLead(input: LeadInput): Promise<Lead> {
+  const { workspaceId, email: owner } = await requireRole("member");
+  const v = normalizeLeadInput(input);
+  await assertEmailAvailable(workspaceId, v.email);
+
+  const inserted = await sql`
+    insert into leads (workspace_id, owner_email, full_name, email, company, job_title, linkedin_url, stage, source)
+    values (${workspaceId}, ${owner}, ${v.full_name}, ${v.email}, ${v.company}, ${v.job_title}, ${v.linkedin_url}, ${v.stage}, 'manual')
+    returning id, full_name, email, company, job_title, linkedin_url, stage, source, created_at
+  `;
+
+  revalidatePath("/dashboard/leads");
+  return inserted[0] as Lead;
+}
+
+export async function updateLead(id: number, input: LeadInput): Promise<Lead> {
+  const { workspaceId } = await requireRole("member");
+  const v = normalizeLeadInput(input);
+  await assertEmailAvailable(workspaceId, v.email, id);
+
+  const updated = await sql`
+    update leads set
+      full_name = ${v.full_name},
+      email = ${v.email},
+      company = ${v.company},
+      job_title = ${v.job_title},
+      linkedin_url = ${v.linkedin_url},
+      stage = ${v.stage}
+    where id = ${id} and workspace_id = ${workspaceId}
+    returning id, full_name, email, company, job_title, linkedin_url, stage, source, created_at
+  `;
+  if (updated.length === 0) throw new Error("Lead not found");
+
+  revalidatePath("/dashboard/leads");
+  return updated[0] as Lead;
+}
+
+/**
+ * Deleting a lead cascades to delete its campaign_sends rows (see schema.sql),
+ * which would silently erase the record that they were ever emailed — the
+ * exact history compliance tooling (cooldown, DNC audits) relies on. Block
+ * deletion once that history exists; Do Not Contact is the right tool for
+ * "stop contacting this person" instead.
+ */
+export async function deleteLead(id: number): Promise<void> {
+  const { workspaceId } = await requireRole("admin");
+
+  const leadRows = await sql`select id from leads where id = ${id} and workspace_id = ${workspaceId}`;
+  if (leadRows.length === 0) throw new Error("Lead not found");
+
+  const sendCount = await sql`select count(*)::int as count from campaign_sends where lead_id = ${id}`;
+  if ((sendCount[0].count as number) > 0) {
+    throw new Error(
+      "This lead has message history and can't be deleted — add them to Do Not Contact instead if you want to stop contacting them."
+    );
+  }
+
+  await sql`delete from leads where id = ${id} and workspace_id = ${workspaceId}`;
+  revalidatePath("/dashboard/leads");
+}
+
 export type ImportRow = {
   full_name: string;
   email?: string;
@@ -238,7 +332,7 @@ export async function generateAiFilter(prompt: string): Promise<AiFilterResult> 
     returning id
   `;
 
-  revalidatePath("/dashboard/leads");
+  revalidatePath("/dashboard/lead-lists");
 
   return {
     id: inserted[0].id as number,
@@ -247,4 +341,68 @@ export async function generateAiFilter(prompt: string): Promise<AiFilterResult> 
     estimatedCount,
     estimateMethod,
   };
+}
+
+export type SegmentSummary = {
+  id: number;
+  name: string;
+  prompt: string | null;
+  criteria: FilterCriteria;
+  leadCount: number;
+  estimateMethod: EstimateMethod;
+  createdAt: string;
+};
+
+/**
+ * Recomputes each saved audience's count live against current leads rather
+ * than trusting the `lead_count` stored at creation time — segments saved
+ * before the company-matching fix (see matchKnownCompanies) had no way to
+ * recognize a literal company name, so their stored count could be a
+ * fabricated guess. Re-running the same ground-truth match here means old
+ * segments self-correct on every view instead of staying wrong forever.
+ */
+export async function listSegments(): Promise<SegmentSummary[]> {
+  const { workspaceId } = await requireRole("viewer");
+  const rows = await sql`
+    select id, name, prompt, criteria, created_at
+    from segments
+    where workspace_id = ${workspaceId}
+    order by created_at desc
+  `;
+
+  const segments: SegmentSummary[] = [];
+  for (const r of rows) {
+    let criteria = r.criteria as FilterCriteria;
+    const prompt = r.prompt as string | null;
+    if (prompt) {
+      const knownCompanyMatches = await matchKnownCompanies(workspaceId, prompt);
+      if (knownCompanyMatches.length > 0) {
+        criteria = {
+          ...criteria,
+          companies: Array.from(new Set([...(criteria.companies ?? []), ...knownCompanyMatches])),
+        };
+      }
+    }
+    const matchedCount = await countMatchingLeads(workspaceId, criteria);
+    const estimateMethod: EstimateMethod =
+      matchedCount > 0 ? "measured" : hasStructuredCriteria(criteria) ? "no_matches" : "guessed";
+
+    segments.push({
+      id: r.id as number,
+      name: r.name as string,
+      prompt,
+      criteria,
+      leadCount: matchedCount,
+      estimateMethod,
+      createdAt: r.created_at as string,
+    });
+  }
+  return segments;
+}
+
+export async function deleteSegment(id: number): Promise<void> {
+  const { workspaceId } = await requireRole("member");
+  const rows = await sql`delete from segments where id = ${id} and workspace_id = ${workspaceId} returning id`;
+  if (rows.length === 0) throw new Error("Audience not found");
+  revalidatePath("/dashboard/lead-lists");
 }
