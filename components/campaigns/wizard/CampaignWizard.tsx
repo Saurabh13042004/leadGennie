@@ -14,6 +14,7 @@ import {
   Split,
   Rocket,
   Loader2,
+  Workflow as WorkflowIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import WizardStepper from "./WizardStepper";
@@ -23,6 +24,7 @@ import { generateSequenceStepMessage } from "@/lib/actions/ai";
 import { updateSenderPitch } from "@/lib/actions/profile";
 import type { Mailbox } from "@/lib/actions/mailboxes";
 import type { Channel } from "@/lib/ai/messages";
+import { getWorkflow, type WorkflowSummary } from "@/lib/actions/workflows";
 
 type SequenceStep = {
   channel: Channel;
@@ -74,10 +76,12 @@ export default function CampaignWizard({
   audiences,
   initialPitch,
   mailboxes,
+  workflows,
 }: {
   audiences: AudienceOption[];
   initialPitch: string;
   mailboxes: Mailbox[];
+  workflows: WorkflowSummary[];
 }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -93,6 +97,35 @@ export default function CampaignWizard({
   const [launching, setLaunching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiLoadingIdx, setAiLoadingIdx] = useState<Set<number>>(new Set());
+  const [workflowId, setWorkflowId] = useState<number | null>(null);
+  const [workflowLoading, setWorkflowLoading] = useState(false);
+
+  async function applyWorkflow(id: number) {
+    setWorkflowLoading(true);
+    setError(null);
+    try {
+      const wf = await getWorkflow(id);
+      const matchedIdx =
+        wf.sourceType === "segment"
+          ? audiences.findIndex((a) => a.id === wf.sourceSegmentId)
+          : audiences.findIndex((a) => a.id === null);
+      if (matchedIdx >= 0) setAudienceIdx(matchedIdx);
+      setSteps(
+        wf.steps.map((s) => ({
+          channel: s.channel as Channel,
+          waitDays: s.waitDays,
+          subject: s.subject ?? undefined,
+          body: s.body,
+        }))
+      );
+      setWorkflowId(id);
+      if (!name.trim()) setName(workflows.find((w) => w.id === id)?.name ?? "");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load workflow");
+    } finally {
+      setWorkflowLoading(false);
+    }
+  }
 
   const audience = audienceIdx !== null ? audiences[audienceIdx] : null;
 
@@ -175,6 +208,7 @@ export default function CampaignWizard({
         dailyEmailLimit,
         dailyDmLimit,
         steps: steps.map((s) => ({ channel: s.channel, waitDays: s.waitDays, subject: s.subject, body: s.body })),
+        workflowId,
       });
       const params = new URLSearchParams({ launched: String(result.id) });
       if (result.blockedCount > 0) params.set("blocked", String(result.blockedCount));
@@ -203,6 +237,48 @@ export default function CampaignWizard({
 
       {step === 1 && (
         <div className="space-y-6">
+          {workflows.length > 0 && (
+            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <WorkflowIcon className="w-4 h-4 text-blue-400" />
+                <h3 className="text-sm font-medium text-white">Start from a saved workflow</h3>
+              </div>
+              <p className="text-xs text-neutral-500 mb-3">
+                Pre-fills the audience and sequence below from a workflow built in Agentic Flows — still fully
+                editable after.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {workflows.map((w) => (
+                  <button
+                    key={w.id}
+                    onClick={() => applyWorkflow(w.id)}
+                    disabled={workflowLoading}
+                    className={cn(
+                      "text-xs rounded-full px-3 py-1.5 border transition-colors disabled:opacity-50",
+                      workflowId === w.id
+                        ? "border-blue-500/50 bg-blue-500/15 text-white"
+                        : "border-white/10 text-neutral-300 hover:bg-white/5"
+                    )}
+                  >
+                    {w.name} · {w.stepCount} step{w.stepCount === 1 ? "" : "s"}
+                  </button>
+                ))}
+                {workflowId !== null && (
+                  <button
+                    onClick={() => {
+                      setWorkflowId(null);
+                      setSteps(DEFAULT_STEPS);
+                    }}
+                    disabled={workflowLoading}
+                    className="text-xs text-neutral-500 hover:text-white px-2"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm text-neutral-300 mb-1.5">Campaign name</label>
             <input

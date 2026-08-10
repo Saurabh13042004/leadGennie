@@ -14,6 +14,7 @@ import {
   normalize as normalizeCriteria,
   type FilterCriteria,
 } from "@/lib/db/lead-matching";
+import { insertLead, updateLeadFields } from "@/lib/db/leads-core";
 
 export type Lead = {
   id: number;
@@ -48,65 +49,18 @@ export type LeadInput = {
   stage?: string;
 };
 
-function normalizeLeadInput(input: LeadInput) {
-  const full_name = input.full_name.trim();
-  if (!full_name) throw new Error("Full name is required.");
-  return {
-    full_name,
-    email: input.email?.trim() || null,
-    company: input.company?.trim() || null,
-    job_title: input.job_title?.trim() || null,
-    linkedin_url: input.linkedin_url?.trim() || null,
-    stage: input.stage?.trim() || "new",
-  };
-}
-
-async function assertEmailAvailable(workspaceId: number, email: string | null, excludeId?: number) {
-  if (!email) return;
-  const rows = excludeId
-    ? await sql`
-        select id from leads
-        where workspace_id = ${workspaceId} and lower(email) = lower(${email}) and id != ${excludeId}
-      `
-    : await sql`select id from leads where workspace_id = ${workspaceId} and lower(email) = lower(${email})`;
-  if (rows.length > 0) throw new Error("A lead with this email already exists.");
-}
-
 export async function createLead(input: LeadInput): Promise<Lead> {
   const { workspaceId, email: owner } = await requireRole("member");
-  const v = normalizeLeadInput(input);
-  await assertEmailAvailable(workspaceId, v.email);
-
-  const inserted = await sql`
-    insert into leads (workspace_id, owner_email, full_name, email, company, job_title, linkedin_url, stage, source)
-    values (${workspaceId}, ${owner}, ${v.full_name}, ${v.email}, ${v.company}, ${v.job_title}, ${v.linkedin_url}, ${v.stage}, 'manual')
-    returning id, full_name, email, company, job_title, linkedin_url, stage, source, created_at
-  `;
-
+  const lead = await insertLead(workspaceId, owner, input, "manual");
   revalidatePath("/dashboard/leads");
-  return inserted[0] as Lead;
+  return lead;
 }
 
 export async function updateLead(id: number, input: LeadInput): Promise<Lead> {
   const { workspaceId } = await requireRole("member");
-  const v = normalizeLeadInput(input);
-  await assertEmailAvailable(workspaceId, v.email, id);
-
-  const updated = await sql`
-    update leads set
-      full_name = ${v.full_name},
-      email = ${v.email},
-      company = ${v.company},
-      job_title = ${v.job_title},
-      linkedin_url = ${v.linkedin_url},
-      stage = ${v.stage}
-    where id = ${id} and workspace_id = ${workspaceId}
-    returning id, full_name, email, company, job_title, linkedin_url, stage, source, created_at
-  `;
-  if (updated.length === 0) throw new Error("Lead not found");
-
+  const lead = await updateLeadFields(workspaceId, id, input);
   revalidatePath("/dashboard/leads");
-  return updated[0] as Lead;
+  return lead;
 }
 
 /**

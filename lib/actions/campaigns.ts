@@ -152,6 +152,7 @@ export type CreateCampaignInput = {
   dailyEmailLimit: number;
   dailyDmLimit: number;
   steps: CampaignStepInput[];
+  workflowId?: number | null;
 };
 
 /**
@@ -183,11 +184,11 @@ export async function createCampaign(input: CreateCampaignInput) {
   const inserted = await sql`
     insert into campaigns (
       workspace_id, owner_email, name, status, audience_label, audience_segment_id,
-      channels, from_email, mailbox_id, daily_email_limit, daily_dm_limit, total_leads, blocked_count
+      channels, from_email, mailbox_id, daily_email_limit, daily_dm_limit, total_leads, blocked_count, workflow_id
     )
     values (
       ${workspaceId}, ${owner}, ${input.name}, 'pending_approval', ${input.audienceLabel}, ${input.audienceSegmentId},
-      ${input.channels}, ${fromEmail}, ${input.mailboxId}, ${input.dailyEmailLimit}, ${input.dailyDmLimit}, ${leads.length}, ${blocked.length}
+      ${input.channels}, ${fromEmail}, ${input.mailboxId}, ${input.dailyEmailLimit}, ${input.dailyDmLimit}, ${leads.length}, ${blocked.length}, ${input.workflowId ?? null}
     )
     returning id
   `;

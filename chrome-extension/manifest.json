@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "LeadGennie Automation Engine",
+  "version": "4.2",
+  "description": "Autonomous GTM agent for profile context extraction and campaign execution.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "alarms",
+    "identity",
+    "debugger"
+  ],
+  "host_permissions": [
+    "*://*.linkedin.com/*",
+    "http://localhost:3000/*",
+    "https://leadgennie.com/*",
+    "https://*.vercel.app/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://sheets.googleapis.com/*"
+  ],
+  "oauth2": {
+    "client_id": "887235773122-vo8pvcvm40gasip93s30m475vo3uvhbc.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/spreadsheets"]
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.linkedin.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "LeadGennie Agent"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}

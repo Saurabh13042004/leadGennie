@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LeadGennie Agent</title>
+  <style>
+    body {
+      width: 320px;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0A0D14;
+      color: #fff;
+    }
+    .header {
+      padding: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo {
+      width: 24px;
+      height: 24px;
+      background: #6366f1;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* Replaced SVG inline style */
+    .logo svg {
+      color: white;
+    }
+    .header-title {
+      font-weight: bold; 
+      font-size: 16px; 
+      letter-spacing: -0.5px;
+    }
+    .content {
+      padding: 16px;
+    }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 10px #22c55e;
+    }
+    .dot.off {
+      background: #6b7280;
+      box-shadow: none;
+    }
+    .btn {
+      width: 100%;
+      padding: 10px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background: #4338ca;
+    }
+    .log {
+      margin-top: 16px;
+      background: #000;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 8px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #a8a29e;
+      height: 80px;
+      overflow-y: auto;
+    }
+    #syncBtn { background: #22c55e; margin-bottom: 8px; }
+    #scrapeBtn { margin-bottom: 8px; }
+    #standaloneBtn { background: #6366f1; margin-bottom: 8px; }
+    #optionsBtn { background: #374151; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C12 2 12.5 8.5 15.5 11.5C18.5 12.5 22 12 22 12C22 12 18.5 12.5 15.5 15.5C12.5 18.5 12 22 12 22C12 22 11.5 18.5 8.5 15.5C5.5 12.5 2 12 2 12C2 12 5.5 12.5 8.5 11.5C11.5 8.5 12 2 12 2Z"></path></svg>
+    </div>
+    <div class="header-title">LeadGennie Agent</div>
+  </div>
+  
+  <div class="content">
+    <div class="status">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">Checking connection...</span>
+    </div>
+
+    <button class="btn hidden" id="syncBtn">Sync Now</button>
+    <button class="btn" id="scrapeBtn">Generate Message for This Profile</button>
+    <button class="btn" id="standaloneBtn">Run Standalone Mode</button>
+    <button class="btn" id="optionsBtn">Settings</button>
+
+    <div class="log" id="logBox">
+      > Awaiting instructions...
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

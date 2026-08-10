@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LeadGennie Chrome Extension Message Protocol",
+  "type": "object",
+  "oneOf": [
+    {
+      "title": "Process Context Request",
+      "description": "Sent from content script to background to trigger LLM personalization",
+      "properties": {
+        "type": { "const": "PROCESS_CONTEXT" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "profileUrl": { "type": "string", "format": "uri" },
+            "recentPosts": { "type": "array", "items": { "type": "string" } },
+            "jobPostings": { "type": "array", "items": { "type": "string" } },
+            "fundingInfo": { "type": ["string", "null"] },
+            "scrapedAt": { "type": "string", "format": "date-time" }
+          },
+          "required": ["profileUrl"]
+        }
+      },
+      "required": ["type", "payload"]
+    },
+    {
+      "title": "LLM Generated Sequence Response",
+      "description": "Payload returned by the LLM backend for sequence execution",
+      "properties": {
+        "success": { "type": "boolean" },
+        "data": {
+          "type": "object",
+          "properties": {
+            "connectionNote": { "type": "string", "maxLength": 300 },
+            "firstMessage": { "type": "string" },
+            "followUpSequence": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "delayDays": { "type": "integer" },
+                  "message": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Task Queue Enqueue",
+      "description": "Command to background worker to schedule an action in the queue",
+      "properties": {
+        "type": { "const": "ENQUEUE_TASK" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": { "enum": ["SEND_CONNECTION", "SEND_MESSAGE"] },
+            "note": { "type": "string" },
+            "message": { "type": "string" }
+          },
+          "required": ["type"]
+        }
+      },
+      "required": ["type", "payload"]
+    },
+    {
+      "title": "Dashboard Sync Request",
+      "description": "Relay telemetry back to the main LeadGennie platform dashboard",
+      "properties": {
+        "type": { "const": "SYNC_ACTION" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "event": { "type": "string" },
+            "task": { "type": "object" },
+            "status": { "enum": ["Success", "Failed"] },
+            "error": { "type": "string" }
+          },
+          "required": ["event"]
+        }
+      },
+      "required": ["type", "payload"]
+    }
+  ]
+}

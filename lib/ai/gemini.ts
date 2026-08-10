@@ -1,10 +1,25 @@
-import { GoogleGenAI, Type, type Schema } from "@google/genai";
+import { GoogleGenAI, ApiError, Type, type Schema } from "@google/genai";
 
 export class GeminiError extends Error {
   constructor(message: string, readonly cause?: unknown) {
     super(message);
     this.name = "GeminiError";
   }
+}
+
+/**
+ * Distinguishes "temporarily rate/quota-limited, will work again shortly or
+ * once billing is upgraded" from every other failure — the two look
+ * identical as a generic "Gemini request failed" otherwise, which isn't
+ * actionable for whoever sees it (a 20-requests/day free-tier cap is very
+ * easy to hit while testing, and the fix is either "wait" or "upgrade
+ * billing," not "something is broken").
+ */
+function describeGeminiError(error: unknown): string {
+  if (error instanceof ApiError && error.status === 429) {
+    return "Gemini API quota exceeded — the free tier caps you at 20 requests/day for this model. Wait for the quota to reset or upgrade your Gemini API billing plan.";
+  }
+  return "Gemini request failed";
 }
 
 let client: GoogleGenAI | null = null;
@@ -38,7 +53,7 @@ export async function generateJson<T>(prompt: string, schema: Schema): Promise<T
     return JSON.parse(text) as T;
   } catch (error) {
     if (error instanceof GeminiError) throw error;
-    throw new GeminiError("Gemini request failed", error);
+    throw new GeminiError(describeGeminiError(error), error);
   }
 }
 
@@ -53,7 +68,7 @@ export async function generateText(prompt: string): Promise<string> {
     return text.trim();
   } catch (error) {
     if (error instanceof GeminiError) throw error;
-    throw new GeminiError("Gemini request failed", error);
+    throw new GeminiError(describeGeminiError(error), error);
   }
 }
 

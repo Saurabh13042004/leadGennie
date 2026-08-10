@@ -500,3 +500,42 @@ create table if not exists form_submissions (
 
 create index if not exists form_submissions_workspace_id_idx on form_submissions (workspace_id, created_at desc);
 create index if not exists form_submissions_dedupe_idx on form_submissions (form_id, dedupe_key);
+
+-- Agentic Flows: a saved, reusable sequence template — decoupled from any one
+-- campaign, unlike campaign_steps (which are always owned by exactly one
+-- campaign and thrown away with it). `canvas` stores the visual builder's
+-- node/edge layout verbatim (positions etc.) so re-opening a workflow renders
+-- exactly as it was left; `workflow_steps` below is the *derived*, linear,
+-- ordered execution list computed from that graph at save time — campaigns
+-- read from workflow_steps, never from canvas directly.
+create table if not exists workflows (
+  id bigserial primary key,
+  workspace_id bigint not null references workspaces (id) on delete cascade,
+  name text not null,
+  source_type text not null default 'all_leads', -- 'segment' | 'all_leads'
+  source_segment_id bigint references segments (id) on delete set null,
+  canvas jsonb not null default '{}',
+  created_by_user_id bigint references users (id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists workflows_workspace_id_idx on workflows (workspace_id);
+
+create table if not exists workflow_steps (
+  id bigserial primary key,
+  workflow_id bigint not null references workflows (id) on delete cascade,
+  step_order int not null,
+  channel text not null,
+  wait_days int not null default 0,
+  subject text,
+  body text not null default ''
+);
+
+create index if not exists workflow_steps_workflow_id_idx on workflow_steps (workflow_id);
+
+-- Traceability only, not live linkage — a campaign created from a workflow
+-- gets its own snapshotted campaign_steps copy (see lib/actions/campaigns.ts),
+-- so editing the workflow template later never retroactively changes a
+-- campaign that already launched from it.
+alter table campaigns add column if not exists workflow_id bigint references workflows (id) on delete set null;

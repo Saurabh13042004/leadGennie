@@ -1,23 +1,13 @@
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db/client";
+import { extensionAuthFromRequest } from "@/lib/auth/extension-token";
 
 export const dynamic = "force-dynamic";
 
-async function workspaceIdFromRequest(request: Request): Promise<number | null> {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token) return null;
-
-  const rows = await sql`select workspace_id from api_tokens where token = ${token}`;
-  if (rows.length === 0) return null;
-
-  await sql`update api_tokens set last_used_at = now() where token = ${token}`;
-  return rows[0].workspace_id as number;
-}
-
 export async function GET(request: Request) {
-  const workspaceId = await workspaceIdFromRequest(request);
-  if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await extensionAuthFromRequest(request);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { workspaceId } = auth;
 
   const rows = await sql`
     select
@@ -38,8 +28,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const workspaceId = await workspaceIdFromRequest(request);
-  if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await extensionAuthFromRequest(request);
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { workspaceId } = auth;
 
   const body = await request.json();
   const { id, status, error } = body as { id?: number; status?: "sent" | "failed"; error?: string };
