@@ -20,8 +20,8 @@ export default function MapStep({
   const duplicates = IMPORT_FIELDS.filter((f) => Object.values(mapping).filter((v) => v === f).length > 1);
   return (
     <div className="space-y-5">
-      <p className="text-sm text-neutral-400">
-        <span className="text-white">{fileName}</span> · {rows.length.toLocaleString()} rows detected. We matched your columns automatically —
+      <p className="text-sm text-neutral-500">
+        <span className="text-neutral-900 font-medium">{fileName}</span> · {rows.length.toLocaleString()} rows detected. We matched your columns automatically —
         check them, and change anything that&apos;s wrong.
       </p>
 
@@ -29,19 +29,19 @@ export default function MapStep({
         {headers.map((header) => {
           const sample = rows.find((r) => r[header]?.trim())?.[header]?.trim();
           return (
-            <div key={header} className="flex items-center gap-3 rounded-lg border border-white/10 px-3 py-2">
+            <div key={header} className="flex items-center gap-3 rounded-lg border border-neutral-200 px-3 py-2">
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-neutral-200 truncate">{header}</p>
-                {sample && <p className="text-[11px] text-neutral-600 truncate">e.g. {sample}</p>}
+                <p className="text-sm text-neutral-700 truncate">{header}</p>
+                {sample && <p className="text-[11px] text-neutral-400 truncate">e.g. {sample}</p>}
               </div>
-              <ArrowLeft className="w-3.5 h-3.5 text-neutral-600 rotate-180 shrink-0" />
+              <ArrowLeft className="w-3.5 h-3.5 text-neutral-300 rotate-180 shrink-0" />
               <select
                 aria-label={`Map column ${header}`}
                 value={mapping[header] ?? ""}
                 onChange={(e) => onChange({ ...mapping, [header]: e.target.value as ImportField | "" })}
                 className={cn(
-                  "bg-white/5 border rounded-lg text-sm text-white px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-white/20",
-                  mapping[header] ? "border-blue-500/30" : "border-white/10",
+                  "bg-neutral-50 border rounded-lg text-sm text-neutral-900 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300",
+                  mapping[header] ? "border-indigo-300" : "border-neutral-200",
                 )}
               >
                 <option value="">Ignore column</option>
@@ -55,13 +55,13 @@ export default function MapStep({
       </div>
 
       {duplicates.length > 0 && (
-        <p className="flex items-start gap-2 text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
+        <p className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-px" />
           More than one column is mapped to {duplicates.map((f) => FIELD_LABELS[f]).join(", ")}. The first non-empty value in each row is used.
         </p>
       )}
       {!canContinue && (
-        <p className="text-sm text-yellow-300 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
           Map a &quot;Full name&quot; column (or &quot;First name&quot; / &quot;Last name&quot;) to continue.
         </p>
       )}
@@ -70,8 +70,8 @@ export default function MapStep({
         onClick={onContinue}
         disabled={!canContinue}
         className={cn(
-          "w-full rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors",
-          canContinue ? "bg-white text-black hover:bg-neutral-200" : "bg-white/10 text-neutral-500 cursor-not-allowed",
+          "w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors",
+          canContinue ? "bg-neutral-900 text-white hover:bg-neutral-800" : "bg-neutral-100 text-neutral-400 cursor-not-allowed",
         )}
       >
         Continue to preview
