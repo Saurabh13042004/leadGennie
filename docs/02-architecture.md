@@ -1,6 +1,6 @@
 # 02 — Architecture
 
-Keep: Next.js 16 App Router + Neon Postgres + NextAuth + Resend + OpenAI (gpt-4o). Add: a durable job layer, a tool-based agent layer, a structured-output validation layer, and a **Python Intelligence Engine** (separate service, decision D-11) that investigates the world.
+Keep: Next.js 16 App Router + Neon Postgres + NextAuth + Resend + OpenAI (gpt-4o-mini). Add: a durable job layer, a tool-based agent layer, a structured-output validation layer, and a **Python Intelligence Engine** (separate service, decision D-11) that investigates the world.
 
 > **Next.js runs the business/product. Python investigates the world.**
 
@@ -163,7 +163,7 @@ The existing precheck logic in `lib/campaigns/dispatch.ts` and `lib/compliance.t
 
 ## LLM usage
 
-- **Next:** single entry `lib/ai/client.ts` (**exists**: provider-neutral `generateJson`/`generateText` over an `LlmProvider` adapter — `lib/ai/providers/openai.ts`, model from `OPENAI_MODEL`, default `gpt-4o`): structured output, token accounting, `usage_record`, per-workspace limits, quota mapping, mockable. Used for: planner, personalization copy, reply classification/drafts, AI filter builder.
+- **Next:** single entry `lib/ai/client.ts` (**exists**: provider-neutral `generateJson`/`generateText` over an `LlmProvider` adapter — `lib/ai/providers/openai.ts`, model from `OPENAI_MODEL`, default `gpt-4o-mini`): structured output, token accounting, `usage_record`, per-workspace limits, quota mapping, mockable. Used for: planner, personalization copy, reply classification/drafts, AI filter builder.
 - **Engine:** single entry `llm/client.py` with the same guarantees; returns `usage[]` to Next (Next writes `usage_records` — single writer).
 - Model choice per task via config (cheap for classification/normalization/entailment, stronger for planning/personalization). Provider swappable (D-02).
 

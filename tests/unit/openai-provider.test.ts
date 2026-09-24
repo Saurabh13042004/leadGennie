@@ -69,7 +69,7 @@ describe("OpenAI provider", () => {
     });
     expect(out).toEqual({ body: "hi" });
     const args = create.mock.calls[0][0];
-    expect(args.model).toBe("gpt-4o");
+    expect(args.model).toBe("gpt-4o-mini");
     expect(args.response_format.type).toBe("json_schema");
     expect(args.response_format.json_schema.strict).toBe(true);
   });

@@ -47,7 +47,7 @@ describe.skipIf(!process.env.RUN_LIVE_LLM)("OpenAI live smoke", () => {
     const d = await draftMessage({ channel: "email", stepIndex: 0, audienceLabel: "VP Sales at B2B SaaS", senderCompany: "Acme", senderPitch: "We help SDR teams book more qualified meetings." });
     expect(d.subject && d.subject.length).toBeGreaterThan(0);
     expect(d.body.length).toBeGreaterThan(20);
-    expect(d.model).toBe("gpt-4o");
+    expect(d.model).toBe("gpt-4o-mini");
   });
 
   it("returns plain text", async () => {

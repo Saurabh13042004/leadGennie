@@ -134,4 +134,4 @@ Next-side counterpart: `lib/intelligence/` — `client.ts` (typed HTTP client, s
 
 Implemented as specified except: SQL migrations instead of Alembic; extra neutral modules `app/urls.py` (registrable-domain helpers), `app/injection.py` (prompt-injection scanner), `app/documents.py` (`RawDocument`/`DocumentSet`), `app/dates.py`, `app/clock.py`; scripts in `scripts/` (`migrate.py`, `smoke.py`, `export_openapi.py`); `openapi.json` is committed (drift-checked). Details and findings: [`agents/evidence-validator.md`](agents/evidence-validator.md#as-built-phase-2a--deviations-and-findings), [`sources.md`](sources.md#as-built-phase-2a), [`development.md`](development.md#as-built-phase-2a).
 
-**Live smoke (real fetch + gpt-4o, `linear.app`):** 5 pages, 4 LLM calls, ≈ $0.04, 17/17 claims verified, 6 hiring signals, 5 leadership people, contract invariants OK, warnings only for the unconfigured search provider.
+**Live smoke (real fetch + gpt-4o-mini, `linear.app`):** 5 pages, 4 LLM calls, ≈ $0.04, 17/17 claims verified, 6 hiring signals, 5 leadership people, contract invariants OK, warnings only for the unconfigured search provider.

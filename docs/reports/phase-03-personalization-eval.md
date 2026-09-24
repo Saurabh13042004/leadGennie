@@ -1,6 +1,6 @@
 # Phase 3 personalization eval
 
-Run 2026-09-24 · model `gpt-4o` · prompt `cold-email/v1` · 32 cases (fixtures: `tests/fixtures/personalization/cases.ts`).
+Run 2026-09-24 · model `gpt-4o-mini` · prompt `cold-email/v1` · 32 cases (fixtures: `tests/fixtures/personalization/cases.ts`).
 
 | Metric | Result |
 |---|---|

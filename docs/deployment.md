@@ -91,7 +91,7 @@ Private HTTP service in `services/intelligence/` (image built from its `Dockerfi
 | `INTELLIGENCE_URL`, `INTELLIGENCE_SERVICE_TOKEN`, `INTELLIGENCE_SIGNING_SECRET` | Next.js worker | how the app calls the engine (bearer + HMAC of `timestamp.METHOD.path.body`) |
 | `INTELLIGENCE_SERVICE_TOKEN`, `INTELLIGENCE_SIGNING_SECRET` (+ `_PREVIOUS` during rotation) | engine | must match; the engine **refuses to serve** without them |
 | `INTEL_DATABASE_URL` | engine | Postgres role limited to the `intel` schema (unset ⇒ in-memory, dev only). Apply schema once with a privileged role: `python scripts/migrate.py` |
-| `OPENAI_API_KEY`, `OPENAI_MODEL` (`gpt-4o`) | engine | LLM |
+| `OPENAI_API_KEY`, `OPENAI_MODEL` (`gpt-4o-mini`) | engine | LLM |
 | `SEARCH_PROVIDER=brave`, `BRAVE_API_KEY` | engine | web/news search (unset ⇒ first-party pages + job boards only) |
 | `FETCH_USER_AGENT`, `FETCH_HOST_RPS`, `FETCH_MAX_BYTES` | engine | politeness; the UA must link to a real bot-info page before production |
 

@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { LlmError, type LlmCallOptions, type LlmProvider, type LlmSchema } from "@/lib/ai/llm-types";
 
-export const DEFAULT_OPENAI_MODEL = "gpt-4o";
+export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 
 export function openAiModelName(): string {
   return process.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL;

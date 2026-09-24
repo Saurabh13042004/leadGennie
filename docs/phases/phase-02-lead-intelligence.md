@@ -15,7 +15,7 @@ Phase 2 ships in two sub-phases, each independently verifiable:
 2B can start against the **fake engine** as soon as the 2A contract is merged (WP2A.1), so the two run in parallel after the contract lands.
 
 ## Starting point
-No research/scoring/signals/evidence exists (`/dashboard/signals`, `/accounts` are stubs); no Python in the repo. `generateJson` exists in TS (OpenAI `gpt-4o` since 2026-09-24, `lib/ai/client.ts`). LLM cost/quota needs a spend limit on the key (**D-02**, decided). Data-source decision **D-03**: this phase uses web search + first-party sites + news + job pages on leads the user already has; **no people/company discovery provider yet** (Phase 8).
+No research/scoring/signals/evidence exists (`/dashboard/signals`, `/accounts` are stubs); no Python in the repo. `generateJson` exists in TS (OpenAI `gpt-4o-mini` since 2026-09-24, `lib/ai/client.ts`). LLM cost/quota needs a spend limit on the key (**D-02**, decided). Data-source decision **D-03**: this phase uses web search + first-party sites + news + job pages on leads the user already has; **no people/company discovery provider yet** (Phase 8).
 
 ---
 

@@ -15,8 +15,8 @@ Open questions that change what gets built. Each has a **recommendation** so wor
 **Decision:** _pending_
 
 ## D-02 — LLM provider, billing tier, and model routing
-**Status: DECIDED (owner, 2026-09-24): OpenAI `gpt-4o`.** Migrated off Gemini; a stronger model isn't needed. The Gemini free tier (20 requests/day) is no longer a blocker.
-**Implemented (Next.js side):** all LLM calls go through `lib/ai/client.ts` (`generateJson`, `generateText`, `MODEL_NAME`) over an `LlmProvider` adapter (`lib/ai/providers/openai.ts`); strict JSON-schema structured outputs; `OPENAI_API_KEY`, optional `OPENAI_MODEL` (default `gpt-4o`); errors mapped to `QUOTA_EXCEEDED` / `RATE_LIMITED` / `NOT_CONFIGURED` / `PROVIDER_ERROR`. `@google/genai` removed.
+**Status: DECIDED (owner, 2026-09-24): OpenAI `gpt-4o-mini`.** Migrated off Gemini; a stronger model isn't needed. The Gemini free tier (20 requests/day) is no longer a blocker.
+**Implemented (Next.js side):** all LLM calls go through `lib/ai/client.ts` (`generateJson`, `generateText`, `MODEL_NAME`) over an `LlmProvider` adapter (`lib/ai/providers/openai.ts`); strict JSON-schema structured outputs; `OPENAI_API_KEY`, optional `OPENAI_MODEL` (default `gpt-4o-mini` since 2026-09-25 — owner change from `gpt-4o-mini`; the Phase 2/3 live evals in the changelog were measured on `gpt-4o-mini` and have not been re-run); errors mapped to `QUOTA_EXCEEDED` / `RATE_LIMITED` / `NOT_CONFIGURED` / `PROVIDER_ERROR`. `@google/genai` removed.
 **Still to do:** the Python engine's `llm/client.py` uses the OpenAI Python SDK with the same rules (structured output, usage accounting, quota mapping); cheap tasks (normalization, entailment, classification) may later route to a smaller model via per-task env overrides — only if evals show it's worth it.
 **Operational:** set a monthly spend limit on the OpenAI key; budgets per engine run (`max_llm_calls`, `max_cost_usd`) cap research cost. Revoke the old Gemini key that was once hardcoded in the extension (no longer used).
 **Decision:** _decided_

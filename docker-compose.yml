@@ -34,7 +34,7 @@ services:
       INTELLIGENCE_SERVICE_TOKEN: dev-token
       INTELLIGENCE_SIGNING_SECRET: dev-secret
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       SEARCH_PROVIDER: ${SEARCH_PROVIDER:-none}
       BRAVE_API_KEY: ${BRAVE_API_KEY:-}
     ports: ["8000:8000"]

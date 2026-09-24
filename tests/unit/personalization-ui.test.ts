@@ -13,7 +13,7 @@ const evidence = { 11: { id: 11, claim: "Acme is hiring 4 sales roles", snippet:
 const draft = (over: Partial<DraftView> = {}): DraftView => ({
   id: 1, leadId: 1, leadName: "Sarah Chen", company: "Acme", stepIndex: 0, status: "draft", subject: "Ramping your new sales hires", body: GOOD_BODY,
   originalSubject: "Ramping your new sales hires", originalBody: GOOD_BODY, angle: "New hires", tone: "concise", includeNews: false,
-  claims: [{ text: "Acme is hiring 4 sales roles", evidenceId: 11 }], issues: [], attempts: 1, confidence: 0.8, model: "gpt-4o", promptVersion: "cold-email/v1",
+  claims: [{ text: "Acme is hiring 4 sales roles", evidenceId: 11 }], issues: [], attempts: 1, confidence: 0.8, model: "gpt-4o-mini", promptVersion: "cold-email/v1",
   createdAt: "2026-09-25T00:00:00.000Z", updatedAt: "2026-09-25T00:00:00.000Z", approvedAt: null, isCurrent: true, evidence, ...over,
 });
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);

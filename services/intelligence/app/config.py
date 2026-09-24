@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # llm
     openai_api_key: str = ""
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-4o-mini"
     openai_model_entailment: str = ""
 
     # search / news (D-03)

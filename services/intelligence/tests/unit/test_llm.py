@@ -33,7 +33,7 @@ def test_strict_schema_keeps_property_names_that_look_like_keywords() -> None:
 
 
 class ScriptedBackend:
-    provider, model = "test", "gpt-4o"
+    provider, model = "test", "gpt-4o-mini"
 
     def __init__(self, *texts: str | Exception) -> None:
         self.texts, self.prompts = list(texts), []
@@ -52,7 +52,7 @@ async def test_valid_output_parses_and_records_usage_and_trace() -> None:
     out = await llm.generate(ctx, task="t", system="s", user="u", schema=Out)
     assert out.items[0].title == "a"
     assert ctx.usage[0].tokens_in == 1000 and ctx.usage[0].cost_estimate == pytest.approx(
-        estimate_cost("gpt-4o", 1000, 200)
+        estimate_cost("gpt-4o-mini", 1000, 200)
     )
     assert ctx.trace[0].tool == "t" and ctx.budget.llm_calls == 1
 

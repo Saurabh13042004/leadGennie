@@ -8,7 +8,7 @@
 | Packaging | `uv` (`pyproject.toml` + committed `uv.lock`) — pin everything |
 | Web | FastAPI + Uvicorn; pydantic v2 models as the contract |
 | HTTP | httpx (async) |
-| LLM | OpenAI Python SDK (`gpt-4o`, structured outputs via JSON schema / pydantic parsing) behind `llm/client.py` (provider-swappable; same D-02 decision as the app). Verify current SDK API before coding |
+| LLM | OpenAI Python SDK (`gpt-4o-mini` default, structured outputs via JSON schema / pydantic parsing) behind `llm/client.py` (provider-swappable; same D-02 decision as the app). Verify current SDK API before coding |
 | DB | psycopg 3 (async, pooled) to the **`intel` schema only**. Migrations are plain numbered SQL (`migrations/*.sql`) applied by `scripts/migrate.py` with checksums (`intel.schema_migrations`) — Alembic was dropped: it would pull in SQLAlchemy for three tables |
 | Lint/format | ruff (lint + format) |
 | Types | mypy `--strict` (or pyright strict) — no untyped defs |

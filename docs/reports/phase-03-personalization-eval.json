@@ -1,6 +1,6 @@
 {
   "stats": {
-    "model": "gpt-4o",
+    "model": "gpt-4o-mini",
     "promptVersion": "cold-email/v1",
     "cases": 32,
     "validatorPassRate": 0.90625,

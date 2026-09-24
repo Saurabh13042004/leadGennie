@@ -84,7 +84,7 @@ export class FakeIntelligenceClient implements IntelligenceClient {
         { seq: 2, stage: "extracting", tool: "extract", started_at: "2026-09-24T10:00:02Z", duration_ms: 3400, status: "ok", input_summary: "5 documents", output_summary: "facts=5", tokens_in: 900, tokens_out: 200 },
       ],
       usage: [
-        { kind: "llm", provider: "openai", model: "gpt-4o", units: 1, tokens_in: 900, tokens_out: 200, cost_estimate: 0.0043 },
+        { kind: "llm", provider: "openai", model: "gpt-4o-mini", units: 1, tokens_in: 900, tokens_out: 200, cost_estimate: 0.0043 },
         { kind: "fetch", provider: "http", model: null, units: 5, tokens_in: 0, tokens_out: 0, cost_estimate: 0 },
       ],
     };
