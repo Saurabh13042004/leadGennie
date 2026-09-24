@@ -31,8 +31,8 @@ Claim ─► Evidence (url + snippet) ─► Source (captured doc) ─► Checks
 ## Confidence
 ```
 confidence = clamp01( tier_weight × entailment_factor × recency_factor × (1 + min(0.15, 0.05 × (independent_sources − 1))) )
-tier_weight: first_party 0.95 · reputable_news 0.9 · ats/job_board 0.9 · press_release 0.85 · blog/aggregator 0.6 · unknown 0.4
-entailment_factor: yes 1.0 · partial 0.8 · no → hard fail
+tier_weight: first_party 0.95 · reputable_news 0.9 · ats/job_board 0.9 · press_release 0.85 · **dated_news 0.75** (news article on an unlisted domain that states its publish date) · news/aggregator 0.6 (undated) · unknown 0.4
+entailment_factor: yes 1.0 · partial 0.9 (the narrowed claim is re-checked by the deterministic gate) · no → hard fail
 verified = all hard checks pass AND confidence ≥ VERIFY_THRESHOLD (default 0.70)
 ```
 Every verdict returns `checks[]` with pass/fail + notes (why unverified) so the UI/debug page can explain, and evals can audit.
@@ -56,3 +56,12 @@ Entailment LLM unavailable → claims needing it are `verified=false` with note 
 
 ## Evals
 Adversarial corpus (~150 cases): fabricated URL; correct URL wrong snippet; paraphrase-true; paraphrase-false (number changed); homonym company; stale news presented as current; contradictory sources; injection-laden page; partial support. Metrics: **false-verified rate (must be 0)**, false-unverified rate (tracked, target < 15%), agreement between rule and LLM checks.
+
+## As built (Phase 2A) — deviations and findings
+
+- **Tier `dated_news` (0.75) added.** With the original tiers a dated article on an unlisted news site (0.6) could never reach the 0.70 threshold even with corroboration (cap +0.15 needs 4 sources), so legitimate coverage was structurally unverifiable.
+- **Partial entailment factor 0.9 (was 0.8).** A partial verdict only verifies the *narrowed* claim, and that narrowed claim must itself pass the deterministic consistency gate; 0.8 double-penalised press releases (0.85 × 0.8 = 0.68 < 0.70).
+- **Homonym guard is headquarters-based, not "any other country".** A third-party page fails entity match only if it says the company is **based in** a different country ("based in Boston, USA", "Boston-based", "(Boston, USA)"). Naming another country as an expansion destination ("opened an office in Austin") is *not* a conflict — the first version treated it as one and wrongly rejected cross-border expansion news. The entailment prompt also carries `COMPANY: name (domain), based in location` and instructs "differently-named company (e.g. Acme Robotics vs Acme) ⇒ no".
+- **Job boards prove identity only via the claimed company's own site.** `RawDocument.metadata.linked_from` (set by the jobs collector) must be on the *same registrable domain as the claim's company*. The first version accepted any linked board — the generated adversarial corpus caught Acme verifying against Globex's board.
+- **Known limit:** a homonym page with no location/domain cue ("Acme Robotics raised $30M") is caught only by the entailment judge, not by rules. Mitigations: entity-aware entailment prompt, tiers (unlisted third parties can't reach the threshold alone), and corpus tracking. This is the residual risk to watch in live evals.
+- **Measured (fake LLM):** `tests/evals/` — hand-written 25 cases + generated corpus of **215 negatives / 30 positives**: **0 false-verified** (even with a sycophantic judge that answers "yes" to everything), **0 false-unverified**. Live: 17/17 first-party claims verified on a real site with gpt-4o; a live adversarial run against real pages is still to do (`make smoke`).

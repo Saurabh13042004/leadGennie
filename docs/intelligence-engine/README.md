@@ -89,7 +89,7 @@ services/intelligence/
     evidence/          validator.py matching.py confidence.py
     scoring/           icp.py intent.py
     llm/               client.py  prompts/  schemas/
-    store/             intel schema access: runs, source_cache (Alembic migrations)
+    store/             intel schema access: runs, source_cache, host limiter (memory + Postgres; plain SQL migrations)
     telemetry/         logging.py  trace.py  usage.py
   tests/  unit/ contract/ evals/ fixtures/(recorded HTTP)
 ```
@@ -129,3 +129,9 @@ Next-side counterpart: `lib/intelligence/` — `client.ts` (typed HTTP client, s
 | [`agents/qualification-agent.md`](agents/qualification-agent.md) | Fit qualification |
 | [`agents/outreach-research-agent.md`](agents/outreach-research-agent.md) | Why contact / why now / angle |
 | [`agents/evidence-validator.md`](agents/evidence-validator.md) | Claim verification gate |
+
+## As built (Phase 2A, 2026-09-24)
+
+Implemented as specified except: SQL migrations instead of Alembic; extra neutral modules `app/urls.py` (registrable-domain helpers), `app/injection.py` (prompt-injection scanner), `app/documents.py` (`RawDocument`/`DocumentSet`), `app/dates.py`, `app/clock.py`; scripts in `scripts/` (`migrate.py`, `smoke.py`, `export_openapi.py`); `openapi.json` is committed (drift-checked). Details and findings: [`agents/evidence-validator.md`](agents/evidence-validator.md#as-built-phase-2a--deviations-and-findings), [`sources.md`](sources.md#as-built-phase-2a), [`development.md`](development.md#as-built-phase-2a).
+
+**Live smoke (real fetch + gpt-4o, `linear.app`):** 5 pages, 4 LLM calls, ≈ $0.04, 17/17 claims verified, 6 hiring signals, 5 leadership people, contract invariants OK, warnings only for the unconfigured search provider.

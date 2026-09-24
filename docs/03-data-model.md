@@ -86,7 +86,7 @@ Unique `(provider, provider_message_id)`.
 ### `jobs` (Phase 5; minimal enqueue helper earlier)
 See `02-architecture.md`.
 
-### Engine-owned `intel` schema (Phase 2A — separate Alembic migrations, not in `db/migrations`)
+### Engine-owned `intel` schema (Phase 2A — separate plain-SQL migrations in `services/intelligence/migrations/`, not in `db/migrations`)
 `intel.runs (run_id, idempotency_key unique, task, status, progress, input_hash, result jsonb, trace jsonb, usage jsonb, error, created_at, finished_at, expires_at)`, `intel.source_cache (url_hash, url, fetched_at, etag, html_hash, text, source_type, expires_at)` — **public content only, no workspace identifiers**, `intel.host_limits` (shared per-host rate limiter). The engine's DB role cannot access the product schema; Next's role cannot rely on `intel` (it talks to the engine over HTTP).
 
 ### `schema_migrations` (Phase 0)

@@ -68,6 +68,7 @@ Open questions that change what gets built. Each has a **recommendation** so wor
 **Decision:** _decided_
 
 ## D-12 — Engine hosting, DB access, and run durability (details of D-11)
+**Implementation status (2026-09-24):** everything except the *host choice* is built and verified locally — poll pattern, `intel` schema + limited-role design, shared per-host limiter, run resume after a crash, Docker image (non-root, healthcheck). Only the staging deploy is blocked on picking a host.
 **Blocking for:** Phase 2A staging deploy (development can proceed locally with compose).
 **Open choices & recommendations:**
 - **Host:** a container platform with private networking and long-request support (e.g. Fly.io, Railway, Cloud Run). Avoid pure serverless functions for the engine (long runs, background tasks). *Recommend:* same provider/region as the worker script, private network to Next; if the web app is on Vercel, put the engine + worker on a private-reachable host and restrict inbound with the HMAC + IP allow-list (Vercel egress IPs are not static — verify; consider a tunnel/proxy or making the *worker* (not Vercel functions) the only caller).

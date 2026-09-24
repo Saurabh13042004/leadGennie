@@ -81,3 +81,18 @@ No new environment variables. Order matters:
    ```
    Add `--env=DATABASE_URL_TEST` to run against the test branch first. Node ≥ 22.18 is required (the scripts import the app's pure TypeScript normalizers via type-stripping; a harmless `MODULE_TYPELESS_PACKAGE_JSON` warning is printed).
 3. Nothing to schedule: imports run from the browser in ≤200-row chunks, each idempotent, so an interrupted import resumes with **Retry** in the modal.
+
+## Intelligence Engine (Phase 2A) — Python service
+
+Private HTTP service in `services/intelligence/` (image built from its `Dockerfile`). **Host: not chosen yet (decision D-12)** — needs a container platform with private networking and long-request support (Fly.io / Railway / Cloud Run). Only the always-on job worker (never browsers or serverless functions) calls it.
+
+| Variable | Where | Purpose |
+|---|---|---|
+| `INTELLIGENCE_URL`, `INTELLIGENCE_SERVICE_TOKEN`, `INTELLIGENCE_SIGNING_SECRET` | Next.js worker | how the app calls the engine (bearer + HMAC of `timestamp.METHOD.path.body`) |
+| `INTELLIGENCE_SERVICE_TOKEN`, `INTELLIGENCE_SIGNING_SECRET` (+ `_PREVIOUS` during rotation) | engine | must match; the engine **refuses to serve** without them |
+| `INTEL_DATABASE_URL` | engine | Postgres role limited to the `intel` schema (unset ⇒ in-memory, dev only). Apply schema once with a privileged role: `python scripts/migrate.py` |
+| `OPENAI_API_KEY`, `OPENAI_MODEL` (`gpt-4o`) | engine | LLM |
+| `SEARCH_PROVIDER=brave`, `BRAVE_API_KEY` | engine | web/news search (unset ⇒ first-party pages + job boards only) |
+| `FETCH_USER_AGENT`, `FETCH_HOST_RPS`, `FETCH_MAX_BYTES` | engine | politeness; the UA must link to a real bot-info page before production |
+
+Checklist before production: ≥ 2 replicas; TLS + private networking only; **egress restricted to the public internet** (block RFC1918/link-local/metadata — the SSRF guard is application-level); secrets in the platform secret manager; alerts on error rate, p95 run duration, LLM/search quota errors, fetch-block rate, budget-exhaustion rate; `intel` schema retention (30 days for runs). Local: `docker compose up engine-fake` (no keys) or `docker compose --profile real up`.

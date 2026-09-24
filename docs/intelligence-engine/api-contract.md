@@ -4,7 +4,7 @@ Source of truth: pydantic models in `services/intelligence/app/contracts/`. Fast
 
 ## Auth & headers
 
-- Private network only. Every request: `Authorization: Bearer <INTELLIGENCE_SERVICE_TOKEN>`, plus `X-LG-Timestamp` and `X-LG-Signature` = HMAC-SHA256(secret, `timestamp + "." + body`); reject skew > 5 min; constant-time compare. Token rotation supports two active secrets.
+- Private network only. Every request: `Authorization: Bearer <INTELLIGENCE_SERVICE_TOKEN>`, plus `X-LG-Timestamp` and `X-LG-Signature` = hex HMAC-SHA256(secret, `timestamp + "." + METHOD + "." + path-with-query + "." + body`) — binding the method and path means a captured signature can't be replayed against another endpoint; reject skew > 5 min; constant-time compare. **Fails closed:** a deployment with no token/secret configured answers `503 UNAVAILABLE`, never serves unauthenticated. Token rotation supports two active secrets.
 - Correlation headers (logging only, **not authorization**): `X-Request-Id`, `X-Agent-Run-Id`, `X-Job-Id`, `X-Workspace-Id`.
 - Response header `X-Contract-Version: 1.x`.
 

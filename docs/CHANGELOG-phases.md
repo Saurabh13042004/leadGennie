@@ -2,6 +2,48 @@
 
 Evidence log for each phase. Newest first.
 
+## Phase 2A — Intelligence Engine (code complete 2026-09-24; local + one live run; staging deploy pending)
+
+`services/intelligence/` — Python 3.12, FastAPI, pydantic v2, uv. Spec: `phases/phase-02-lead-intelligence.md` → 2A; design: `intelligence-engine/`.
+
+### What changed
+
+| WP | Result |
+|---|---|
+| 2A.1 Skeleton + contract | pydantic contract → committed `openapi.json` (drift-checked); bearer + HMAC (`timestamp.METHOD.path.body`, ±5 min, two rotating secrets, **fails closed**); error envelope; `/healthz` `/readyz` `/v1/capabilities`; idempotent async runs (`POST/GET /v1/runs`, cancel, SSE); **fake mode** (6 fixture companies incl. quota/slow/partial faults); memory + Postgres stores (`intel` schema, checksummed SQL migrations); run resume after a crash; retryable failures restart on resubmit |
+| 2A.2 Fetch + connectors | Guarded fetcher (SSRF: scheme/credentials/port, DNS + every redirect + connected-peer checks; robots; shared per-host limiter; size/type/timeout; injection scan) + website, web_search (Brave), news, jobs (Greenhouse/Lever/Ashby) connectors, deterministic planner, RSS via defusedxml |
+| 2A.3 Extraction + LLM | Strict-schema OpenAI client (retry-once-with-error, usage/cost, budget checked before every call, quota mapping), `FakeLlm`; extraction with mandatory verbatim `source_span` (unverifiable items dropped; unstated dates and unbacked counts neutralised); injection lines redacted from prompts |
+| 2A.4 Evidence Validator | 7 checks + confidence formula + standalone `POST /v1/evidence/validate`; fails closed when the LLM is unavailable/over budget |
+| 2A.5 Agents + pipeline | Research, Signal, Qualification (+`/v1/score`), Outreach Research; `ResearchPipeline` (traced, budgeted, cancellable, partial-on-budget); scoring = pure functions |
+| 2A.6 Hardening | Adversarial corpus (215 neg / 30 pos), 50-concurrent-run load test, boundary tests, Docker image, CI workflow, compose, root `verify:all`, docs |
+
+### Bugs / design flaws found by the tests (all fixed, regression-tested)
+1. **Job-board entity binding**: Acme's claim verified against Globex's board (any linked board counted as proof). Now the board must be linked from the *claimed company's* domain. (Found by the generated corpus.)
+2. **Location conflict too blunt**: any other country in the page blocked cross-border expansion news. Now headquarters-based only.
+3. **Tier arithmetic**: dated news on unlisted domains (0.6) could never verify → `dated_news` 0.75; partial entailment 0.8 → 0.9 (0.85×0.8 < 0.70).
+4. **Cancel race**: cancelling a queued-but-not-started run could be overwritten by the run marking itself `running` (found by the restart test on Postgres).
+5. **Rate limiter jitter**: slots were spaced but event-loop jitter bunched requests 0.1 ms apart at 10 ms spacing (load test) → limiter also tracks the actual last-send time.
+6. **`ElementTree` element falsiness** (`a or b` on children-less XML elements) silently dropped feed dates; `registrable_domain` collapsed every `.example` host to `example`; strict-schema converter stripped properties named `title`/`default`; ruff autofix removed imports that new code needed — each has a test.
+7. **Repo side effect (mine):** ESLint walked into `services/intelligence/.venv` (broke root `npm run lint`) → `services/**` ignored in ESLint and tsconfig.
+
+### Acceptance criteria (2A subset) — evidence
+| Criterion | Status | Evidence / caveat |
+|---|---|---|
+| Contract + fake mode usable by the Next side | ✅ | `openapi.json`; `make fake` / `docker compose up engine-fake`; contract invariants on every fixture |
+| Private + HMAC; no product-table access; cannot send email | ✅ tests | boundary tests (no mail libs; every SQL string is `intel.*`); auth tests incl. rotation, skew, method/path binding, fail-closed |
+| **Validator 0 false-verified** | ✅ | 215 generated negatives + 25 hand-written, sycophantic *and* honest judges; positives 0 missed. ⚠️ measured with a scripted judge, not live gpt-4o adversarially |
+| Every source URL was fetched by the engine; unverified never scores/outreach | ✅ | `check_invariants` enforced before any result leaves the engine (+ contract tests) |
+| Budgets hard; graceful partial | ✅ | pages / LLM calls / time / search all tested; partial result keeps invariants |
+| Prompt-injection page inert | ✅ tests | redacted from prompts; injected snippet rejected; no confidence uplift |
+| Idempotent + survives engine restart | ✅ | replay tests; **Postgres restart-mid-run test** |
+| 50 concurrent runs, host rate respected | ✅ | 502 requests to one host in 5.0 s at a 100 rps cap; all 50 succeeded with invariants |
+| Real run end-to-end | ✅ one site | `linear.app`: 5 pages, 4 LLM calls, ≈ $0.04, 17/17 verified, invariants OK |
+| `make verify` green; staging deploy | ✅ / ❌ | ruff, format, import-linter (3 contracts), mypy strict (83 files), 185 tests, OpenAPI drift. **Staging not deployed (no host — D-12)** |
+
+### Not done / deferred
+- Staging deploy (D-12 host), live search provider run (needs `BRAVE_API_KEY`, D-03), live adversarial validator eval, LLM-proposed search queries, People mode + discovery connectors (Phase 8), `public_profiles`/`reddit` (deliberately never).
+- **Next (2B):** app-side client (`lib/intelligence/*`), persistence with quarantine, jobs, ICP editor, lead detail page — against `make fake` first.
+
 ## Phase 1 — Lead foundation (code complete 2026-09-24; live backfill done; browser click-through pending)
 
 ### What changed

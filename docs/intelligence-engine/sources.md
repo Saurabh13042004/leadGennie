@@ -63,3 +63,12 @@ Deterministic first, LLM-structured second:
 - Fetch guardrails: SSRF suite (private IPs, redirects to metadata, DNS rebinding simulation, giant body, wrong content-type).
 - Extraction: golden files for expected structured output per fixture page.
 - Live smoke (manual, not CI): `make smoke DOMAIN=example.com` runs a real budget-limited run.
+
+## As built (Phase 2A)
+
+- **Search planner is deterministic only** (no LLM-proposed queries yet): funding / expansion / hiring / leadership templates + up to 2 offer-keyword queries + a `"name" "domain"` query. Web-search queries feed `web_search`, funding/expansion/leadership queries feed `news`.
+- **Search provider:** Brave adapter (`BRAVE_API_KEY`, `SEARCH_PROVIDER=brave`); `NullSearch` otherwise — connectors then skip with a visible warning (`web_search_unavailable`, `news_unavailable`) and the run continues on first-party pages + job boards. Endpoint paths/response shapes follow Brave's documented web/news search API but **were not exercised live** (no key yet): confirm at the first `make smoke` with a key (decision D-03).
+- **Website connector** allowance: ~40% of the page budget, max 8; nav-discovered pages first (careers, about, team, news, product, pricing, blog), default paths only for categories with no link (one default each); the blog RSS feed's first two items are read; off-site links are never followed.
+- **Jobs connector** reads Greenhouse / Lever / Ashby public JSON APIs only for boards **linked from the company's own pages**, and records `linked_from` so the validator can bind the board to the company. If a careers page isn't linked to a board (e.g. JS-rendered), the LLM extracts roles from the careers page text instead (spans required).
+- **Guardrail specifics:** robots — 4xx ⇒ allowed, 5xx/timeout ⇒ conservatively disallowed for the run; per-host limiter is shared via Postgres across replicas (and jitter-proof in-memory); redirect targets are re-resolved and re-checked; the connected peer address is re-checked (`network_stream.server_addr`) — a rebinding attempt can still cause one GET to reach an internal host before the response is discarded, so also deploy the engine with egress restricted to the public internet (network policy), see `development.md`.
+- **Job function classification** uses the ATS department when present, otherwise title rules (customer_success → sales → engineering → marketing → product → …). The live run showed regex-only classification mislabels edge titles; treat function-level counts as approximate.
