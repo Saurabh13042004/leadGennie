@@ -8,13 +8,14 @@ import { createPortal } from "react-dom";
 interface BookDemoModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialEmail?: string;
 }
 
-export default function BookDemoModal({ isOpen, onClose }: BookDemoModalProps) {
+export default function BookDemoModal({ isOpen, onClose, initialEmail = "" }: BookDemoModalProps) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: "",
-    email: "",
+    email: initialEmail,
     company: "",
     companySize: "",
     outboundVolume: "",
@@ -24,6 +25,16 @@ export default function BookDemoModal({ isOpen, onClose }: BookDemoModalProps) {
   const [submitted, setSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Adjust state during render (rather than in an effect) when the modal
+  // just opened, so a prefilled email from the caller takes effect.
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    if (isOpen && initialEmail) {
+      setFormData((prev) => ({ ...prev, email: initialEmail }));
+    }
+  }
 
   const challenges = [
     "Deliverability",
