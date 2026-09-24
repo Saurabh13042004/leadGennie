@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Caveat } from "next/font/google";
 import { ArrowRight, Check } from "lucide-react";
 import BookDemoModal from "@/components/BookDemoModal";
 import DashboardMockup from "./DashboardMockup";
+
+const caveat = Caveat({ subsets: ["latin"], weight: "600" });
 
 const PILLS = ["Prompt-driven lead filters", "Email + LinkedIn", "AI-built workflows"];
 
@@ -14,6 +17,9 @@ export default function LandingHero() {
   return (
     <>
       <section className="relative overflow-hidden px-5 pb-10 pt-16 md:pt-20">
+        <div className="pointer-events-none absolute -right-40 -top-40 -z-10 h-[520px] w-[520px] rounded-full bg-[conic-gradient(from_140deg,rgba(99,102,241,0.16),rgba(217,70,239,0.12),rgba(56,189,248,0.14),rgba(99,102,241,0.16))] blur-3xl" />
+        <div className="pointer-events-none absolute -left-32 top-72 -z-10 h-72 w-72 rounded-full bg-indigo-100/70 blur-3xl" />
+
         <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[1.02fr_0.98fr]">
           <div>
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-neutral-500">
@@ -63,7 +69,23 @@ export default function LandingHero() {
             </div>
           </div>
 
-          <div className="relative hidden lg:block">
+          <div className="relative hidden pt-14 lg:block">
+            <p
+              className={`${caveat.className} absolute -top-3 left-4 z-10 -rotate-3 text-2xl text-neutral-400`}
+            >
+              this is what your team sees ✦
+            </p>
+            <svg className="absolute left-6 top-9 z-10 h-10 w-16 text-neutral-300" viewBox="0 0 64 40" fill="none">
+              <path
+                d="M4 4C18 4 34 10 42 22C46 28 48 32 50 36"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeDasharray="1 6"
+              />
+              <path d="M50 36L42 33M50 36L47 28" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+
             <DashboardMockup />
           </div>
         </div>

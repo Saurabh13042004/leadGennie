@@ -53,52 +53,52 @@ export default function SignupForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm text-neutral-300 mb-1.5">Full name</label>
+        <label className="block text-sm text-neutral-600 mb-1.5">Full name</label>
         <input
           type="text"
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-2.5 text-white text-sm placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20"
+          className="w-full rounded-lg bg-neutral-50 border border-neutral-200 px-4 py-2.5 text-neutral-900 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
           placeholder="Jane Doe"
         />
       </div>
       <div>
-        <label className="block text-sm text-neutral-300 mb-1.5">Company</label>
+        <label className="block text-sm text-neutral-600 mb-1.5">Company</label>
         <input
           type="text"
           value={company}
           onChange={(e) => setCompany(e.target.value)}
-          className="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-2.5 text-white text-sm placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20"
+          className="w-full rounded-lg bg-neutral-50 border border-neutral-200 px-4 py-2.5 text-neutral-900 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
           placeholder="Juntrax Solutions"
         />
       </div>
       <div>
-        <label className="block text-sm text-neutral-300 mb-1.5">Work email</label>
+        <label className="block text-sm text-neutral-600 mb-1.5">Work email</label>
         <input
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-2.5 text-white text-sm placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20"
+          className="w-full rounded-lg bg-neutral-50 border border-neutral-200 px-4 py-2.5 text-neutral-900 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
           placeholder="you@company.com"
         />
       </div>
       <div>
-        <label className="block text-sm text-neutral-300 mb-1.5">Password</label>
+        <label className="block text-sm text-neutral-600 mb-1.5">Password</label>
         <input
           type="password"
           required
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-2.5 text-white text-sm placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20"
+          className="w-full rounded-lg bg-neutral-50 border border-neutral-200 px-4 py-2.5 text-neutral-900 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
           placeholder="At least 8 characters"
         />
       </div>
 
       {error && (
-        <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
           {error}
         </p>
       )}
@@ -106,7 +106,7 @@ export default function SignupForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full flex items-center justify-center gap-2 bg-white text-black font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-60"
+        className="w-full flex items-center justify-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-60"
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
         Create account

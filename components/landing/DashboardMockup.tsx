@@ -33,10 +33,13 @@ const RECENT_ACTIVITY = [
 
 export default function DashboardMockup() {
   return (
-    <div className="relative">
-      <div className="pointer-events-none absolute -inset-x-6 -inset-y-10 -z-10 rounded-[32px] bg-gradient-to-br from-indigo-100 via-indigo-50 to-transparent blur-2xl" />
+    <div className="relative" style={{ perspective: "1600px" }}>
+      <div className="pointer-events-none absolute -inset-x-10 -inset-y-12 -z-10 rounded-[40px] bg-[radial-gradient(circle_at_30%_20%,rgba(99,102,241,0.28),transparent_55%),radial-gradient(circle_at_80%_75%,rgba(217,70,239,0.18),transparent_50%),radial-gradient(circle_at_60%_10%,rgba(56,189,248,0.16),transparent_45%)] blur-2xl" />
 
-      <div className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-[0_24px_70px_rgba(20,25,30,0.12)]">
+      <div
+        className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-[0_30px_80px_rgba(79,70,229,0.16)] transition-transform duration-500 will-change-transform hover:[transform:perspective(1600px)_rotateY(-4deg)_rotateX(1deg)_rotateZ(0.6deg)]"
+        style={{ transform: "perspective(1600px) rotateY(-8deg) rotateX(2deg) rotateZ(1.4deg)" }}
+      >
         <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="flex h-5 w-5 items-center justify-center rounded border border-neutral-200 bg-white">
@@ -171,11 +174,15 @@ export default function DashboardMockup() {
         </div>
       </div>
 
-      <div className="absolute -bottom-5 -right-5 max-w-[220px] rounded-xl border border-neutral-200 bg-white p-3 shadow-[0_18px_45px_rgba(20,25,30,0.16)]">
+      <div className="absolute -bottom-6 -right-6 max-w-[220px] -rotate-2 rounded-xl border border-neutral-200 bg-white p-3 shadow-[0_18px_45px_rgba(79,70,229,0.18)]">
         <p className="mb-1 text-[11px] font-bold text-neutral-900">Built for high-volume outreach</p>
         <p className="text-[10px] leading-relaxed text-neutral-500">
           Use prompts, signals and workflows to make each touch more relevant.
         </p>
+      </div>
+
+      <div className="absolute -left-7 top-10 flex h-14 w-14 rotate-[-8deg] items-center justify-center rounded-2xl border border-neutral-200 bg-white shadow-[0_14px_34px_rgba(217,70,239,0.18)]">
+        <span className="text-xl">✦</span>
       </div>
     </div>
   );
