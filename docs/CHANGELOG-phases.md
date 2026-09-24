@@ -2,6 +2,28 @@
 
 Evidence log for each phase. Newest first.
 
+## Phase 8 (basic slice) — "Ask Gennie" on the Command Center (2026-09-25; verified hermetically + live against real OpenAI and the real DB; browser click-through pending)
+
+Prompt bar at the top of `/dashboard` → validated plan → **user approves** → deterministic run with live progress → results counted from the DB. Pulled forward on request; the rest of Phase 8 is untouched.
+
+| Piece | Where |
+|---|---|
+| Pure agent core (no DB/service/mail imports — eslint + `agent-boundaries` test) | `lib/agent/` (types, tool registry: `find_leads`, `research_leads`, `rank_leads`; `plan.ts` validator; `planner.ts`; `orchestrator.ts` state machine) |
+| Persistence + ports | `lib/db/gennie.ts`, `lib/domain/gennie/{service,services,jobs,view}.ts`, job type `gennie_run`, actions `lib/actions/gennie.ts` |
+| UI | `components/gennie/*`, `app/dashboard/gennie/[runId]`, prompt bar + recent runs on `app/dashboard/page.tsx` |
+
+Guarantees (each has a test): planning queues nothing · no approval, no run (a stray job is a no-op) · double-approve starts one run · plan re-validated at approval and args re-validated at every step · unknown tool / literal lead ids / extra keys rejected (strict schemas) · limits clamped with a warning · cancel stops fan-out (queued jobs canceled, engine runs asked to stop) · pause/resume · run state persisted → restart/double-delivery never re-queues research · counts come from the DB · tenant isolation (another workspace's run is NOT_FOUND) · no tool can send email or touch campaigns.
+
+Bugs found on the way (fixed):
+1. **`onJobSettled` closed any run referenced by a job's `agent_run_id` as if it were a research batch** (overwrote `progress`, marked runs `completed` even when paused/failed). Now only `*_batch` runs are settled by the hook (`lib/intelligence/jobs.ts`).
+2. Plan validation required the model's step list to be in dependency order; a real model wrote a valid plan backwards and it was rejected. Validation is now graph-based and orders steps itself.
+3. Logs dropped an error's `cause`, so "OpenAI request failed" was undiagnosable. `lib/log.ts` now serializes causes.
+4. The planner wasn't told research was *unavailable*, so it substituted a different plan; it now is, and pointless follow-up questions on wholly-unsupported requests are dropped.
+
+Live run (real `gpt-4o-mini`, real Neon, throwaway workspace, then deleted): 0 jobs before approval → approve → completed; ranking 92/83/71 and counts 4/4/3 equal the database; "email all my leads and schedule a campaign" → refused, not approvable; "do outbound" → asks what to do; prompt-injection → refusal note + read-only steps only.
+
+Not verified: real-browser click-through of the UI; the research step against the real engine (not configured here — covered with the fake engine); credits (Phase 10).
+
 ## Phase 3 — AI personalization (code complete 2026-09-25; verified hermetically + against the real model; strict-judge "0 fabricated" NOT literally met; browser click-through and Neon migration pending)
 
 **What exists**
@@ -17,7 +39,7 @@ Evidence log for each phase. Newest first.
 | `npm run verify` | exit 0 — 500 tests pass, 9 opt-in skipped (was 391) |
 | Hallucination injection (unit) | 27 fabricated drafts (invented expansion/funding/hire counts/location/mutual connection/prior call/integration/customers/metrics/competitor/person/award/promotion/urgency/flattery/embellishment/inference/presupposition, cross-workspace evidence id, …): **27/27 rejected**; plus clean, no-evidence and known-false-positive controls that must pass |
 | Integration (PGlite) | real research → real evidence rows → generate; hallucinating model → retry → `failed_validation` (approval refused; a human edit can rescue it); recovery on the rewrite; invalid JSON never persisted; foreign/unverified/superseded evidence excluded; tone in prompt; regenerate keeps history; edit keeps original + logs diff + warns not blocks; approval re-checks evidence; tenant isolation on every operation; bulk with a per-lead quota failure while the rest succeed; cap 50; no double-queue |
-| Live eval (`gpt-4o`, 32 cases; ~10 runs while tuning — last run: 29/32 pass, 18 on the first try, 11 after the one rewrite, 3 failed) | validators pass 81–91% across the last runs; **in every flagged statement I read, no invented fact, number, name, event or entity reached a passing draft**; a strict second-model judge still flags 1–5 passing drafts per run (5 in the last run), every one a *soft* problem (embellishment "seamless", generalisation, a presupposition inside a question, picking one of two conflicting evidence items) — so the spec line "0 fabricated statements under the judge" is **not** literally met; see `docs/reports/phase-03-personalization-eval.md` |
+| Live eval (`gpt-4o-mini`, 32 cases; ~10 runs while tuning — last run: 29/32 pass, 18 on the first try, 11 after the one rewrite, 3 failed) | validators pass 81–91% across the last runs; **in every flagged statement I read, no invented fact, number, name, event or entity reached a passing draft**; a strict second-model judge still flags 1–5 passing drafts per run (5 in the last run), every one a *soft* problem (embellishment "seamless", generalisation, a presupposition inside a question, picking one of two conflicting evidence items) — so the spec line "0 fabricated statements under the judge" is **not** literally met; see `docs/reports/phase-03-personalization-eval.md` |
 
 **What the live eval taught (each fixed, each with a regression test)**
 1. First run: 9% passed. The unknown-entity check treated every word of a Title-Case subject ("Exploring Meeting Efficiency") as an invented company. Fixed (Title-Case subjects skip the capitalization test but still face the claim rules).
@@ -42,7 +64,7 @@ Evidence log for each phase. Newest first.
 
 **Owner-side:** apply migrations `0008`, `0009`, `0010` to Neon (`npm run db:migrate`); open a researched lead and generate a draft; decide whether to gate on an LLM entailment check.
 
-## Live validation of `lead_research` (2026-09-25, real sites, gpt-4o, no search provider)
+## Live validation of `lead_research` (2026-09-25, real sites, gpt-4o-mini, no search provider)
 
 Ran `scripts/smoke.py` on linear.app, posthog.com (ICP: B2B SaaS/dev-tools, 20–1000 employees; lead "Head of Growth"). Cost ≈ $0.04–0.05 and 25–35 s per run.
 
@@ -142,7 +164,7 @@ Verification: `npm run verify` — typecheck ✅, lint ✅ (0 errors), `check:fa
 |---|---|---|
 | Contract + fake mode usable by the Next side | ✅ | `openapi.json`; `make fake` / `docker compose up engine-fake`; contract invariants on every fixture |
 | Private + HMAC; no product-table access; cannot send email | ✅ tests | boundary tests (no mail libs; every SQL string is `intel.*`); auth tests incl. rotation, skew, method/path binding, fail-closed |
-| **Validator 0 false-verified** | ✅ | 215 generated negatives + 25 hand-written, sycophantic *and* honest judges; positives 0 missed. ⚠️ measured with a scripted judge, not live gpt-4o adversarially |
+| **Validator 0 false-verified** | ✅ | 215 generated negatives + 25 hand-written, sycophantic *and* honest judges; positives 0 missed. ⚠️ measured with a scripted judge, not live gpt-4o-mini adversarially |
 | Every source URL was fetched by the engine; unverified never scores/outreach | ✅ | `check_invariants` enforced before any result leaves the engine (+ contract tests) |
 | Budgets hard; graceful partial | ✅ | pages / LLM calls / time / search all tested; partial result keeps invariants |
 | Prompt-injection page inert | ✅ tests | redacted from prompts; injected snippet rejected; no confidence uplift |

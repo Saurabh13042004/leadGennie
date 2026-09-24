@@ -11,7 +11,8 @@ import { loadWorkspaceContext } from "./request";
 /** Bulk research is capped per request: it bounds LLM/search spend and keeps the queue fair (spec: default 50). */
 export const MAX_BULK_RESEARCH = 50;
 
-export type ActorCtx = { workspaceId: number; userId: number };
+/** `parentRunId` links the batch to the run that started it (e.g. a Gennie run), atomically with its creation. */
+export type ActorCtx = { workspaceId: number; userId: number; parentRunId?: number | null };
 
 export type EnqueueResult = {
   agentRunId: number;
@@ -55,7 +56,7 @@ export async function enqueueLeadResearch(actor: ActorCtx, leadIds: number[]): P
   }
 
   const agentRunId = await createAgentRun({
-    workspaceId: actor.workspaceId, userId: actor.userId, type: "research_batch", input: { leadIds: ids },
+    workspaceId: actor.workspaceId, userId: actor.userId, type: "research_batch", input: { leadIds: ids }, parentRunId: actor.parentRunId ?? null,
     status: todo.length === 0 ? "completed" : "running",
   });
 

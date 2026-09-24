@@ -36,8 +36,18 @@ function minLevel(): LogLevel {
   return process.env.NODE_ENV === "production" ? "info" : "debug";
 }
 
-function serializeError(err: Error): LogFields {
-  return { name: err.name, message: err.message, stack: err.stack };
+function serializeError(err: Error, depth = 0): LogFields {
+  // Wrapper errors (LlmError, IntelligenceError, …) keep the real failure in `cause` — without it a log line
+  // says "request failed" and nothing else.
+  const cause = (err as { cause?: unknown }).cause;
+  return {
+    name: err.name,
+    message: err.message,
+    stack: err.stack,
+    ...(cause !== undefined && depth < 3
+      ? { cause: cause instanceof Error ? serializeError(cause, depth + 1) : sanitize(cause, 4) }
+      : {}),
+  };
 }
 
 function sanitize(value: unknown, depth = 0): unknown {

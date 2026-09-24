@@ -58,7 +58,7 @@ const SORT_SQL: Record<LeadSortKey, string> = {
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, "\\$&");
 
-function buildWhere(workspaceId: number, q: LeadListQuery) {
+export function buildWhere(workspaceId: number, q: LeadListQuery) {
   const params: unknown[] = [workspaceId];
   const clauses = ["l.workspace_id = $1"];
   const bind = (v: unknown) => {
@@ -81,7 +81,7 @@ function buildWhere(workspaceId: number, q: LeadListQuery) {
   return { where: clauses.join(" and "), params };
 }
 
-const FROM = `from leads l left join companies c on c.id = l.company_id and c.workspace_id = l.workspace_id`;
+export const FROM = `from leads l left join companies c on c.id = l.company_id and c.workspace_id = l.workspace_id`;
 
 export async function listLeadsPage(workspaceId: number, q: LeadListQuery): Promise<LeadListPage> {
   const { where, params } = buildWhere(workspaceId, q);

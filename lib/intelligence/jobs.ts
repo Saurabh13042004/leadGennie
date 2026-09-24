@@ -116,6 +116,11 @@ async function importRunTelemetry(ctx: JobContext, childRunId: number, view: Eng
 /** When every job of a batch has settled, close the parent run so the UI stops polling. */
 export async function settleBatchRun(workspaceId: number, batchRunId: number | null): Promise<void> {
   if (!batchRunId) return;
+  // Only BATCH runs (research_batch, personalization_batch) are closed by counting their jobs. A run of any other
+  // kind (e.g. a Gennie run, which owns its lifecycle) may have jobs that carry its id — settling those must never
+  // overwrite its progress or mark it completed.
+  const kind = await sql`select type from agent_runs where id = ${batchRunId} and workspace_id = ${workspaceId}`;
+  if (kind.length === 0 || !String(kind[0].type).endsWith("_batch")) return;
   const c = await jobCounts(workspaceId, batchRunId);
   const total = c.queued + c.running + c.succeeded + c.failed + c.dead + c.canceled;
   await updateAgentRunProgress(workspaceId, batchRunId, { total, ...c });

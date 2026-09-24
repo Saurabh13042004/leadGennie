@@ -90,6 +90,7 @@ export const navGroups: NavGroup[] = [
 export const allNavItems: NavItem[] = [...primaryNav, ...legacyNav];
 
 export function isNavItemActive(item: NavItem, pathname: string): boolean {
-  if (item.href === "/dashboard") return pathname === "/dashboard";
+  // Command Center owns the Gennie run pages; every other /dashboard/* path belongs to its own item.
+  if (item.href === "/dashboard") return pathname === "/dashboard" || pathname.startsWith("/dashboard/gennie/");
   return [item.href, ...(item.matchPrefixes ?? [])].some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }

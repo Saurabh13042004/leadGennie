@@ -56,7 +56,7 @@ Update this table as phases land. A phase is only "Done" when every acceptance c
 | 5 | Email execution engine | Not started |
 | 6 | Inbox & reply intelligence | Not started |
 | 7 | Chrome extension (capture) | Not started |
-| 8 | Gennie agent | Not started |
+| 8 | Gennie agent | **Basic slice ("Ask Gennie") shipped early** — plan → approve → run over the tools that exist today (find / research / rank leads); no send, no campaigns, no discovery. Full phase (campaign tools, planner evals, runs debug page, SSE) not started (see `CHANGELOG-phases.md`) |
 | 9 | Analytics | Not started |
 | 10 | Usage & credits | Not started |
 | 11 | Billing & beta launch | Not started |
