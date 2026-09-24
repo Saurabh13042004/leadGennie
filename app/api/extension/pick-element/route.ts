@@ -1,36 +1,37 @@
-import { NextResponse } from "next/server";
+import { z } from "zod";
+import { AppError, mapAiError, ok, parseJson, withApi } from "@/lib/api";
 import { extensionAuthFromRequest } from "@/lib/auth/extension-token";
-import { pickLinkedInElement, type ClickableCandidate } from "@/lib/ai/linkedin-element-picker";
-import { GeminiError } from "@/lib/ai/gemini";
+import { pickLinkedInElement } from "@/lib/ai/linkedin-element-picker";
 
 export const dynamic = "force-dynamic";
 
 const MAX_CANDIDATES = 60;
 
-export async function POST(request: Request) {
+const Body = z.object({
+  candidates: z
+    .array(
+      z.object({
+        index: z.number().int(),
+        tag: z.string().max(40),
+        text: z.string().max(500),
+        ariaLabel: z.string().max(500),
+        href: z.string().max(1000),
+      })
+    )
+    .min(1, "candidates is required"),
+  taskDescription: z.string().trim().min(1, "taskDescription is required").max(1_000),
+});
+
+export const POST = withApi(async (request) => {
   const auth = await extensionAuthFromRequest(request);
-  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth) throw new AppError("UNAUTHENTICATED", "Unauthorized");
 
-  const body = await request.json();
-  const { candidates, taskDescription } = body as {
-    candidates?: ClickableCandidate[];
-    taskDescription?: string;
-  };
-
-  if (!candidates || !Array.isArray(candidates) || candidates.length === 0) {
-    return NextResponse.json({ error: "candidates is required" }, { status: 400 });
-  }
-  if (!taskDescription || !taskDescription.trim()) {
-    return NextResponse.json({ error: "taskDescription is required" }, { status: 400 });
-  }
+  const { candidates, taskDescription } = await parseJson(request, Body);
 
   try {
     const result = await pickLinkedInElement(candidates.slice(0, MAX_CANDIDATES), taskDescription);
-    return NextResponse.json(result);
-  } catch (error) {
-    if (error instanceof GeminiError) {
-      return NextResponse.json({ error: error.message }, { status: 502 });
-    }
-    throw error;
+    return ok({ ...result });
+  } catch (err) {
+    throw mapAiError(err);
   }
-}
+});

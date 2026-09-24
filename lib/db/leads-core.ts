@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db/client";
+import { AppError } from "@/lib/api/errors";
 
 /**
  * Plain (non-"use server") shared core for creating/updating a lead —
@@ -31,7 +32,7 @@ export type LeadFields = {
 
 function normalizeLeadFields(input: LeadFields) {
   const full_name = input.full_name.trim();
-  if (!full_name) throw new Error("Full name is required.");
+  if (!full_name) throw new AppError("VALIDATION_ERROR", "Full name is required.");
   return {
     full_name,
     email: input.email?.trim() || null,
@@ -50,12 +51,11 @@ export async function assertLeadEmailAvailable(workspaceId: number, email: strin
         where workspace_id = ${workspaceId} and lower(email) = lower(${email}) and id != ${excludeId}
       `
     : await sql`select id from leads where workspace_id = ${workspaceId} and lower(email) = lower(${email})`;
-  if (rows.length > 0) throw new Error("A lead with this email already exists.");
+  if (rows.length > 0) throw new AppError("CONFLICT", "A lead with this email already exists.");
 }
 
 export async function insertLead(
   workspaceId: number,
-  ownerEmail: string,
   input: LeadFields,
   source: string
 ): Promise<LeadRecord> {
@@ -63,8 +63,8 @@ export async function insertLead(
   await assertLeadEmailAvailable(workspaceId, v.email);
 
   const inserted = await sql`
-    insert into leads (workspace_id, owner_email, full_name, email, company, job_title, linkedin_url, stage, source)
-    values (${workspaceId}, ${ownerEmail}, ${v.full_name}, ${v.email}, ${v.company}, ${v.job_title}, ${v.linkedin_url}, ${v.stage}, ${source})
+    insert into leads (workspace_id, full_name, email, company, job_title, linkedin_url, stage, source)
+    values (${workspaceId}, ${v.full_name}, ${v.email}, ${v.company}, ${v.job_title}, ${v.linkedin_url}, ${v.stage}, ${source})
     returning id, full_name, email, company, job_title, linkedin_url, stage, source, created_at
   `;
   return inserted[0] as LeadRecord;
@@ -85,6 +85,6 @@ export async function updateLeadFields(workspaceId: number, id: number, input: L
     where id = ${id} and workspace_id = ${workspaceId}
     returning id, full_name, email, company, job_title, linkedin_url, stage, source, created_at
   `;
-  if (updated.length === 0) throw new Error("Lead not found");
+  if (updated.length === 0) throw new AppError("NOT_FOUND", "Lead not found");
   return updated[0] as LeadRecord;
 }

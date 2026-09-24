@@ -1,48 +1,45 @@
+// Usage:
+//   node --env-file=.env.local scripts/migrate.mjs                 apply pending migrations to $DATABASE_URL
+//   node --env-file=.env.local scripts/migrate.mjs --status        show applied/pending, change nothing
+//   node --env-file=.env.local scripts/migrate.mjs --env=DATABASE_URL_TEST
+//
+// Migrations: db/migrations/NNNN_name.sql, forward-only, checksummed.
+// See scripts/lib/migrator.mjs.
 import { neon } from "@neondatabase/serverless";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import bcrypt from "bcryptjs";
+import { getStatus, loadMigrations, migrate, neonDriver } from "./lib/migrator.mjs";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const args = process.argv.slice(2);
+const envArg = args.find((a) => a.startsWith("--env="));
+const envName = envArg ? envArg.slice("--env=".length) : "DATABASE_URL";
+const statusOnly = args.includes("--status");
 
-if (!process.env.DATABASE_URL) {
-  console.error("DATABASE_URL is not set");
+const url = process.env[envName];
+if (!url) {
+  console.error(`${envName} is not set`);
   process.exit(1);
 }
 
-const sql = neon(process.env.DATABASE_URL);
-const schema = readFileSync(join(__dirname, "../lib/db/schema.sql"), "utf-8");
+const dir = join(dirname(fileURLToPath(import.meta.url)), "../db/migrations");
+const migrations = loadMigrations(dir);
+const driver = neonDriver(neon(url));
 
-// Strip full-line `--` comments before splitting on `;` — a semicolon inside
-// a comment (e.g. "does X; does Y") otherwise fragments the statement that
-// follows it, since this splitter has no notion of SQL comment syntax.
-const withoutComments = schema
-  .split("\n")
-  .filter((line) => !line.trim().startsWith("--"))
-  .join("\n");
+try {
+  if (statusOnly) {
+    const status = await getStatus(driver, migrations);
+    for (const m of migrations) {
+      const applied = status.applied.find((r) => r.version === m.version);
+      const bad = status.mismatched.some((x) => x.migration.version === m.version);
+      console.log(`${bad ? "MODIFIED" : applied ? "applied " : "pending "}  ${m.file}`);
+    }
+    for (const r of status.unknown) console.log(`UNKNOWN   ${r.version}_${r.name} (in DB, not in repo)`);
+    process.exit(status.mismatched.length || status.unknown.length ? 1 : 0);
+  }
 
-const statements = withoutComments
-  .split(";")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-for (const statement of statements) {
-  await sql.query(statement);
-  console.log("Ran:", statement.split("\n")[0].slice(0, 60));
-}
-
-console.log(`Migration complete (${statements.length} statements).`);
-
-const demoEmail = "demo@leadgennie.ai";
-const existingUser = await sql`select id from users where email = ${demoEmail}`;
-if (existingUser.length === 0) {
-  const passwordHash = bcrypt.hashSync("demo1234", 10);
-  await sql`
-    insert into users (name, email, password_hash, company)
-    values ('Demo User', ${demoEmail}, ${passwordHash}, 'Juntrax Solutions')
-  `;
-  console.log("Seeded demo user.");
-} else {
-  console.log("Demo user already present.");
+  const { appliedNow } = await migrate(driver, migrations, { log: (m) => console.log(m) });
+  console.log(appliedNow.length ? `Applied ${appliedNow.length} migration(s).` : "Database is up to date.");
+} catch (err) {
+  console.error(err instanceof Error ? err.message : err);
+  process.exit(1);
 }

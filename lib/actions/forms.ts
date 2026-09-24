@@ -5,7 +5,7 @@ import { sql } from "@/lib/db/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/workspace-context";
 import { logActivity } from "@/lib/activity";
-import { proposeLeadFromSubmission, workspaceOwnerEmail } from "@/lib/forms-core";
+import { proposeLeadFromSubmission } from "@/lib/forms-core";
 
 export type FormField = { key: string; label: string; type: "text" | "email" | "tel"; required: boolean };
 
@@ -166,13 +166,11 @@ export async function createLeadFromSubmission(submissionId: number) {
   if (!submission) throw new Error("Submission not found");
   if (submission.approval_id) throw new Error("This submission already has a proposal pending review.");
 
-  const owner = await workspaceOwnerEmail(workspaceId);
   const approvalId = await proposeLeadFromSubmission({
     workspaceId,
     submissionId,
     action: "create",
     fields: submission.payload as Record<string, string>,
-    ownerEmail: owner,
     requestedByUserId: userId,
   });
 

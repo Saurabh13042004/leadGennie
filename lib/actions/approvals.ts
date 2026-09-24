@@ -262,8 +262,8 @@ export async function decideApproval(approvalId: number, decision: "approved" | 
     } else if (payload.action === "create") {
       const f = payload.fields;
       const leadRows = await sql`
-        insert into leads (workspace_id, owner_email, full_name, email, company, source)
-        values (${workspaceId}, ${payload.owner ?? "unknown@workspace"}, ${f.full_name || f.email || "Unknown"}, ${f.email ?? null}, ${f.company ?? null}, 'form')
+        insert into leads (workspace_id, full_name, email, company, source)
+        values (${workspaceId}, ${f.full_name || f.email || "Unknown"}, ${f.email ?? null}, ${f.company ?? null}, 'form')
         returning id
       `;
       const leadId = leadRows[0].id as number;

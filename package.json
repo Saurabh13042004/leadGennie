@@ -7,7 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check:fake-metrics": "node scripts/checks/no-fake-metrics.mjs",
+    "verify": "npm run typecheck && npm run lint && npm run check:fake-metrics && npm run test && npm run build",
     "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
+    "db:migrate:status": "node --env-file=.env.local scripts/migrate.mjs --status",
     "db:seed": "node --env-file=.env.local scripts/seed.mjs",
     "scheduler": "node --env-file=.env.local scripts/scheduler.mjs"
   },
@@ -28,12 +34,14 @@
     "resend": "^6.17.1",
     "standardwebhooks": "^1.0.0",
     "tailwind-merge": "^3.6.0",
-    "three": "^0.184.0"
+    "three": "^0.184.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^20",
+    "@types/node": "^22.20.4",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -41,6 +49,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.1"
   }
 }

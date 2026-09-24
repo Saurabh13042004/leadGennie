@@ -1,24 +1,25 @@
-import { NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
+import { AppError, ok, withApi } from "@/lib/api";
 import { processEmailSends, processLinkedinSends } from "@/lib/campaigns/dispatch";
 
 export const dynamic = "force-dynamic";
 
-function unauthorized() {
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+function secretMatches(header: string | null, secret: string): boolean {
+  const expected = Buffer.from(`Bearer ${secret}`);
+  const actual = Buffer.from(header ?? "");
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-export async function GET(request: Request) {
+export const GET = withApi(async (request, _ctx, { log }) => {
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) {
-    return NextResponse.json({ error: "CRON_SECRET is not configured" }, { status: 500 });
-  }
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${cronSecret}`) {
-    return unauthorized();
+  if (!cronSecret) throw new AppError("NOT_CONFIGURED", "CRON_SECRET is not configured.");
+  if (!secretMatches(request.headers.get("authorization"), cronSecret)) {
+    throw new AppError("UNAUTHENTICATED", "Unauthorized");
   }
 
-  const emailResult = await processEmailSends();
-  const linkedinResult = await processLinkedinSends();
+  const email = await processEmailSends();
+  const linkedin = await processLinkedinSends();
+  log.info("cron.dispatch", { email, linkedin });
 
-  return NextResponse.json({ email: emailResult, linkedin: linkedinResult });
-}
+  return ok({ email, linkedin });
+});

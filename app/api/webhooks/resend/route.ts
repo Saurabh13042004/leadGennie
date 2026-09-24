@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { Webhook } from "standardwebhooks";
+import { AppError, ok, withApi } from "@/lib/api";
 import { sql } from "@/lib/db/client";
 import { logActivity } from "@/lib/activity";
 
@@ -26,18 +26,16 @@ type ResendWebhookEvent = {
  * call at all. Keeping this decoupled means bounce/complaint suppression
  * works independently of whether outbound sending is configured.
  */
-export async function POST(request: Request) {
+export const POST = withApi(async (request) => {
   const secret = process.env.RESEND_WEBHOOK_SECRET;
-  if (!secret) {
-    return NextResponse.json({ error: "RESEND_WEBHOOK_SECRET is not configured" }, { status: 500 });
-  }
+  if (!secret) throw new AppError("NOT_CONFIGURED", "RESEND_WEBHOOK_SECRET is not configured.");
 
   const payload = await request.text();
   const id = request.headers.get("webhook-id");
   const timestamp = request.headers.get("webhook-timestamp");
   const signature = request.headers.get("webhook-signature");
   if (!id || !timestamp || !signature) {
-    return NextResponse.json({ error: "Missing webhook signature headers" }, { status: 401 });
+    throw new AppError("UNAUTHENTICATED", "Missing webhook signature headers");
   }
 
   let event: ResendWebhookEvent;
@@ -49,17 +47,17 @@ export async function POST(request: Request) {
     });
     event = verified as ResendWebhookEvent;
   } catch {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    throw new AppError("UNAUTHENTICATED", "Invalid signature");
   }
 
   if (event.type !== "email.bounced" && event.type !== "email.complained" && event.type !== "email.suppressed") {
-    return NextResponse.json({ ok: true, ignored: event.type });
+    return ok({ ignored: event.type });
   }
 
   const emailId = event.data.email_id;
   const toEmail = event.data.to?.[0];
   if (!toEmail) {
-    return NextResponse.json({ ok: true, correlated: false });
+    return ok({ correlated: false });
   }
 
   // Correlate via provider_message_id (Resend's own send id), not just the
@@ -70,7 +68,7 @@ export async function POST(request: Request) {
   `;
   const row = rows[0];
   if (!row) {
-    return NextResponse.json({ ok: true, correlated: false });
+    return ok({ correlated: false });
   }
   const workspaceId = row.workspace_id as number;
 
@@ -103,5 +101,5 @@ export async function POST(request: Request) {
     });
   }
 
-  return NextResponse.json({ ok: true, suppressed: Boolean(reason) });
-}
+  return ok({ suppressed: Boolean(reason) });
+});

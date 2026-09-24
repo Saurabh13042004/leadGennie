@@ -1,6 +1,6 @@
 import { KeyRound } from "lucide-react";
 import { auth } from "@/auth";
-import { getOrCreateApiToken } from "@/lib/actions/api-tokens";
+import { getApiTokenInfo } from "@/lib/actions/api-tokens";
 import ApiCredentialsPanel from "@/components/dashboard/ApiCredentialsPanel";
 
 export const metadata = {
@@ -33,6 +33,6 @@ export default async function Page() {
     );
   }
 
-  const token = await getOrCreateApiToken();
-  return <ApiCredentialsPanel initialToken={token} />;
+  const info = await getApiTokenInfo();
+  return <ApiCredentialsPanel initialInfo={info} />;
 }

@@ -1,36 +1,27 @@
-import { NextResponse } from "next/server";
+import { z } from "zod";
+import { AppError, mapAiError, ok, parseJson, withApi } from "@/lib/api";
 import { extensionAuthFromRequest } from "@/lib/auth/extension-token";
 import { generatePersonalizedLinkedinMessage } from "@/lib/ai/linkedin-personalize";
-import { GeminiError } from "@/lib/ai/gemini";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+const Body = z.object({
+  profileUrl: z.string().trim().min(1, "profileUrl is required").max(500),
+  pageText: z.string().trim().min(1, "pageText is required").max(200_000),
+  sdrContext: z.string().max(5_000).optional(),
+  customPrompt: z.string().max(5_000).optional(),
+});
+
+export const POST = withApi(async (request) => {
   const auth = await extensionAuthFromRequest(request);
-  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth) throw new AppError("UNAUTHENTICATED", "Unauthorized");
 
-  const body = await request.json();
-  const { profileUrl, pageText, sdrContext, customPrompt } = body as {
-    profileUrl?: string;
-    pageText?: string;
-    sdrContext?: string;
-    customPrompt?: string;
-  };
-
-  if (!profileUrl) {
-    return NextResponse.json({ error: "profileUrl is required" }, { status: 400 });
-  }
-  if (!pageText || !pageText.trim()) {
-    return NextResponse.json({ error: "pageText is required" }, { status: 400 });
-  }
+  const { profileUrl, pageText, sdrContext, customPrompt } = await parseJson(request, Body);
 
   try {
     const result = await generatePersonalizedLinkedinMessage(profileUrl, pageText, sdrContext, customPrompt);
-    return NextResponse.json(result);
-  } catch (error) {
-    if (error instanceof GeminiError) {
-      return NextResponse.json({ error: error.message }, { status: 502 });
-    }
-    throw error;
+    return ok({ ...result });
+  } catch (err) {
+    throw mapAiError(err);
   }
-}
+});

@@ -1,32 +1,19 @@
-import { NextResponse } from "next/server";
+import { z } from "zod";
+import { ok, parseJson, withApi } from "@/lib/api";
 import { sql } from "@/lib/db/client";
 
-export async function POST(request: Request) {
-  const body = await request.json();
-  const {
-    name,
-    email,
-    company,
-    companySize,
-    outboundVolume,
-    challenges,
-    crmUsed,
-  } = body as {
-    name?: string;
-    email?: string;
-    company?: string;
-    companySize?: string;
-    outboundVolume?: string;
-    challenges?: string[];
-    crmUsed?: string;
-  };
+const Body = z.object({
+  name: z.string().trim().min(1, "Name is required.").max(120),
+  email: z.string().trim().min(1, "Email is required.").email("Enter a valid email address.").max(254),
+  company: z.string().trim().min(1, "Company is required.").max(160),
+  companySize: z.string().trim().max(60).optional(),
+  outboundVolume: z.string().trim().max(60).optional(),
+  challenges: z.array(z.string().trim().max(120)).max(20).optional(),
+  crmUsed: z.string().trim().max(120).optional(),
+});
 
-  if (!name || !email || !company) {
-    return NextResponse.json(
-      { error: "Name, email, and company are required." },
-      { status: 400 }
-    );
-  }
+export const POST = withApi(async (request) => {
+  const { name, email, company, companySize, outboundVolume, challenges, crmUsed } = await parseJson(request, Body);
 
   await sql`
     insert into demo_requests
@@ -35,5 +22,5 @@ export async function POST(request: Request) {
       (${name}, ${email}, ${company}, ${companySize ?? null}, ${outboundVolume ?? null}, ${challenges ?? []}, ${crmUsed ?? null})
   `;
 
-  return NextResponse.json({ ok: true });
-}
+  return ok();
+});

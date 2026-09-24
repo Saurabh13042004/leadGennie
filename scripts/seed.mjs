@@ -1,64 +1,77 @@
+// Creates ONE demo workspace, flagged workspaces.is_demo = true, so demos,
+// tests and E2E runs never mix with real customer data.
+//
+//   npm run db:seed -- --yes                      (password printed once if not supplied)
+//   SEED_DEMO_PASSWORD=... npm run db:seed -- --yes
+//   node --env-file=.env.local scripts/seed.mjs --yes --env=DATABASE_URL_TEST
+//
+// Idempotent. Seeds only real *records* (a user, a workspace, sample leads on
+// the reserved example.com domain) — never fabricated metrics or campaign stats.
 import { neon } from "@neondatabase/serverless";
+import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 
-if (!process.env.DATABASE_URL) {
-  console.error("DATABASE_URL is not set");
+const args = process.argv.slice(2);
+const envArg = args.find((a) => a.startsWith("--env="));
+const envName = envArg ? envArg.slice("--env=".length) : "DATABASE_URL";
+const url = process.env[envName];
+
+if (!url) {
+  console.error(`${envName} is not set`);
+  process.exit(1);
+}
+if (!args.includes("--yes")) {
+  console.error(`Refusing to seed ${envName} without --yes (this writes a demo user + workspace).`);
   process.exit(1);
 }
 
-const sql = neon(process.env.DATABASE_URL);
-const owner = "demo@leadgennie.ai";
+const sql = neon(url);
+const demoEmail = "demo@leadgennie.ai";
 
-const existing = await sql`select count(*)::int as count from campaigns where owner_email = ${owner}`;
-if (existing[0].count > 0) {
-  console.log("Demo campaigns already exist, skipping seed.");
-  process.exit(0);
-}
-
-const campaigns = [
-  {
-    name: "Q3 SaaS – India ICP",
-    status: "running",
-    audience_label: "Indian SaaS — Series B+",
-    channels: ["email", "linkedin"],
-    total_leads: 1248,
-    sent_count: 1020,
-    replied_count: 246,
-  },
-  {
-    name: "Series A Founders – US",
-    status: "running",
-    audience_label: "US Fintech founders",
-    channels: ["email", "linkedin"],
-    total_leads: 642,
-    sent_count: 410,
-    replied_count: 88,
-  },
-  {
-    name: "CTO outreach EMEA",
-    status: "paused",
-    audience_label: "MNC CTOs — EMEA",
-    channels: ["email"],
-    total_leads: 318,
-    sent_count: 318,
-    replied_count: 54,
-  },
-  {
-    name: "Fintech APAC – Re-engage",
-    status: "draft",
-    audience_label: "All qualified leads",
-    channels: ["email"],
-    total_leads: 0,
-    sent_count: 0,
-    replied_count: 0,
-  },
-];
-
-for (const c of campaigns) {
-  await sql`
-    insert into campaigns (owner_email, name, status, audience_label, channels, total_leads, sent_count, replied_count, from_email)
-    values (${owner}, ${c.name}, ${c.status}, ${c.audience_label}, ${c.channels}, ${c.total_leads}, ${c.sent_count}, ${c.replied_count}, 'jane@leadforge.io')
+let [user] = await sql`select id from users where email = ${demoEmail}`;
+if (!user) {
+  const password = process.env.SEED_DEMO_PASSWORD || randomBytes(9).toString("base64url");
+  const hash = bcrypt.hashSync(password, 10);
+  [user] = await sql`
+    insert into users (name, email, password_hash, company)
+    values ('Demo User', ${demoEmail}, ${hash}, 'Demo Workspace')
+    returning id
   `;
-  console.log("Seeded campaign:", c.name);
+  console.log(`Created demo user ${demoEmail}`);
+  if (!process.env.SEED_DEMO_PASSWORD) console.log(`Password (shown once): ${password}`);
+} else {
+  console.log("Demo user already present.");
 }
 
-console.log("Seed complete.");
+let [workspace] = await sql`select id from workspaces where slug = 'demo-workspace'`;
+if (!workspace) {
+  [workspace] = await sql`
+    insert into workspaces (name, slug, created_by_user_id, is_demo)
+    values ('Demo Workspace', 'demo-workspace', ${user.id}, true)
+    returning id
+  `;
+  await sql`
+    insert into workspace_members (workspace_id, user_id, role, status)
+    values (${workspace.id}, ${user.id}, 'owner', 'active')
+  `;
+  console.log(`Created demo workspace #${workspace.id}`);
+} else {
+  await sql`update workspaces set is_demo = true where id = ${workspace.id}`;
+  console.log("Demo workspace already present.");
+}
+
+const sampleLeads = [
+  ["Avery Chen", "avery.chen@example.com", "Northwind Analytics", "VP Sales"],
+  ["Jordan Patel", "jordan.patel@example.com", "Contoso Cloud", "Head of Growth"],
+  ["Sam Okafor", "sam.okafor@example.com", "Fabrikam Labs", "Founder"],
+  ["Riley Martin", "riley.martin@example.com", "Globex Software", "Director of Marketing"],
+  ["Taylor Nguyen", "taylor.nguyen@example.com", "Initech Systems", "CTO"],
+];
+for (const [name, email, company, title] of sampleLeads) {
+  await sql`
+    insert into leads (workspace_id, full_name, email, company, job_title, source)
+    values (${workspace.id}, ${name}, ${email}, ${company}, ${title}, 'demo')
+    on conflict (workspace_id, lower(email)) where email is not null do nothing
+  `;
+}
+console.log(`Demo leads ensured (${sampleLeads.length}).`);

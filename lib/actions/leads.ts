@@ -50,8 +50,8 @@ export type LeadInput = {
 };
 
 export async function createLead(input: LeadInput): Promise<Lead> {
-  const { workspaceId, email: owner } = await requireRole("member");
-  const lead = await insertLead(workspaceId, owner, input, "manual");
+  const { workspaceId } = await requireRole("member");
+  const lead = await insertLead(workspaceId, input, "manual");
   revalidatePath("/dashboard/leads");
   return lead;
 }
@@ -64,7 +64,7 @@ export async function updateLead(id: number, input: LeadInput): Promise<Lead> {
 }
 
 /**
- * Deleting a lead cascades to delete its campaign_sends rows (see schema.sql),
+ * Deleting a lead cascades to delete its campaign_sends rows (see db/migrations/0001_baseline.sql),
  * which would silently erase the record that they were ever emailed — the
  * exact history compliance tooling (cooldown, DNC audits) relies on. Block
  * deletion once that history exists; Do Not Contact is the right tool for
@@ -111,8 +111,8 @@ export type ImportResult = {
 type PendingRow = { row: ImportRow & { full_name: string; email?: string }; originalIndex: number };
 
 const UPSERT_SQL = `
-  insert into leads (workspace_id, owner_email, full_name, email, company, job_title, linkedin_url, source)
-  select * from unnest($1::bigint[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[])
+  insert into leads (workspace_id, full_name, email, company, job_title, linkedin_url, source)
+  select * from unnest($1::bigint[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[])
   on conflict (workspace_id, lower(email)) where email is not null do update set
     full_name = excluded.full_name,
     company = coalesce(excluded.company, leads.company),
@@ -121,10 +121,9 @@ const UPSERT_SQL = `
   returning (xmax = 0) as inserted
 `;
 
-function upsertParams(workspaceId: number, owner: string, rows: PendingRow["row"][]) {
+function upsertParams(workspaceId: number, rows: PendingRow["row"][]) {
   return [
     rows.map(() => workspaceId),
-    rows.map(() => owner),
     rows.map((r) => r.full_name),
     rows.map((r) => r.email?.trim() || null),
     rows.map((r) => r.company?.trim() || null),
@@ -136,10 +135,9 @@ function upsertParams(workspaceId: number, owner: string, rows: PendingRow["row"
 
 async function upsertLeadRow(
   workspaceId: number,
-  owner: string,
   row: PendingRow["row"]
 ): Promise<{ inserted: boolean }> {
-  const result = await sql.query(UPSERT_SQL, upsertParams(workspaceId, owner, [row]));
+  const result = await sql.query(UPSERT_SQL, upsertParams(workspaceId, [row]));
   return { inserted: result[0].inserted as boolean };
 }
 
@@ -150,7 +148,7 @@ async function upsertLeadRow(
  * the run is persisted to import_jobs for audit and to support re-upload.
  */
 export async function importLeadsCsv(rows: ImportRow[], fileName?: string): Promise<ImportResult> {
-  const { workspaceId, email: owner, userId } = await requireRole("member");
+  const { workspaceId, userId } = await requireRole("member");
 
   const errors: ImportError[] = [];
   let skipped = 0;
@@ -189,7 +187,7 @@ export async function importLeadsCsv(rows: ImportRow[], fileName?: string): Prom
     try {
       const result = await sql.query(
         UPSERT_SQL,
-        upsertParams(workspaceId, owner, pending.map((p) => p.row))
+        upsertParams(workspaceId, pending.map((p) => p.row))
       );
       for (const r of result) {
         if (r.inserted) created++;
@@ -198,7 +196,7 @@ export async function importLeadsCsv(rows: ImportRow[], fileName?: string): Prom
     } catch {
       for (const p of pending) {
         try {
-          const { inserted } = await upsertLeadRow(workspaceId, owner, p.row);
+          const { inserted } = await upsertLeadRow(workspaceId, p.row);
           if (inserted) created++;
           else updated++;
         } catch (err) {
@@ -247,7 +245,7 @@ export type AiFilterResult = {
 };
 
 export async function generateAiFilter(prompt: string): Promise<AiFilterResult> {
-  const { workspaceId, email: owner } = await requireRole("member");
+  const { workspaceId } = await requireRole("member");
   const trimmed = prompt.trim();
   if (!trimmed) throw new Error("Prompt is required");
 
@@ -282,8 +280,8 @@ export async function generateAiFilter(prompt: string): Promise<AiFilterResult> 
   const name = trimmed.length > 60 ? `${trimmed.slice(0, 57)}...` : trimmed;
 
   const inserted = await sql`
-    insert into segments (workspace_id, owner_email, name, prompt, criteria, lead_count)
-    values (${workspaceId}, ${owner}, ${name}, ${trimmed}, ${JSON.stringify(criteria)}, ${estimatedCount})
+    insert into segments (workspace_id, name, prompt, criteria, lead_count)
+    values (${workspaceId}, ${name}, ${trimmed}, ${JSON.stringify(criteria)}, ${estimatedCount})
     returning id
   `;
 

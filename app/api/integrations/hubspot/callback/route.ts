@@ -50,9 +50,9 @@ export async function GET(request: Request) {
 
     await sql`
       insert into crm_connections
-        (workspace_id, owner_email, provider, label, portal_id, access_token, refresh_token, scope, expires_at)
+        (workspace_id, provider, label, portal_id, access_token, refresh_token, scope, expires_at)
       values
-        (${session.user.workspaceId}, ${session.user.email}, 'hubspot', ${label}, ${portalId}, ${encryptedAccessToken}, ${encryptedRefreshToken}, ${scope}, ${expiresAt})
+        (${session.user.workspaceId}, 'hubspot', ${label}, ${portalId}, ${encryptedAccessToken}, ${encryptedRefreshToken}, ${scope}, ${expiresAt})
       on conflict (workspace_id, provider, portal_id)
       do update set
         access_token = excluded.access_token,

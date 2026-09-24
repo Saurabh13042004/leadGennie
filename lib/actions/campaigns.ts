@@ -162,7 +162,7 @@ export type CreateCampaignInput = {
  * created once an admin/owner approves (see lib/actions/approvals.ts).
  */
 export async function createCampaign(input: CreateCampaignInput) {
-  const { workspaceId, email: owner, userId } = await requireRole("member");
+  const { workspaceId, userId } = await requireRole("member");
 
   // DEL-01: no email send may be tied to an unverified/unapproved identity —
   // the mailbox must be active and its domain currently verified.
@@ -183,11 +183,11 @@ export async function createCampaign(input: CreateCampaignInput) {
 
   const inserted = await sql`
     insert into campaigns (
-      workspace_id, owner_email, name, status, audience_label, audience_segment_id,
+      workspace_id, name, status, audience_label, audience_segment_id,
       channels, from_email, mailbox_id, daily_email_limit, daily_dm_limit, total_leads, blocked_count, workflow_id
     )
     values (
-      ${workspaceId}, ${owner}, ${input.name}, 'pending_approval', ${input.audienceLabel}, ${input.audienceSegmentId},
+      ${workspaceId}, ${input.name}, 'pending_approval', ${input.audienceLabel}, ${input.audienceSegmentId},
       ${input.channels}, ${fromEmail}, ${input.mailboxId}, ${input.dailyEmailLimit}, ${input.dailyDmLimit}, ${leads.length}, ${blocked.length}, ${input.workflowId ?? null}
     )
     returning id

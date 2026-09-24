@@ -15,7 +15,6 @@ export async function proposeLeadFromSubmission(input: {
   action: "create" | "update";
   fields: Record<string, string>;
   leadId?: number;
-  ownerEmail?: string;
   requestedByUserId: number | null;
 }): Promise<number> {
   const title =
@@ -39,7 +38,6 @@ export async function proposeLeadFromSubmission(input: {
       submissionId: input.submissionId,
       leadId: input.leadId,
       fields: input.fields,
-      owner: input.ownerEmail,
     },
     requestedByUserId: input.requestedByUserId,
   });
@@ -82,15 +80,4 @@ export async function getPublicForm(embedKey: string): Promise<PublicForm | null
     fields: row.fields as PublicForm["fields"],
     consentText: row.consent_text as string,
   };
-}
-
-export async function workspaceOwnerEmail(workspaceId: number): Promise<string> {
-  const rows = await sql`
-    select u.email from workspace_members wm
-    join users u on u.id = wm.user_id
-    where wm.workspace_id = ${workspaceId} and wm.role = 'owner' and wm.status = 'active'
-    order by wm.created_at asc
-    limit 1
-  `;
-  return (rows[0]?.email as string) ?? "unknown@workspace";
 }

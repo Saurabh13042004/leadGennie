@@ -1,37 +1,25 @@
-import { NextResponse } from "next/server";
+import { z } from "zod";
+import { AppError, ok, parseJson, withApi } from "@/lib/api";
 import { createUser, findUserByEmail } from "@/lib/users";
 
-export async function POST(request: Request) {
-  const body = await request.json();
-  const { name, email, password, company } = body as {
-    name?: string;
-    email?: string;
-    password?: string;
-    company?: string;
-  };
+const Body = z.object({
+  name: z.string().trim().min(1, "Name is required.").max(120),
+  email: z.string().trim().min(1, "Email is required.").email("Enter a valid email address.").max(254),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters.")
+    // bcrypt only uses the first 72 bytes; refuse rather than silently truncate.
+    .max(72, "Password must be at most 72 characters."),
+  company: z.string().trim().max(160).optional(),
+});
 
-  if (!name || !email || !password) {
-    return NextResponse.json(
-      { error: "Name, email, and password are required." },
-      { status: 400 }
-    );
-  }
-
-  if (password.length < 8) {
-    return NextResponse.json(
-      { error: "Password must be at least 8 characters." },
-      { status: 400 }
-    );
-  }
+export const POST = withApi(async (request) => {
+  const { name, email, password, company } = await parseJson(request, Body);
 
   if (await findUserByEmail(email)) {
-    return NextResponse.json(
-      { error: "An account with this email already exists." },
-      { status: 409 }
-    );
+    throw new AppError("CONFLICT", "An account with this email already exists.");
   }
 
-  const user = await createUser({ name, email, password, company });
-
-  return NextResponse.json({ id: user.id, email: user.email });
-}
+  const user = await createUser({ name, email, password, company: company || undefined });
+  return ok({ id: user.id, email: user.email });
+});
