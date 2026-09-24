@@ -35,7 +35,7 @@ async function precheckBlocked(workspaceId: number, leadId: number, leadEmail: s
     return "Recipient is on the Do Not Contact list";
   }
   const cooldown = await getLeadsInCooldown(workspaceId, [leadId]);
-  if (cooldown.has(leadId)) {
+  if (cooldown.has(Number(leadId))) {
     return "Recipient was contacted by another campaign within the cooldown window";
   }
   return null;

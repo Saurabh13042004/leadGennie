@@ -3,9 +3,9 @@ import { ok, parseJson, withApi } from "@/lib/api";
 import { sql } from "@/lib/db/client";
 
 const Body = z.object({
-  name: z.string().trim().min(1, "Name is required.").max(120),
-  email: z.string().trim().min(1, "Email is required.").email("Enter a valid email address.").max(254),
-  company: z.string().trim().min(1, "Company is required.").max(160),
+  name: z.string({ error: "Name is required." }).trim().min(1, "Name is required.").max(120),
+  email: z.string({ error: "Email is required." }).trim().min(1, "Email is required.").email("Enter a valid email address.").max(254),
+  company: z.string({ error: "Company is required." }).trim().min(1, "Company is required.").max(160),
   companySize: z.string().trim().max(60).optional(),
   outboundVolume: z.string().trim().max(60).optional(),
   challenges: z.array(z.string().trim().max(120)).max(20).optional(),

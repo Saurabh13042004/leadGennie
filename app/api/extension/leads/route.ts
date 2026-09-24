@@ -7,7 +7,7 @@ import { extractLeadInfoFromPage } from "@/lib/ai/linkedin-personalize";
 export const dynamic = "force-dynamic";
 
 const Body = z.object({
-  pageText: z.string().trim().min(1, "pageText is required").max(200_000),
+  pageText: z.string({ error: "pageText is required" }).trim().min(1, "pageText is required").max(200_000),
   linkedin_url: z.string().trim().max(500).optional(),
 });
 

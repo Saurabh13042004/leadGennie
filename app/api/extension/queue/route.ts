@@ -29,8 +29,8 @@ export const GET = withApi(async (request) => {
 });
 
 const ReportBody = z.object({
-  id: z.number().int().positive("id is required"),
-  status: z.enum(["sent", "failed"], { message: "status must be 'sent' or 'failed'" }),
+  id: z.number({ error: "id is required" }).int().positive("id is required"),
+  status: z.enum(["sent", "failed"], { error: "status must be 'sent' or 'failed'" }),
   error: z.string().max(500).optional(),
 });
 

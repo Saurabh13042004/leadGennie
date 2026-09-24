@@ -34,7 +34,8 @@ export async function getLeadsInCooldown(
        and coalesce(sent_at, scheduled_at) >= now() - ($3 || ' days')::interval`,
     [workspaceId, leadIds, cooldownDays]
   );
-  return new Set(rows.map((r) => r.lead_id as number));
+  // Normalize: Postgres bigint may arrive as a string; callers compare numbers.
+  return new Set(rows.map((r) => Number(r.lead_id)));
 }
 
 export type ComplianceCheckResult<T> = {
@@ -62,7 +63,7 @@ export async function filterCompliantLeads<T extends { id: number; email: string
   for (const lead of leads) {
     if (lead.email && dnc.has(lead.email.toLowerCase())) {
       blocked.push({ lead, reason: "do_not_contact" });
-    } else if (cooldown.has(lead.id)) {
+    } else if (cooldown.has(Number(lead.id))) {
       blocked.push({ lead, reason: "cooldown" });
     } else {
       allowed.push(lead);

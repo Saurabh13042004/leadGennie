@@ -6,8 +6,8 @@ import { generatePersonalizedLinkedinMessage } from "@/lib/ai/linkedin-personali
 export const dynamic = "force-dynamic";
 
 const Body = z.object({
-  profileUrl: z.string().trim().min(1, "profileUrl is required").max(500),
-  pageText: z.string().trim().min(1, "pageText is required").max(200_000),
+  profileUrl: z.string({ error: "profileUrl is required" }).trim().min(1, "profileUrl is required").max(500),
+  pageText: z.string({ error: "pageText is required" }).trim().min(1, "pageText is required").max(200_000),
   sdrContext: z.string().max(5_000).optional(),
   customPrompt: z.string().max(5_000).optional(),
 });

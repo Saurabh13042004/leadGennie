@@ -19,7 +19,7 @@ const Body = z.object({
       })
     )
     .min(1, "candidates is required"),
-  taskDescription: z.string().trim().min(1, "taskDescription is required").max(1_000),
+  taskDescription: z.string({ error: "taskDescription is required" }).trim().min(1, "taskDescription is required").max(1_000),
 });
 
 export const POST = withApi(async (request) => {

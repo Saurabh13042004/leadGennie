@@ -7,7 +7,7 @@
 // Escape hatch: `workspace-scope-ok: <reason>` in a comment inside the SQL
 // (or on the line above the statement) for the rare legitimate exception
 // (e.g. a child table scoped through its parent in the same statement).
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 const ROOT = process.cwd();
@@ -30,17 +30,72 @@ function* walk(dir) {
   }
 }
 
+
+/**
+ * Extracts every template literal from TS source, with `${...}` expressions
+ * collapsed to "?". Handles nesting (a template inside an expression inside a
+ * template), which SQL built with .map()/.join() relies on — a plain
+ * /`[^`]*`/ regex splits such statements in the middle.
+ */
+function templateLiterals(src) {
+  const out = [];
+  const n = src.length;
+
+  function scanCode(i, untilBrace) {
+    let depth = 0;
+    while (i < n) {
+      const ch = src[i];
+      const next = src[i + 1];
+      if (ch === "`") { i = scanTemplate(i); continue; }
+      if (ch === "'" || ch === '"') {
+        i++;
+        while (i < n && src[i] !== ch) i += src[i] === "\\" ? 2 : 1;
+        i++;
+        continue;
+      }
+      if (ch === "/" && next === "/") { while (i < n && src[i] !== "\n") i++; continue; }
+      if (ch === "/" && next === "*") { i = src.indexOf("*/", i + 2); i = i === -1 ? n : i + 2; continue; }
+      if (untilBrace) {
+        if (ch === "{") depth++;
+        else if (ch === "}") {
+          if (depth === 0) return i + 1;
+          depth--;
+        }
+      }
+      i++;
+    }
+    return i;
+  }
+
+  function scanTemplate(start) {
+    let i = start + 1;
+    let text = "";
+    while (i < n) {
+      const ch = src[i];
+      if (ch === "\\") { text += src.slice(i, i + 2); i += 2; continue; }
+      if (ch === "`") { out.push({ text, index: start }); return i + 1; }
+      if (ch === "$" && src[i + 1] === "{") { text += "?"; i = scanCode(i + 2, true); continue; }
+      text += ch;
+      i++;
+    }
+    return i;
+  }
+
+  scanCode(0, false);
+  return out;
+}
+
 const stmtRe = /\b(update|delete\s+from)\s+(?:only\s+)?("?)(\w+)\2/gi;
 const violations = [];
 
 for (const top of ["app", "lib"]) {
+  if (!existsSync(join(ROOT, top))) continue;
   for (const file of walk(join(ROOT, top))) {
     const src = readFileSync(file, "utf-8");
     // Only look inside template literals / strings that contain SQL.
-    const literalRe = /`([^`]*)`/g;
-    let m;
-    while ((m = literalRe.exec(src))) {
-      const body = m[1];
+    for (const lit of templateLiterals(src)) {
+      const m = { index: lit.index };
+      const body = lit.text;
       stmtRe.lastIndex = 0;
       let s;
       while ((s = stmtRe.exec(body))) {
