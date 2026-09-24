@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { sql } from "@/lib/db/client";
+import { dateOnly } from "@/lib/db/dates";
 import { AppError } from "@/lib/api/errors";
 import { onJobSettled, registerJobHandler } from "@/lib/jobs/registry";
 import { JobError, PermanentJobError, type HandlerOutcome, type JobContext } from "@/lib/jobs/types";
@@ -241,7 +242,7 @@ export async function leadScoringHandler(ctx: JobContext): Promise<HandlerOutcom
         icp: toEngineIcp(icp),
         company: { industry: inputs.industry ?? null, country: inputs.country ?? null, employee_count: inputs.employee_count ?? null, domain: (r.company_domain as string | null) ?? null, keywords_found: inputs.keywords_found ?? [] },
         person: { title: (r.job_title as string | null) ?? inputs.person_title ?? null },
-        signals: signals.map((s) => ({ id: String(s.id), type: s.type as never, confidence: Number(s.confidence), detected_at: s.detected_at ? String(s.detected_at).slice(0, 10) : null, verified: true })),
+        signals: signals.map((s) => ({ id: String(s.id), type: s.type as never, confidence: Number(s.confidence), detected_at: dateOnly(s.detected_at), verified: true })),
       },
       { jobId: ctx.job.id, workspaceId: ctx.workspaceId },
     );

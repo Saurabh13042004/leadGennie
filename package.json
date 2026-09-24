@@ -18,7 +18,8 @@
     "db:migrate:status": "node --env-file=.env.local scripts/migrate.mjs --status",
     "db:seed": "node --env-file=.env.local scripts/seed.mjs",
     "scheduler": "node --env-file=.env.local scripts/scheduler.mjs",
-    "check:tenancy": "node scripts/checks/workspace-scoped-sql.mjs"
+    "check:tenancy": "node scripts/checks/workspace-scoped-sql.mjs",
+    "eval:personalization": "RUN_LIVE_LLM=1 node --env-file=.env.local node_modules/.bin/vitest run tests/live/personalization-eval.live.test.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

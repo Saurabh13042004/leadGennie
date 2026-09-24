@@ -103,3 +103,10 @@ Checklist before production: ≥ 2 replicas; TLS + private networking only; **eg
 2. Env: `INTELLIGENCE_URL`, `INTELLIGENCE_SERVICE_TOKEN`, `INTELLIGENCE_SIGNING_SECRET` (same values as the engine's). Without them the UI says the engine isn't configured and research is refused up front (no job is created).
 3. **Something must call the worker.** `scripts/scheduler.mjs` now also `POST`s `/api/jobs/tick` every minute (`JOBS_TICK_CRON` to change) with `Bearer $CRON_SECRET`; any pinger can do the same. Clicking *Research* also triggers a best-effort tick after the response (`after()`), so a running scheduler only guarantees the worst case.
 4. Verify with the real engine: `docker compose up engine-fake`, then `RUN_LIVE_ENGINE=1 INTELLIGENCE_URL=http://localhost:8000 npx vitest run tests/live/intelligence-engine.live.test.ts` (uses the in-process test database, not Neon).
+
+## Phase 3 rollout (AI personalization)
+
+1. `npm run db:migrate` — applies `0010` (`message_drafts`, `message_draft_edits`, `workspaces.tone`). Additive; nothing existing changes.
+2. No new environment variables: generation uses the same `OPENAI_API_KEY` / `OPENAI_MODEL` as the rest of the app. **Rate limits matter:** bulk drafting runs as `personalization` jobs through the existing worker (same tick as research); a 429 is retried with backoff, a quota error dead-letters that lead only and is shown in the batch's error list. The account used in development had a 30k tokens/minute ceiling — at that limit, plan ≈ 10–15 drafts per minute.
+3. Cost: ≈ 1 model call per draft (2 when the checker forces one rewrite; ~40% did in the eval). Usage is recorded in `usage_records` (`ref_type = 'message_draft'`).
+4. Re-run the eval before changing the default prompt (`prompt.ts`) or `OPENAI_MODEL`: `npm run eval:personalization` (real model, ~3 min, writes `docs/reports/phase-03-personalization-eval.{md,json}`; never part of CI).

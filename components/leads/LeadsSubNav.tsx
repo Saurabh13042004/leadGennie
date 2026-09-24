@@ -8,9 +8,10 @@ const TABS = [
   { label: "All leads", href: "/dashboard/leads" },
   { label: "Audiences", href: "/dashboard/lead-lists" },
   { label: "Inbound", href: "/dashboard/leads/inbound" },
+  { label: "Email drafts", href: "/dashboard/leads/drafts" },
 ];
 
-/** Leads is one destination with three views; this keeps them reachable now that the sidebar has one entry. */
+/** Leads is one destination with four views; this keeps them reachable now that the sidebar has one entry. */
 export default function LeadsSubNav() {
   const pathname = usePathname();
   return (

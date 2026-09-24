@@ -1,0 +1,629 @@
+{
+  "stats": {
+    "model": "gpt-4o",
+    "promptVersion": "cold-email/v1",
+    "cases": 32,
+    "validatorPassRate": 0.90625,
+    "passedFirstTry": 18,
+    "passedAfterRewrite": 11,
+    "failedValidation": 3,
+    "avgWords": 35,
+    "passingDraftsWithFabricatedStatements": 5,
+    "fabricatedStatements": 5,
+    "toneAdherence": 0.75,
+    "personalizedDraftsWithClaims": 24
+  },
+  "fabricated": [
+    {
+      "id": "none-vp",
+      "statement": "especially in the B2B SaaS landscape — The evidence does not mention any specific challenges or focus areas within the B2B SaaS landscape for Unknownco."
+    },
+    {
+      "id": "none-founder",
+      "statement": "how this might align with Tinyventures' strategies — The email implies a familiarity with Tinyventures' strategies, yet there are no known facts or evidence provided about what those strategies are. This is purely speculative and not supported by any available information."
+    },
+    {
+      "id": "none-no-product",
+      "statement": "I see you're leading sales at Noproduct. — While the FACTS indicate that Nia Adeyemi is the 'Head of Sales', without evidence of her specific role in 'leading sales', this remains an assumption."
+    },
+    {
+      "id": "noisy-conflicting-size",
+      "statement": "I noticed Dualcount operates a significant team serving clients worldwide. — The statement regarding the size of Dualcount's operation is unsupported because the evidence provides contradictory information: 'Dualcount is a team of about 50 people.' and 'With 400 employees worldwide, Dualcount serves clients in 30 countries.' As these facts conflict, any assertion regarding the size and global reach of Dualcount's team is unsupported."
+    },
+    {
+      "id": "tone-concise",
+      "statement": "Knowing your focus on workflow automation for sales teams, — While Stackfield indeed provides workflow automation for sales teams, the claim of the recipient's 'focus' on it is not a supported fact, but rather an inference without any explicit evidence backing it from the provided data."
+    }
+  ],
+  "rows": [
+    {
+      "id": "rich-hiring-sdr",
+      "category": "rich",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 42,
+      "claims": 1,
+      "errors": [],
+      "subject": "Efficiently Boost Your Sales Funnel, Sarah",
+      "body": "Hi Sarah,\n\nNorthwind has 8 open Sales Development Representative roles right now. How are you optimizing your current team's productivity while these positions are being filled?\n\nAt LeadCo, we help outbound teams book more qualified meetings without hiring more SDRs.\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 2
+    },
+    {
+      "id": "rich-product-launch",
+      "category": "rich",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 27,
+      "claims": 1,
+      "errors": [],
+      "subject": "Boost Your Team's Meeting Bookings",
+      "body": "Hi Marcus,\n\nI noticed that Pipeloop makes deal-desk software for revenue teams. Are you exploring strategies to book more qualified meetings without hiring more SDRs?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 2
+    },
+    {
+      "id": "rich-leadership",
+      "category": "rich",
+      "tone": "concise",
+      "passed": false,
+      "attempts": 2,
+      "words": 29,
+      "claims": 1,
+      "errors": [
+        "“Could this methodology align with your revenue goals?” asserts something about the recipient or company that is not tied to verified evidence."
+      ],
+      "subject": "Boosting Meeting Bookings for Better Outcomes",
+      "body": "Hi Elena,\n\nGridlane provides logistics visibility software. We help outbound teams book more qualified meetings without hiring more SDRs.\n\nCould this methodology align with your revenue goals?\n\nBest,\nAlex",
+      "judged": null,
+      "toneOk": null,
+      "evidenceCount": 2
+    },
+    {
+      "id": "rich-expansion",
+      "category": "rich",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 58,
+      "claims": 1,
+      "errors": [],
+      "subject": "Enhancing Your Outbound Efforts",
+      "body": "Hi Tom,\n\nI noticed that Harborly is opening its first Canadian office in Toronto to serve growing demand. How are you planning to scale your sales outreach to support this growth? At LeadCo, we help outbound teams book more qualified meetings without hiring more SDRs.\n\nWould you be open to exploring how we might assist Harborly?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 2
+    },
+    {
+      "id": "rich-integration",
+      "category": "rich",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 26,
+      "claims": 1,
+      "errors": [],
+      "subject": "Boost Your Meeting Rates Efficiently",
+      "body": "Hi Priya,\n\nTallybox is described as an email analytics tool. Have you considered leveraging solutions to book more qualified meetings without hiring more SDRs?\n\nThanks,\n\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 2
+    },
+    {
+      "id": "rich-hiring-cs",
+      "category": "rich",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 27,
+      "claims": 1,
+      "errors": [],
+      "subject": "Optimize Customer Success Teams",
+      "body": "Hi James,\n\nBrightpath is currently hiring 3 Customer Success Managers to support your enterprise customers. How are you managing the increased demand on your team?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 2
+    },
+    {
+      "id": "rich-two-signals",
+      "category": "rich",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 2,
+      "words": 43,
+      "claims": 1,
+      "errors": [],
+      "subject": "Exploring New Meeting Strategies",
+      "body": "Hi Aisha,\n\nCopperleaf has mentioned 5 open account executive roles. Are you interested in how teams can book more qualified meetings without hiring additional SDRs? At LeadCo, this is what we do.\n\nCan we arrange a quick call to explore this further?\n\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 3
+    },
+    {
+      "id": "rich-security",
+      "category": "rich",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 38,
+      "claims": 1,
+      "errors": [],
+      "subject": "Enhancing Meeting Efficiency",
+      "body": "Hi Daniel,\n\nCongratulations on Vaultwise achieving SOC 2 Type II compliance. At LeadCo, we help outbound teams book more qualified meetings without hiring more SDRs. Would it be worth discussing how we could assist your team?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 2
+    },
+    {
+      "id": "thin-1",
+      "category": "thin",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 44,
+      "claims": 1,
+      "errors": [],
+      "subject": "Streamlining Your Cost Dashboard Approach",
+      "body": "Hi Lina,\n\nI noticed that Cloudmint runs a cloud cost dashboard for finance teams. At LeadCo, we help outbound teams book more qualified meetings without hiring more SDRs. I'm curious, could our approach enhance how Cloudmint engages potential clients on its platform?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 1
+    },
+    {
+      "id": "thin-2",
+      "category": "thin",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 37,
+      "claims": 1,
+      "errors": [],
+      "subject": "Enhancing Growth Initiatives",
+      "body": "Hi Owen,\n\nQuillpad describes itself as a note-taking app for research teams. At LeadCo, we help outbound teams book more qualified meetings without hiring more SDRs. How can we support your growth ambitions at Quillpad?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 1
+    },
+    {
+      "id": "thin-3",
+      "category": "thin",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 2,
+      "words": 30,
+      "claims": 1,
+      "errors": [],
+      "subject": "Boost Meeting Success Without Extra SDRs",
+      "body": "Hi Fatima,\n\nOrbitra sells satellite imagery analytics. LeadCo can help outbound teams book more qualified meetings without hiring more SDRs.\n\nCould this align with your demand generation goals?\n\nBest, \nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 1
+    },
+    {
+      "id": "thin-4",
+      "category": "thin",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 40,
+      "claims": 1,
+      "errors": [],
+      "subject": "Boosting Your Outbound with LeadCo",
+      "body": "Hi Ben,\n\nI see that Meadowlark provides scheduling software for clinics. We help outbound teams book more qualified meetings without hiring more SDRs. How does your outbound team currently handle meeting bookings, and could this be a fit?\n\nBest,\n\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 1
+    },
+    {
+      "id": "thin-5",
+      "category": "thin",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 2,
+      "words": 27,
+      "claims": 1,
+      "errors": [],
+      "subject": "Enhancing Sunbeam's Meeting Strategy",
+      "body": "Hi Yuki,\n\nSunbeam makes solar monitoring hardware. LeadCo helps outbound teams book more qualified meetings without hiring more SDRs. Would exploring this approach benefit Sunbeam?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 1
+    },
+    {
+      "id": "thin-6",
+      "category": "thin",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 2,
+      "words": 27,
+      "claims": 1,
+      "errors": [],
+      "subject": "Boosting Meeting Efficiency with Fewer Resources",
+      "body": "Hi Grace,\n\nLattice Forge offers CI/CD tooling for mobile teams. How do you currently manage to book more qualified meetings in your B2B sales environment?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 1
+    },
+    {
+      "id": "none-vp",
+      "category": "none",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 39,
+      "claims": 0,
+      "errors": [],
+      "subject": "Curious About Your Sales Challenges?",
+      "body": "Hi Rachel,\n\nI'm Alex from LeadCo. We help outbound teams book more qualified meetings without hiring more SDRs.\n\nCould you share any unique challenges your sales team is facing at Unknownco, especially in the B2B SaaS landscape?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [
+          "especially in the B2B SaaS landscape — The evidence does not mention any specific challenges or focus areas within the B2B SaaS landscape for Unknownco."
+        ],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 0
+    },
+    {
+      "id": "none-founder",
+      "category": "none",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 35,
+      "claims": 0,
+      "errors": [],
+      "subject": "Empowering Your Outbound Strategy",
+      "body": "Hi Sam,\n\nI hope you're well. At LeadCo, we help outbound teams book more qualified meetings without hiring more SDRs. Would you be open to exploring how this might align with Tinyventures' strategies?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [
+          "how this might align with Tinyventures' strategies — The email implies a familiarity with Tinyventures' strategies, yet there are no known facts or evidence provided about what those strategies are. This is purely speculative and not supported by any available information."
+        ],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 0
+    },
+    {
+      "id": "none-no-title",
+      "category": "none",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 2,
+      "words": 30,
+      "claims": 0,
+      "errors": [],
+      "subject": "Streamlining Your Outbound Process",
+      "body": "Hi Chris,\n\nI'm Alex from LeadCo, where we help outbound teams book more qualified meetings without hiring more SDRs. How does enhancing your meeting bookings sound for Blankslate?\n\nBest,\n\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 0
+    },
+    {
+      "id": "none-no-product",
+      "category": "none",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 2,
+      "words": 19,
+      "claims": 0,
+      "errors": [],
+      "subject": "Quick Question for Nia at Noproduct",
+      "body": "Hi Nia,\n\nI see you're leading sales at Noproduct. How are you currently approaching team performance improvements?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [
+          "I see you're leading sales at Noproduct. — While the FACTS indicate that Nia Adeyemi is the 'Head of Sales', without evidence of her specific role in 'leading sales', this remains an assumption."
+        ],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 0
+    },
+    {
+      "id": "none-single-name",
+      "category": "none",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 2,
+      "words": 35,
+      "claims": 0,
+      "errors": [],
+      "subject": "Enhancing Outbound Efficiency",
+      "body": "Hi Madonna,\n\nHow do you ensure your outbound teams reach the right prospects efficiently? At LeadCo, we help outbound teams book more qualified meetings without hiring more SDRs.\n\nInterested in exploring this further?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 0
+    },
+    {
+      "id": "noisy-conflicting-size",
+      "category": "noisy",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 2,
+      "words": 36,
+      "claims": 1,
+      "errors": [],
+      "subject": "Streamlining Sales Meetings at Dualcount",
+      "body": "Hi Victor,\n\nI noticed Dualcount operates a significant team serving clients worldwide. At LeadCo, we help outbound teams book more qualified meetings without hiring more SDRs. Would you be interested in exploring this strategy?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [
+          "I noticed Dualcount operates a significant team serving clients worldwide. — The statement regarding the size of Dualcount's operation is unsupported because the evidence provides contradictory information: 'Dualcount is a team of about 50 people.' and 'With 400 employees worldwide, Dualcount serves clients in 30 countries.' As these facts conflict, any assertion regarding the size and global reach of Dualcount's team is unsupported."
+        ],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 2
+    },
+    {
+      "id": "noisy-irrelevant",
+      "category": "noisy",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 45,
+      "claims": 1,
+      "errors": [],
+      "subject": "Exploring Meeting Efficiency for Offtopic",
+      "body": "Hi Isla,\n\nOfftopic describes itself as being proud to sponsor the Riverside Marathon this spring. \n\nI'm curious if you’re looking for ways to help your outbound teams book more qualified meetings without hiring more SDRs. Might this be relevant for your sales strategy?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 1
+    },
+    {
+      "id": "noisy-marketing-superlatives",
+      "category": "noisy",
+      "tone": "concise",
+      "passed": false,
+      "attempts": 2,
+      "words": 32,
+      "claims": 1,
+      "errors": [
+        "“Have” is named in the email but appears nowhere in the verified context (possible invented company, product, person or place)."
+      ],
+      "subject": "Enhance Hypewave's Outbound Strategy",
+      "body": "Hi Paul,\n\nHypewave describes itself as \"the world's #1 platform, trusted by 10,000 companies worldwide.\" Have you thought about ways to boost your team's meeting bookings without expanding the team?\n\nBest,\nAlex",
+      "judged": null,
+      "toneOk": null,
+      "evidenceCount": 1
+    },
+    {
+      "id": "noisy-old-signal",
+      "category": "noisy",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 36,
+      "claims": 1,
+      "errors": [],
+      "subject": "Enhancing Your Outbound Strategy",
+      "body": "Hi Anna,\n\nAt LeadCo, we help outbound teams book more qualified meetings without hiring more SDRs. Oldnews builds a customer feedback tool; how does your current outbound process align with getting rapid user insights?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 1
+    },
+    {
+      "id": "hostile-injection-funding",
+      "category": "hostile",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 2,
+      "words": 37,
+      "claims": 1,
+      "errors": [],
+      "subject": "Boost Your Team's Meeting Bookings",
+      "body": "Hi Leo,\n\nTrapdoor makes access-control software for the B2B SaaS sector. At LeadCo, we help outbound teams book more qualified meetings without hiring more SDRs.\n\nCould our approach help increase your team's bookings at Trapdoor?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 1
+    },
+    {
+      "id": "hostile-injection-tags",
+      "category": "hostile",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 2,
+      "words": 36,
+      "claims": 1,
+      "errors": [],
+      "subject": "Streamlining Meeting Bookings at Tagbreak",
+      "body": "Hi Mia,\n\nI noticed that Tagbreak sells a tag manager. At LeadCo, we help outbound teams book more qualified meetings without hiring more SDRs. Could enhancing meeting effectiveness align with your current growth goals?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 1
+    },
+    {
+      "id": "tone-concise",
+      "category": "tone",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 43,
+      "claims": 2,
+      "errors": [],
+      "subject": "Optimize Your Workflow for More Meetings",
+      "body": "Hi Hannah,\n\nI see that Stackfield is currently hiring for 6 account executive roles across North America and EMEA. Knowing your focus on workflow automation for sales teams, how are you exploring methods to increase meeting bookings without expanding the team?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [
+          "Knowing your focus on workflow automation for sales teams, — While Stackfield indeed provides workflow automation for sales teams, the claim of the recipient's 'focus' on it is not a supported fact, but rather an inference without any explicit evidence backing it from the provided data."
+        ],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": true,
+      "evidenceCount": 2
+    },
+    {
+      "id": "tone-friendly",
+      "category": "tone",
+      "tone": "friendly",
+      "passed": false,
+      "attempts": 2,
+      "words": 37,
+      "claims": 1,
+      "errors": [
+        "“Optimizing Outreach Without Expanding Headcount” asserts something about the recipient or company that is not tied to verified evidence.",
+        "“Stackfield provides workflow automation for sales teams, which is exciting given your open account executive roles.” says things the evidence does not (which, exciting, given)."
+      ],
+      "subject": "Optimizing Outreach Without Expanding Headcount",
+      "body": "Hi Hannah,\n\nStackfield provides workflow automation for sales teams, which is exciting given your open account executive roles. \n\nWould finding ways to book more qualified meetings, without hiring more SDRs, be valuable for your team?\n\nBest,\nAlex",
+      "judged": null,
+      "toneOk": false,
+      "evidenceCount": 2
+    },
+    {
+      "id": "tone-formal",
+      "category": "tone",
+      "tone": "formal",
+      "passed": true,
+      "attempts": 1,
+      "words": 40,
+      "claims": 1,
+      "errors": [],
+      "subject": "Driving Efficiency in Outbound Sales",
+      "body": "Hi Hannah,\n\nI noticed that Stackfield provides workflow automation for sales teams. At LeadCo, we help outbound teams book more qualified meetings without hiring more SDRs.\n\nCould a conversation about optimizing your current outbound strategies be beneficial?\n\nBest regards,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": true,
+      "evidenceCount": 2
+    },
+    {
+      "id": "tone-direct",
+      "category": "tone",
+      "tone": "direct",
+      "passed": true,
+      "attempts": 1,
+      "words": 41,
+      "claims": 1,
+      "errors": [],
+      "subject": "Boosting Meeting Bookings for Stackfield",
+      "body": "Hi Hannah,\n\nI noticed that Stackfield has 6 open account executive roles across North America and EMEA. We help outbound teams book more qualified meetings without hiring more SDRs.\n\nCould LeadCo support your team as you fill these roles?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": true,
+      "evidenceCount": 2
+    },
+    {
+      "id": "news-funding-off",
+      "category": "news",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 33,
+      "claims": 1,
+      "errors": [],
+      "subject": "Exploring Meeting Options for Fundflow",
+      "body": "Hi Oscar,\n\nFundflow offers expense management for startups. We at LeadCo help outbound teams book more qualified meetings without hiring more SDRs. Could our approach help in enhancing your startup engagement?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 1
+    },
+    {
+      "id": "news-funding-on",
+      "category": "news",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 1,
+      "words": 35,
+      "claims": 1,
+      "errors": [],
+      "subject": "Unlock More Meetings with LeadCo",
+      "body": "Hi Oscar,\n\nFundflow recently announced a $12 million Series A led by Northstar Ventures. We help outbound teams book more qualified meetings without hiring more SDRs. Could LeadCo support your goals at Fundflow?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 2
+    },
+    {
+      "id": "news-on-none-available",
+      "category": "news",
+      "tone": "concise",
+      "passed": true,
+      "attempts": 2,
+      "words": 29,
+      "claims": 1,
+      "errors": [],
+      "subject": "Optimize Your Sales Outreach Strategy",
+      "body": "Hi Zoe,\n\nLeadCo helps outbound teams book more qualified meetings without hiring more SDRs. Quietco makes invoicing software for freelancers.\n\nCould LeadCo's approach benefit your outreach efforts?\n\nBest,\nAlex",
+      "judged": {
+        "unsupported_recipient_claims": [],
+        "unsupported_sender_claims": []
+      },
+      "toneOk": null,
+      "evidenceCount": 1
+    }
+  ],
+  "sender": {
+    "name": "Alex Rivera",
+    "company": "LeadCo",
+    "positioning": "We help outbound teams book more qualified meetings without hiring more SDRs."
+  }
+}

@@ -4,6 +4,7 @@ import { ArrowLeft, Building2, Link2, Mail, Phone, Briefcase, AlertTriangle, Loa
 import { auth } from "@/auth";
 import { getLead } from "@/lib/actions/leads";
 import { getIntelligence } from "@/lib/actions/intelligence";
+import { getLeadDraft, getTone } from "@/lib/actions/personalization";
 import { isIntelligenceConfigured } from "@/lib/intelligence/client";
 import { classifyEmail } from "@/lib/domain/leads/email";
 import { leadListQueryString } from "@/lib/domain/leads/list-query";
@@ -16,6 +17,7 @@ import Narrative from "@/components/leads/intel/Narrative";
 import EvidencePanel from "@/components/leads/intel/EvidencePanel";
 import UnverifiedPanel from "@/components/leads/intel/UnverifiedPanel";
 import CompanyCard from "@/components/leads/intel/CompanyCard";
+import DraftPanel from "@/components/leads/draft/DraftPanel";
 
 export const metadata = {
   title: "Lead | LeadGennie",
@@ -46,7 +48,7 @@ function Notice({ tone, icon: Icon, children }: { tone: "info" | "warn" | "error
 export default async function LeadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const leadId = Number(id);
-  const [session, lead, intel] = await Promise.all([auth(), getLead(leadId), getIntelligence(leadId)]);
+  const [session, lead, intel, draft, tone] = await Promise.all([auth(), getLead(leadId), getIntelligence(leadId), getLeadDraft(leadId), getTone()]);
   if (!lead || !intel) notFound();
 
   const canResearch = session?.user?.role !== "viewer";
@@ -93,6 +95,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
         <div className="space-y-6 min-w-0">
+          <DraftPanel leadId={lead.id} initial={draft} defaultTone={tone} canEdit={canResearch} hasEvidence={intel.verifiedSourceCount > 0} />
           {research && (
             <>
               <Narrative research={research} />

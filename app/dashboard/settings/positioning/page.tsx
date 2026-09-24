@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowLeft, Target } from "lucide-react";
 import { auth } from "@/auth";
 import { getProfile } from "@/lib/actions/workspace-profile";
+import { getTone } from "@/lib/actions/personalization";
+import ToneSetting from "@/components/settings/ToneSetting";
 import PositioningForm from "@/components/settings/PositioningForm";
 
 export const metadata = {
@@ -9,7 +11,7 @@ export const metadata = {
 };
 
 export default async function PositioningPage() {
-  const [session, profile] = await Promise.all([auth(), getProfile()]);
+  const [session, profile, tone] = await Promise.all([auth(), getProfile(), getTone()]);
   const role = session?.user?.role;
   const canEdit = role === "owner" || role === "admin";
 
@@ -28,6 +30,7 @@ export default async function PositioningPage() {
         </div>
       </div>
       <PositioningForm initial={profile} canEdit={canEdit} />
+      <ToneSetting initial={tone} canEdit={canEdit} />
     </div>
   );
 }

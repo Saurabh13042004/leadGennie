@@ -2,6 +2,64 @@
 
 Evidence log for each phase. Newest first.
 
+## Phase 3 — AI personalization (code complete 2026-09-25; verified hermetically + against the real model; strict-judge "0 fabricated" NOT literally met; browser click-through and Neon migration pending)
+
+**What exists**
+- `lib/domain/personalization/`: `context.ts` (the only place that decides what evidence reaches the model: verified, current, recency-filtered, deduped, capped at 12, NEWS/FUNDING withheld unless the toggle is on — with a visible reason), `prompt.ts` (versioned `cold-email/v1`; evidence is data-tagged and tag-stripped), `validators.ts` (pure, deterministic), `generate.ts` (generate → validate → one rewrite with the checker's complaints → validate; never falls back to an unchecked draft), `drafts.ts` (single writer; lifecycle; edit history; approve re-checks against today's evidence), `service.ts` (bulk enqueue, tone), `jobs.ts` (`personalization` job), `segments.ts` (evidence highlights).
+- Migration `0010`: `message_drafts`, `message_draft_edits`, `workspaces.tone`.
+- UI: draft panel on the lead page (tone, "mention recent news" toggle, evidence-linked highlights with hover/focus source snippet, checker messages, edit/approve/reject, show original), bulk "Generate emails" with progress, review queue at Leads → *Email drafts*, tone setting under Positioning & ICP.
+- Validators: schema, greeting/recipient, placeholders, links/emails, spam + fake-urgency + fake-familiarity + flattery + embellishment + speculation phrases, length, unknown named entities (Title-Case subjects handled), claim → evidence (id exists in the lead's verified set, phrase is in the text, numbers/names/words are in the cited evidence), event vocabulary must be a listed claim, and a lexical "every declarative sentence is made of evidence / the sender's own words / filler" check that also covers the tail of a claim sentence and the lead-in clause of a question.
+
+**Evidence**
+
+| Check | Result |
+|---|---|
+| `npm run verify` | exit 0 — 500 tests pass, 9 opt-in skipped (was 391) |
+| Hallucination injection (unit) | 27 fabricated drafts (invented expansion/funding/hire counts/location/mutual connection/prior call/integration/customers/metrics/competitor/person/award/promotion/urgency/flattery/embellishment/inference/presupposition, cross-workspace evidence id, …): **27/27 rejected**; plus clean, no-evidence and known-false-positive controls that must pass |
+| Integration (PGlite) | real research → real evidence rows → generate; hallucinating model → retry → `failed_validation` (approval refused; a human edit can rescue it); recovery on the rewrite; invalid JSON never persisted; foreign/unverified/superseded evidence excluded; tone in prompt; regenerate keeps history; edit keeps original + logs diff + warns not blocks; approval re-checks evidence; tenant isolation on every operation; bulk with a per-lead quota failure while the rest succeed; cap 50; no double-queue |
+| Live eval (`gpt-4o`, 32 cases; ~10 runs while tuning — last run: 29/32 pass, 18 on the first try, 11 after the one rewrite, 3 failed) | validators pass 81–91% across the last runs; **in every flagged statement I read, no invented fact, number, name, event or entity reached a passing draft**; a strict second-model judge still flags 1–5 passing drafts per run (5 in the last run), every one a *soft* problem (embellishment "seamless", generalisation, a presupposition inside a question, picking one of two conflicting evidence items) — so the spec line "0 fabricated statements under the judge" is **not** literally met; see `docs/reports/phase-03-personalization-eval.md` |
+
+**What the live eval taught (each fixed, each with a regression test)**
+1. First run: 9% passed. The unknown-entity check treated every word of a Title-Case subject ("Exploring Meeting Efficiency") as an invented company. Fixed (Title-Case subjects skip the capitalization test but still face the claim rules).
+2. The model copied "Linear" from an example inside my own system prompt into an email about a different company — the entity check caught it. Prompt example made generic.
+3. A digit rule flagged "B2B" as a number claim; a claim beginning a sentence ("With Dana Ortiz…") failed on its capitalised first word; a question containing "hiring" (from the sender's own positioning) was called an unsupported claim. All fixed.
+4. Gaps found the other way: inference riding behind a valid claim ("…which suggests…", "apparently serves multiple B2B clients"), embellishment ("seamless"), flattery ("we're impressed"), and sender-product claims broader than the sender's own description ("increasing headcount", "specialize"). New checks + a prompt rule to copy the positioning sentence.
+5. Numbers matched as substrings ("4" inside "14"); now whole numbers only.
+6. **Latent bug in Phase 2B, fixed here:** `String(date).slice(0, 10)` turns a driver-returned `Date` into "Sun Sep 20" (the read model and the re-scoring job both did this). New `lib/db/dates.ts#dateOnly`, used in all three places.
+7. The eval's own judge was over-flagging (questions, subject lines, statements the evidence states verbatim, self-contradicting flags); it was recalibrated and its output is post-filtered — the report's number is "statements with no support", not "anything the judge said".
+
+**Deviations from the spec (deliberate)**
+- The default prompt is code-versioned (`cold-email/v1`, recorded on every draft) rather than seeded into the Prompt Library: library templates are free-form and cannot carry the claim contract. A workspace's *published* email prompt still contributes its tone rules and prohibited claims, which can only make output stricter, and its id is recorded.
+- The eval is a vitest live test (`npm run eval:personalization`), not `scripts/evals/personalization.mjs`, so it can import the real code path.
+- Migration is `0010` (spec said `0011`; `0010` was free).
+- Engine `POST /v1/evidence/validate` re-check of draft claims: not wired (the spec marks it optional); the deterministic layer is the gate.
+
+**Known limits / recommendations**
+- Validators prove traceability, not truth; the residual risk is soft inference. Closing it fully means an LLM entailment gate on every draft (≈ +1 cheap call). The strict judge over-flags, so gating on it would fail many acceptable drafts — a product decision (D-13 candidate), not something to switch on silently.
+- Emails come out short (median ≈ 35 words) and safe rather than vivid: evidence-only writing with a fail-closed checker trades flair for trust. Tone changes are real but mild.
+- Evidence-linked hover works on hover/focus; not exercised in a real browser (render tests only).
+- Second attempts that still fail are stored `failed_validation` (≈ 3 of 32); the user sees the reasons and can edit.
+
+**Owner-side:** apply migrations `0008`, `0009`, `0010` to Neon (`npm run db:migrate`); open a researched lead and generate a draft; decide whether to gate on an LLM entailment check.
+
+## Live validation of `lead_research` (2026-09-25, real sites, gpt-4o, no search provider)
+
+Ran `scripts/smoke.py` on linear.app, posthog.com (ICP: B2B SaaS/dev-tools, 20–1000 employees; lead "Head of Growth"). Cost ≈ $0.04–0.05 and 25–35 s per run.
+
+| Result | Detail |
+|---|---|
+| Evidence | 22 and 10 claims verified, 0 unverified, invariants OK on both |
+| Outreach | Only verified, cited facts; no fabricated specifics reached the output |
+| Generic fallback | `outreach_angle_replaced: contained unsupported specifics` fired on both — the validator failing closed, as designed |
+
+Problems the first live runs exposed, fixed here (each is a general defect, not a per-site tweak):
+1. **Inference in `why_contact`** ("indicating a large user base that could benefit…") — entailment now treats narrative claims as facts-only; outreach prompt tightened.
+2. **Irrelevant hiring inflated intent** (engineering/product/CS hiring scored as sales intent) — only sales/marketing functions count as relevant hiring; `JOB_POSTING` weight lowered to 8. Linear intent 62 → 42.
+3. **Industry unknown despite a verified description** — Qualification now classifies onto the closed taxonomy from the *verified* description (one extra LLM call, only when industry is missing); breakdown says "inferred from the company description". Linear ICP 35 → 55, PostHog 70 (qualified).
+4. **Absent keyword reported as "does not match"** — absence in the pages read is now `unknown`, worded "not found in the pages we read".
+
+Known limits (not defects): no search provider (D-03), so no news/funding/hiring-board signals beyond the site; HQ location is often not stated on marketing sites; `potential_problem` is a hypothesis and must be labelled as such in Phase 3 copy; "serves 40,000 companies" is a first-party marketing claim and should be attributed ("Linear says…") in generated copy.
+
 ## Phase 2B — Lead intelligence in the app (code complete 2026-09-25; verified hermetically + against the real engine process; browser click-through and Neon migration pending)
 
 Spec: `phases/phase-02-lead-intelligence.md` → 2B. Engine side: see Phase 2A below.

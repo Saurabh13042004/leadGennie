@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db/client";
+import { dateOnly } from "@/lib/db/dates";
 
 /** What the lead detail page shows. Verified and unverified items are returned separately — the UI never mixes them. */
 
@@ -106,7 +107,7 @@ export async function getLeadIntelligence(workspaceId: number, leadId: number): 
   const evidence = evidenceRows.map(toEvidence);
   const signals: SignalView[] = signalRows.map((s) => ({
     id: Number(s.id), type: String(s.type), title: String(s.title), description: String(s.description ?? ""),
-    detectedAt: s.detected_at ? String(s.detected_at).slice(0, 10) : null, confidence: Number(s.confidence), verified: Boolean(s.verified),
+    detectedAt: dateOnly(s.detected_at), confidence: Number(s.confidence), verified: Boolean(s.verified),
     conflictsWith: ((s.conflicts_with ?? []) as unknown[]).map(Number),
     evidence: evidence.filter((e) => e.signalId === Number(s.id)),
   }));

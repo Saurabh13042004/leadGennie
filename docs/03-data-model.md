@@ -144,3 +144,9 @@ Reviewed the live schema against `lib/db/schema.sql` (read-only introspection) a
 - **Leads:** `icp_score`, `intent_score`, `scoring_version`, `qualified` are `NULL` until researched — never a default 0. `research_status ∈ none|queued|running|done|partial|failed`.
 - **Jobs:** `attempts` counts *failures* (a wait-and-poll cycle is not one); an expired lease counts as a failure. Unique `(workspace_id, type, idempotency_key)`.
 - **`agent_runs`:** a `research_batch` parent per user request and one `research_lead`/`research_company` child per job (steps + usage attach to the child).
+
+## As built (Phase 3) — migration `0010`
+- **`message_drafts`:** one row per generation attempt, never overwritten. `is_current` (partial unique on `workspace_id, lead_id, step_index, coalesce(campaign_id, 0)`) marks the draft the UI shows; regenerating flips the old one to history. `status ∈ draft|edited|approved|rejected|failed_validation`. `original_subject/original_body` keep the model's words after a user edit; `claims` is `[{text, evidence_id}]` (drives the highlights), `issues` is the validators' latest verdict (`error`/`warning`), `used_evidence_ids` only ever contains ids from the lead's verified evidence. Links: `generation_id → message_generations` (full prompt/model audit, CAM-03), `research_id`, `agent_run_id`, `prompt_version` (`cold-email/v1`, code-versioned) and `prompt_version_id` (a workspace's published Prompt Library version whose tone/prohibited rules were appended, if any).
+- **`message_draft_edits`:** append-only before/after of every user edit with the validators' warnings for the edited text (a person owns their edits: warn, never block).
+- **`workspaces.tone`:** `concise|friendly|formal|direct`, default `concise`.
+- Written only by `lib/domain/personalization/drafts.ts` (single writer). Nothing in Phase 3 sends email.

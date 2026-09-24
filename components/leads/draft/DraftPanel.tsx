@@ -1,0 +1,195 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { AlertTriangle, CheckCircle2, Info, Loader2, Pencil, RefreshCw, Sparkles, X, XCircle } from "lucide-react";
+import { approveEmailDraft, generateEmailDraft, rejectEmailDraft, saveDraftEdit } from "@/lib/actions/personalization";
+import type { DraftView } from "@/lib/domain/personalization/drafts";
+import { TONES, type DraftStatus, type Tone } from "@/lib/domain/personalization/types";
+import DraftBody from "./DraftBody";
+
+const TONE_LABEL: Record<Tone, string> = { concise: "Concise", friendly: "Friendly", formal: "Formal", direct: "Direct" };
+
+export const STATUS_STYLE: Record<DraftStatus, { label: string; cls: string }> = {
+  draft: { label: "Needs review", cls: "bg-blue-500/15 text-blue-200" },
+  edited: { label: "Edited", cls: "bg-purple-500/15 text-purple-200" },
+  approved: { label: "Approved", cls: "bg-green-500/15 text-green-200" },
+  rejected: { label: "Rejected", cls: "bg-neutral-500/20 text-neutral-300" },
+  failed_validation: { label: "Failed checks", cls: "bg-red-500/15 text-red-200" },
+};
+
+const inputCls = "w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20";
+
+export default function DraftPanel({
+  leadId, initial, defaultTone, canEdit, hasEvidence,
+}: {
+  leadId: number;
+  initial: DraftView | null;
+  defaultTone: Tone;
+  canEdit: boolean;
+  hasEvidence: boolean;
+}) {
+  const [draft, setDraft] = useState<DraftView | null>(initial);
+  const [tone, setTone] = useState<Tone>(initial?.tone ?? defaultTone);
+  const [includeNews, setIncludeNews] = useState(initial?.includeNews ?? false);
+  const [editing, setEditing] = useState(false);
+  const [subject, setSubject] = useState(initial?.subject ?? "");
+  const [body, setBody] = useState(initial?.body ?? "");
+  const [notes, setNotes] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [showOriginal, setShowOriginal] = useState(false);
+  const [pending, start] = useTransition();
+  const [busy, setBusy] = useState<"generate" | "save" | "approve" | "reject" | null>(null);
+
+  function run<T>(kind: NonNullable<typeof busy>, work: () => Promise<{ ok: true; data: T } | { ok: false; error: { message: string } }>, onOk: (d: T) => void) {
+    setError(null);
+    setBusy(kind);
+    start(async () => {
+      const res = await work();
+      setBusy(null);
+      if (!res.ok) return setError(res.error.message);
+      onOk(res.data);
+    });
+  }
+
+  const generate = () =>
+    run("generate", () => generateEmailDraft(leadId, { tone, includeNews }), (d: DraftView) => {
+      setDraft(d);
+      setNotes(d.notes ?? []);
+      setSubject(d.subject);
+      setBody(d.body);
+      setEditing(false);
+    });
+
+  const save = () =>
+    run("save", () => saveDraftEdit(draft!.id, { subject, body }), (d: DraftView) => {
+      setDraft(d);
+      setEditing(false);
+    });
+
+  const approve = () => run("approve", () => approveEmailDraft(draft!.id), (d: DraftView) => setDraft(d));
+  const reject = () => run("reject", () => rejectEmailDraft(draft!.id), (d: DraftView) => setDraft(d));
+
+  const errors = draft?.issues.filter((i) => i.severity === "error") ?? [];
+  const warnings = draft?.issues.filter((i) => i.severity === "warning") ?? [];
+  const status = draft ? STATUS_STYLE[draft.status] : null;
+  const canApprove = canEdit && draft && (draft.status === "draft" || draft.status === "edited");
+
+  return (
+    <section className="rounded-xl border border-white/10 bg-[#0A0A0A] p-5 space-y-4" aria-labelledby="draft-heading">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 id="draft-heading" className="text-sm font-semibold text-white">Email draft</h2>
+          <p className="text-xs text-neutral-500 mt-0.5">Uses only verified evidence. Green phrases link to their source. Nothing is sent from here.</p>
+        </div>
+        {status && <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${status.cls}`}>{status.label}</span>}
+      </div>
+
+      {canEdit && (
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="text-xs text-neutral-400">
+            Tone
+            <select value={tone} onChange={(e) => setTone(e.target.value as Tone)} className="mt-1 block rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-sm text-white">
+              {TONES.map((t) => <option key={t} value={t} className="bg-black">{TONE_LABEL[t]}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 pb-1.5 text-xs text-neutral-300">
+            <input type="checkbox" checked={includeNews} onChange={(e) => setIncludeNews(e.target.checked)} className="accent-emerald-400" />
+            Mention recent company news
+          </label>
+          <button
+            onClick={generate}
+            disabled={pending}
+            className="ml-auto inline-flex items-center gap-2 rounded-lg bg-white px-3.5 py-2 text-sm font-semibold text-black hover:bg-neutral-200 disabled:opacity-50"
+          >
+            {busy === "generate" ? <Loader2 className="h-4 w-4 animate-spin" /> : draft ? <RefreshCw className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+            {busy === "generate" ? "Writing and checking…" : draft ? "Regenerate" : "Generate email"}
+          </button>
+        </div>
+      )}
+
+      {!draft && !hasEvidence && (
+        <p className="flex items-start gap-2 text-xs text-neutral-500">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          This lead has no verified evidence yet. You can still generate a short, honest note — it just won&apos;t reference anything specific about them. Research the lead first for a personalised one.
+        </p>
+      )}
+      {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
+      {notes.length > 0 && (
+        <ul className="space-y-1 text-xs text-neutral-400">{notes.map((n) => <li key={n} className="flex gap-2"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />{n}</li>)}</ul>
+      )}
+
+      {draft && (
+        <div className="space-y-3">
+          {draft.status === "failed_validation" && (
+            <div role="alert" className="flex items-start gap-2.5 rounded-lg border border-red-500/25 bg-red-500/5 px-3 py-2.5 text-sm text-red-100/90">
+              <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-medium">This draft broke the evidence rules, so it can&apos;t be approved as written.</p>
+                <p className="text-xs text-red-100/70 mt-0.5">Edit it to fix the problems below, or regenerate. Nothing unverified is ever filled in for you.</p>
+              </div>
+            </div>
+          )}
+
+          {editing ? (
+            <div className="space-y-3">
+              <label className="block text-xs text-neutral-400">Subject<input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} className={`${inputCls} mt-1`} /></label>
+              <label className="block text-xs text-neutral-400">Body<textarea value={body} onChange={(e) => setBody(e.target.value)} rows={12} maxLength={8000} className={`${inputCls} mt-1 font-sans leading-relaxed`} /></label>
+              <p className="text-xs text-neutral-500">Your edits are yours: we&apos;ll re-check them and show warnings, but never block you.</p>
+              <div className="flex gap-2">
+                <button onClick={save} disabled={pending} className="inline-flex items-center gap-2 rounded-lg bg-white px-3.5 py-2 text-sm font-semibold text-black hover:bg-neutral-200 disabled:opacity-50">
+                  {busy === "save" && <Loader2 className="h-4 w-4 animate-spin" />} Save edits
+                </button>
+                <button onClick={() => { setEditing(false); setSubject(draft.subject); setBody(draft.body); }} className="rounded-lg px-3 py-2 text-sm text-neutral-400 hover:text-white">Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4 space-y-3">
+              <p className="text-sm text-neutral-400">Subject: <span className="font-medium text-white">{draft.subject}</span></p>
+              <DraftBody draft={draft} />
+            </div>
+          )}
+
+          {(errors.length > 0 || warnings.length > 0) && (
+            <div className="space-y-1.5" aria-label="Checks">
+              {errors.map((i, k) => <p key={`e${k}`} className="flex items-start gap-2 text-xs text-red-300"><XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{i.message}</p>)}
+              {warnings.map((i, k) => <p key={`w${k}`} className="flex items-start gap-2 text-xs text-yellow-200/90"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{i.message}</p>)}
+            </div>
+          )}
+          {errors.length === 0 && draft.status === "draft" && (
+            <p className="flex items-center gap-2 text-xs text-green-300/90"><CheckCircle2 className="h-3.5 w-3.5" /> Passed all checks — every personal detail is tied to a verified source.</p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+            <span>{draft.claims.length} sourced phrase{draft.claims.length === 1 ? "" : "s"}</span><span>·</span>
+            <span>Tone: {TONE_LABEL[draft.tone]}</span><span>·</span>
+            <span>{draft.model}</span><span>·</span>
+            <span>{draft.attempts === 2 ? "needed one rewrite" : "first pass"}</span>
+            {draft.status === "edited" && (
+              <button onClick={() => setShowOriginal((v) => !v)} className="ml-1 text-neutral-400 underline hover:text-white">{showOriginal ? "Hide" : "Show"} original</button>
+            )}
+          </div>
+          {showOriginal && (
+            <div className="rounded-lg border border-white/10 p-3 text-xs text-neutral-400 whitespace-pre-wrap">
+              <p className="font-medium text-neutral-300">Original (as generated): {draft.originalSubject}</p>
+              {draft.originalBody}
+            </div>
+          )}
+
+          {canEdit && !editing && (
+            <div className="flex flex-wrap gap-2 border-t border-white/10 pt-3">
+              <button onClick={() => { setEditing(true); setSubject(draft.subject); setBody(draft.body); }} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-sm text-neutral-200 hover:bg-white/5"><Pencil className="h-3.5 w-3.5" /> Edit</button>
+              {canApprove && (
+                <button onClick={approve} disabled={pending} className="inline-flex items-center gap-1.5 rounded-lg bg-green-500/15 px-3 py-1.5 text-sm font-medium text-green-200 hover:bg-green-500/25 disabled:opacity-50">
+                  {busy === "approve" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Approve draft
+                </button>
+              )}
+              {draft.status !== "rejected" && draft.status !== "approved" && (
+                <button onClick={reject} disabled={pending} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-neutral-400 hover:text-white disabled:opacity-50"><X className="h-3.5 w-3.5" /> Reject</button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
