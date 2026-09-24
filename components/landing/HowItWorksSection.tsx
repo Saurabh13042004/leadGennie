@@ -1,52 +1,56 @@
-import { Calendar, FileText, Search, Send } from "lucide-react";
-
 const STEPS = [
   {
     num: "01",
-    icon: Search,
-    title: "Find",
-    desc: "Discover high-intent prospects using real-time signals and your ICP.",
+    title: "Define your ICP",
+    desc: "Describe your target audience using natural language inside the dashboard.",
   },
   {
     num: "02",
-    icon: FileText,
-    title: "Personalize",
-    desc: "AI researches each prospect and drafts a message tailored to them.",
+    title: "Find & enrich",
+    desc: "Work from CRM, Sheets, CSV, LinkedIn and other connected data sources.",
   },
   {
     num: "03",
-    icon: Send,
-    title: "Outreach",
-    desc: "You approve, then run multi-channel sequences across email and more.",
+    title: "Detect intent",
+    desc: "Use signals such as funding, hiring, onboarding and company activity.",
   },
   {
     num: "04",
-    icon: Calendar,
-    title: "Book",
-    desc: "Qualified replies land in your inbox, ready to turn into meetings.",
+    title: "Launch outreach",
+    desc: "Run personalized email and LinkedIn workflows with follow-ups and branching.",
+  },
+  {
+    num: "05",
+    title: "Review & improve",
+    desc: "Track lead history, replies, campaign performance and next-step recommendations.",
   },
 ];
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-20">
+    <section id="how" className="py-20">
       <div className="mx-auto max-w-6xl px-5">
-        <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-neutral-400">How it works</p>
-        <h2 className="mb-14 max-w-2xl text-4xl font-extrabold leading-[1.03] tracking-[-0.03em] text-neutral-900 sm:text-5xl">
-          From idea to booked meeting in a few steps.
-        </h2>
+        <div className="mb-14 flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-neutral-400">How it works</p>
+            <h2 className="max-w-2xl text-4xl font-extrabold leading-[1.03] tracking-[-0.03em] text-neutral-900 sm:text-5xl">
+              From lead list to active workflow.
+            </h2>
+          </div>
+          <p className="max-w-sm text-sm leading-relaxed text-neutral-500">
+            LeadGennie lets you start from your data or from a prompt, then build the workflow around the goals of
+            the campaign.
+          </p>
+        </div>
 
-        <div className="relative grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="absolute left-0 right-0 top-6 hidden h-px bg-neutral-200 lg:block" />
-
+        <div className="grid grid-cols-1 divide-y divide-neutral-200 border-y border-neutral-200 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
           {STEPS.map((step) => (
-            <div key={step.num} className="relative">
-              <div className="relative z-10 mb-5 flex h-12 w-12 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-700 shadow-sm">
-                <step.icon className="h-5 w-5" />
+            <div key={step.num} className="min-h-[190px] px-6 py-7">
+              <div className="mb-6 flex h-8 w-8 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50 text-[11px] font-bold text-indigo-600">
+                {step.num}
               </div>
-              <p className="mb-1 text-[11px] font-bold tracking-widest text-neutral-300">{step.num}</p>
-              <h3 className="mb-1.5 text-lg font-bold tracking-tight text-neutral-900">{step.title}</h3>
-              <p className="text-sm leading-relaxed text-neutral-500">{step.desc}</p>
+              <h3 className="mb-1.5 text-[15px] font-bold tracking-tight text-neutral-900">{step.title}</h3>
+              <p className="text-[12px] leading-relaxed text-neutral-500">{step.desc}</p>
             </div>
           ))}
         </div>

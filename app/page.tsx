@@ -1,9 +1,13 @@
 import LandingNavbar from "@/components/landing/LandingNavbar";
 import LandingHero from "@/components/landing/LandingHero";
-import LogoStrip from "@/components/landing/LogoStrip";
+import IntegrationsStrip from "@/components/landing/IntegrationsStrip";
+import ProblemSolution from "@/components/landing/ProblemSolution";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";
-import FeatureGrid from "@/components/landing/FeatureGrid";
-import ResultsBand from "@/components/landing/ResultsBand";
+import ProductSurface from "@/components/landing/ProductSurface";
+import AgentBuilderSection from "@/components/landing/AgentBuilderSection";
+import SecuritySection from "@/components/landing/SecuritySection";
+import PricingSection from "@/components/landing/PricingSection";
+import FaqSection from "@/components/landing/FaqSection";
 import FinalCta from "@/components/landing/FinalCta";
 import LandingFooter from "@/components/landing/LandingFooter";
 
@@ -13,10 +17,14 @@ export default function Home() {
       <LandingNavbar />
       <main>
         <LandingHero />
-        <LogoStrip />
+        <IntegrationsStrip />
+        <ProblemSolution />
         <HowItWorksSection />
-        <FeatureGrid />
-        <ResultsBand />
+        <ProductSurface />
+        <AgentBuilderSection />
+        <SecuritySection />
+        <PricingSection />
+        <FaqSection />
         <FinalCta />
       </main>
       <LandingFooter />
