@@ -13,18 +13,18 @@ export default async function Page() {
 
   if (!canManage) {
     return (
-      <div className="p-4 md:p-8 max-w-7xl mx-auto">
+      <div className="p-4 md:p-8 max-w-3xl mx-auto">
         <div className="flex items-start gap-3 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-            <KeyRound className="w-5 h-5 text-blue-400" />
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+            <KeyRound className="w-5 h-5 text-indigo-600" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-white">API Credentials</h1>
+            <h1 className="text-xl font-bold tracking-tight text-neutral-900">API Credentials</h1>
             <p className="text-sm text-neutral-500">Secure API access</p>
           </div>
         </div>
-        <div className="rounded-xl border border-dashed border-white/15 bg-[#0A0A0A] flex flex-col items-center justify-center text-center py-20 px-6">
-          <p className="text-white font-medium">Admin or owner role required</p>
+        <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 flex flex-col items-center justify-center text-center py-20 px-6">
+          <p className="text-neutral-900 font-semibold">Admin or owner role required</p>
           <p className="text-sm text-neutral-500 mt-1 max-w-sm">
             Ask a workspace admin or owner to manage the shared API token for this workspace.
           </p>

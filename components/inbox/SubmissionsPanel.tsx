@@ -18,13 +18,13 @@ import type { Lead } from "@/lib/actions/leads";
 import type { Member } from "@/lib/actions/workspace";
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-yellow-500/10 text-yellow-300 border-yellow-500/20",
-  proposed: "bg-purple-500/10 text-purple-300 border-purple-500/20",
-  resolved: "bg-green-500/10 text-green-300 border-green-500/20",
-  spam: "bg-red-500/10 text-red-300 border-red-500/20",
-  duplicate: "bg-white/5 text-neutral-400 border-white/10",
-  dnc_blocked: "bg-orange-500/10 text-orange-300 border-orange-500/20",
-  ignored: "bg-white/5 text-neutral-500 border-white/10",
+  pending: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
+  proposed: "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200",
+  resolved: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
+  spam: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
+  duplicate: "bg-neutral-100 text-neutral-600 ring-1 ring-inset ring-neutral-200",
+  dnc_blocked: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
+  ignored: "bg-neutral-100 text-neutral-500 ring-1 ring-inset ring-neutral-200",
 };
 
 export default function SubmissionsPanel({

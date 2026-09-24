@@ -42,8 +42,8 @@ export default function InboxView({
             className={cn(
               "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
               tab === t
-                ? "bg-blue-500/10 border-blue-500/30 text-white"
-                : "border-white/10 text-neutral-400 hover:text-white hover:bg-white/5"
+                ? "bg-neutral-900 border-neutral-900 text-white"
+                : "border-neutral-200 bg-white text-neutral-500 hover:text-neutral-900 hover:border-neutral-300"
             )}
           >
             {label}

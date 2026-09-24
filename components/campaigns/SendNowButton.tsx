@@ -37,13 +37,13 @@ export default function SendNowButton() {
       <button
         onClick={handleClick}
         disabled={isPending}
-        className="flex items-center gap-2 text-sm text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg px-4 py-2.5 transition-colors disabled:opacity-50"
+        className="flex items-center gap-2 text-sm text-neutral-700 bg-white hover:bg-neutral-50 border border-neutral-200 hover:border-neutral-300 rounded-xl px-4 py-2.5 transition-colors disabled:opacity-50"
       >
         {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         Send due messages now
       </button>
-      {result && <p className="text-xs text-green-400 max-w-xs text-right">{result}</p>}
-      {error && <p className="text-xs text-red-400 max-w-xs text-right">{error}</p>}
+      {result && <p className="text-xs text-emerald-600 max-w-xs text-right">{result}</p>}
+      {error && <p className="text-xs text-rose-600 max-w-xs text-right">{error}</p>}
     </div>
   );
 }
