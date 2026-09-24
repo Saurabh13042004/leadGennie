@@ -113,6 +113,17 @@ class Outreach(StrictModel):
     avoid: list[str] = Field(default_factory=list)
 
 
+class ScoringInputs(StrictModel):
+    """The normalized, VERIFIED attributes the score was computed from. Persisting them lets the app re-score
+    after an ICP edit as a pure function of stored inputs (no re-research)."""
+
+    industry: str | None = None
+    country: str | None = None
+    employee_count: int | None = None
+    keywords_found: list[str] = Field(default_factory=list)
+    person_title: str | None = None
+
+
 class ResearchResult(StrictModel):
     schema_version: str = SCHEMA_VERSION
     scoring_version: str = "1"
@@ -122,6 +133,7 @@ class ResearchResult(StrictModel):
     evidence: list[Evidence] = Field(default_factory=list)
     icp: IcpResult
     intent: IntentResult
+    scoring_inputs: ScoringInputs = Field(default_factory=ScoringInputs)
     qualified: bool = False
     why_fit: list[WhyFitItem] = Field(default_factory=list)
     outreach: Outreach = Field(default_factory=Outreach)

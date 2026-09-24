@@ -7,7 +7,7 @@ from pydantic import Field
 
 from app.contracts.common import SignalType, StrictModel
 from app.contracts.icp import Icp
-from app.contracts.result import IcpResult, IntentResult
+from app.contracts.result import IcpResult, IntentResult, WhyFitItem
 
 
 class ScoreCompany(StrictModel):
@@ -47,6 +47,7 @@ class ScoreData(StrictModel):
     icp: IcpResult
     intent: IntentResult
     qualified: bool
+    why_fit: list[WhyFitItem] = Field(default_factory=list)
 
 
 class ScoreResponse(StrictModel):

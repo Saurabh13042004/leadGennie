@@ -16,6 +16,7 @@ from app.llm.client import LlmClient
 from app.llm.prompts import normalize as prompt
 from app.pipeline.context import BudgetExhausted, PipelineContext
 from app.scoring import taxonomy
+from app.scoring.explain import why_fit
 from app.scoring.icp import Attributes, score_icp
 from app.scoring.intent import SignalInput, score_intent
 
@@ -48,6 +49,7 @@ class Qualification:
     why_fit: list[WhyFitItem]
     industry_key: str | None
     country: str | None
+    keywords_found: list[str]
 
 
 class QualificationAgent:
@@ -86,7 +88,9 @@ class QualificationAgent:
             excluded = any(i.criterion == "exclusion" for i in icp_result.breakdown)
             qualified = (not excluded) and icp_result.score >= icp.min_score_to_qualify
             step["output_summary"] = f"icp={icp_result.score} intent={intent.score} qualified={qualified}"
-        return Qualification(icp_result, intent, qualified, why_fit(icp, icp_result), industry, country)
+        return Qualification(
+            icp_result, intent, qualified, why_fit(icp, icp_result), industry, country, sorted(keywords)
+        )
 
     async def _llm_fallback(
         self, ctx: PipelineContext, profile: VerifiedProfile, industry: str | None, country: str | None
@@ -117,57 +121,3 @@ class QualificationAgent:
         if country is None and out.country and re.fullmatch(r"[A-Z]{2}", out.country):
             country = out.country
         return industry, country
-
-
-def why_fit(icp: Icp, result: IcpResult) -> list[WhyFitItem]:
-    """Human-readable checklist TEMPLATED from the breakdown — it cannot drift from the numbers."""
-    rng = icp.employee_range
-    target = {
-        "employee_range": f"target {rng.min if rng and rng.min is not None else '…'}–{rng.max if rng and rng.max is not None else '…'}"
-        if rng
-        else "",
-        "industry": "target industries: " + ", ".join(i.value for i in icp.industries),
-        "geography": "target regions: " + ", ".join(g.value for g in icp.geographies),
-        "title": "target roles",
-    }
-    label = {
-        "employee_range": "Company size",
-        "industry": "Industry",
-        "geography": "Location",
-        "title": "Decision-maker role",
-    }
-    out: list[WhyFitItem] = []
-    for item in result.breakdown:
-        if item.criterion == "exclusion":
-            out.append(
-                WhyFitItem(
-                    criterion="exclusion", status="not_met", text=item.value_found or "Excluded by ICP"
-                )
-            )
-            continue
-        name = label.get(
-            item.criterion,
-            item.criterion.replace("keyword:", "Mentions “")
-            + ("”" if item.criterion.startswith("keyword:") else ""),
-        )
-        detail = {
-            "met": "matches",
-            "partial": "partly matches",
-            "not_met": "does not match",
-            "unknown": "unknown",
-        }[item.status]
-        found = f" — {item.value_found}" if item.value_found else ""
-        tgt = (
-            f" ({target[item.criterion]})"
-            if item.criterion in target and target[item.criterion] and item.status != "unknown"
-            else ""
-        )
-        out.append(
-            WhyFitItem(
-                criterion=item.criterion,
-                status=item.status,
-                text=f"{name} {detail}{found}{tgt}",
-                evidence_ids=item.evidence_ids,
-            )
-        )
-    return out

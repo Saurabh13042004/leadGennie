@@ -18,7 +18,15 @@ from app.agents.signal import CandidateSignal, SignalAgent
 from app.config import Settings
 from app.contracts.common import RunTask, SignalType
 from app.contracts.icp import Icp
-from app.contracts.result import CompanyProfile, FieldValue, Outreach, Person, ResearchResult, Signal
+from app.contracts.result import (
+    CompanyProfile,
+    FieldValue,
+    Outreach,
+    Person,
+    ResearchResult,
+    ScoringInputs,
+    Signal,
+)
 from app.documents import RawDocument
 from app.evidence.models import Claim, ClaimVerdict
 from app.evidence.validator import EvidenceValidator
@@ -189,6 +197,13 @@ class ResearchPipeline:
             icp=qual.icp,
             intent=qual.intent,
             qualified=qual.qualified,
+            scoring_inputs=ScoringInputs(
+                industry=qual.industry_key,
+                country=qual.country,
+                employee_count=vp.employee_count,
+                keywords_found=qual.keywords_found,
+                person_title=person_title,
+            ),
             why_fit=qual.why_fit,
             outreach=outreach,
             unknowns=list(dict.fromkeys(unknowns)),

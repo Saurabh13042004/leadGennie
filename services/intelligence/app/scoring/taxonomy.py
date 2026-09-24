@@ -323,8 +323,13 @@ def normalize_country(text: str | None) -> str | None:
 
 
 def country_matches(country: str, target: str) -> bool:
-    target = target.strip().upper()
-    return country == target or country in REGIONS.get(target, frozenset())
+    """Does `country` (ISO code) satisfy an ICP geography, which may be a region ("APAC"), an ISO code ("IN")
+    or a plain name ("India", "Bengaluru")?"""
+    upper = target.strip().upper()
+    if upper in REGIONS:
+        return country in REGIONS[upper]
+    iso = upper if upper in _ISO2 else normalize_country(target)
+    return iso is not None and country == iso
 
 
 def normalize_title(title: str | None) -> tuple[str | None, str | None]:

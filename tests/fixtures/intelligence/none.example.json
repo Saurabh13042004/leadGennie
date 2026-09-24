@@ -1,0 +1,127 @@
+{
+  "company": {
+    "business_model": null,
+    "description": null,
+    "domain": "none.example",
+    "employee_band": null,
+    "fields": [],
+    "industry": null,
+    "location": null,
+    "market": null,
+    "name": "None",
+    "products": []
+  },
+  "evidence": [],
+  "icp": {
+    "breakdown": [
+      {
+        "criterion": "industry",
+        "evidence_ids": [],
+        "points": 0.0,
+        "status": "unknown",
+        "value_found": null,
+        "weight": 25.0
+      },
+      {
+        "criterion": "employee_range",
+        "evidence_ids": [],
+        "points": 0.0,
+        "status": "unknown",
+        "value_found": null,
+        "weight": 20.0
+      },
+      {
+        "criterion": "geography",
+        "evidence_ids": [],
+        "points": 0.0,
+        "status": "unknown",
+        "value_found": null,
+        "weight": 15.0
+      },
+      {
+        "criterion": "title",
+        "evidence_ids": [],
+        "points": 25.0,
+        "status": "met",
+        "value_found": "VP Sales",
+        "weight": 25.0
+      },
+      {
+        "criterion": "keyword:outbound",
+        "evidence_ids": [],
+        "points": 0.0,
+        "status": "not_met",
+        "value_found": null,
+        "weight": 15.0
+      }
+    ],
+    "confidence": 0.64,
+    "score": 25
+  },
+  "intent": {
+    "breakdown": [],
+    "score": 0
+  },
+  "outreach": {
+    "avoid": [],
+    "evidence_ids": [],
+    "insufficient_evidence": true,
+    "potential_problem": "",
+    "recommended_angle": "Lead with a role-relevant, low-pressure question.",
+    "why_contact": "None could be relevant based on limited public information.",
+    "why_now": "No recent verified triggers found.",
+    "why_person": ""
+  },
+  "people": [],
+  "qualified": false,
+  "schema_version": "1",
+  "scoring_inputs": {
+    "country": null,
+    "employee_count": null,
+    "industry": null,
+    "keywords_found": [],
+    "person_title": "VP Sales"
+  },
+  "scoring_version": "1",
+  "signals": [],
+  "unknowns": [
+    "industry",
+    "employee_count",
+    "location",
+    "funding",
+    "hiring"
+  ],
+  "warnings": [],
+  "why_fit": [
+    {
+      "criterion": "industry",
+      "evidence_ids": [],
+      "status": "unknown",
+      "text": "industry: unknown"
+    },
+    {
+      "criterion": "employee_range",
+      "evidence_ids": [],
+      "status": "unknown",
+      "text": "employee_range: unknown"
+    },
+    {
+      "criterion": "geography",
+      "evidence_ids": [],
+      "status": "unknown",
+      "text": "geography: unknown"
+    },
+    {
+      "criterion": "title",
+      "evidence_ids": [],
+      "status": "met",
+      "text": "title: VP Sales"
+    },
+    {
+      "criterion": "keyword:outbound",
+      "evidence_ids": [],
+      "status": "not_met",
+      "text": "keyword:outbound: unknown"
+    }
+  ]
+}

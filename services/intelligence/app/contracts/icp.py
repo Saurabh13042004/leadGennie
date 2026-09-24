@@ -23,6 +23,10 @@ class EmployeeRange(StrictModel):
 
 
 class TitleCriterion(StrictModel):
+    """A target role. Met when the title matches any `keywords` (whole-word, case-insensitive: "cto", "vp of
+    engineering") OR satisfies every given `seniority`/`function` constraint."""
+
+    keywords: list[str] = Field(default_factory=list)
     seniority: list[str] = Field(default_factory=list)
     function: list[str] = Field(default_factory=list)
     weight: float = Field(default=25, ge=0)

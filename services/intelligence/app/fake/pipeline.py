@@ -24,6 +24,7 @@ from app.contracts.result import (
     Outreach,
     Person,
     ResearchResult,
+    ScoringInputs,
     Signal,
     Verification,
     WhyFitItem,
@@ -161,6 +162,11 @@ def _build(name: str, domain: str, lead: dict[str, str | None] | None, req: RunR
             FieldValue(field="employee_count", value="120", evidence_ids=["ev_3"]),
             FieldValue(field="industry", value="B2B SaaS", evidence_ids=["ev_4"]),
             FieldValue(field="location", value="Bengaluru, IN", evidence_ids=["ev_3"]),
+            FieldValue(
+                field="description",
+                value="B2B SaaS platform for outbound sales teams.",
+                evidence_ids=["ev_4"],
+            ),
         ]
         signals = [
             Signal(
@@ -323,6 +329,23 @@ def _build(name: str, domain: str, lead: dict[str, str | None] | None, req: RunR
         people=people,
         signals=signals,
         evidence=evidence,
+        scoring_inputs=ScoringInputs(
+            industry=attrs.industry,
+            country=attrs.country,
+            employee_count=employees,
+            keywords_found=sorted(
+                {
+                    k.keyword.strip().lower()
+                    for k in req.context.icp.keyword_signals
+                    if any(
+                        k.keyword.strip().lower() in (e.claim + " " + e.snippet).lower()
+                        for e in evidence
+                        if e.verification.verified
+                    )
+                }
+            ),
+            person_title=lead.get("title") if lead else None,
+        ),
         icp=icp,
         intent=intent,
         qualified=(not excluded) and icp.score >= req.context.icp.min_score_to_qualify,

@@ -20,12 +20,14 @@ typecheck:
 test:
 	$(PY) pytest
 
-contract:       ## OpenAPI drift check + invariants on every fixture result
+contract:       ## OpenAPI + golden-fixture drift checks, invariants on every fixture result
 	$(PY) python scripts/export_openapi.py --check
+	$(PY) python scripts/export_fixtures.py --check
 	$(PY) pytest tests/contract -q
 
-openapi:        ## regenerate the committed OpenAPI contract
+openapi:        ## regenerate the committed OpenAPI contract + golden fixtures the Next.js tests use
 	$(PY) python scripts/export_openapi.py
+	$(PY) python scripts/export_fixtures.py
 
 verify: lint typecheck test contract   ## everything CI runs
 

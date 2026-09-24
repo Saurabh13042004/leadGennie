@@ -58,6 +58,7 @@ extend-immutable-calls = ["fastapi.Depends"]
 "app/evidence/matching.py" = ["RUF001"]  # smart quotes/dashes are the point: they are normalized
 "app/sources/html.py" = ["RUF001"]
 "app/agents/qualification.py" = ["RUF001"]
+"app/scoring/explain.py" = ["RUF001"]
 "app/pipeline/research.py" = ["RUF001"]
 "tests/**" = ["RUF059", "ASYNC109", "SIM117", "B017"]
 

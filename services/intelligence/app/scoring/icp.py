@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from app.contracts.icp import Icp
@@ -106,18 +107,24 @@ def _title(icp: Icp, attrs: Attributes) -> _Criterion | None:
     if not attrs.has_person or (attrs.seniority is None and attrs.function is None):
         return _Criterion("title", weight, "unknown", 0.0, attrs.title_text, "title")
     best, status = 0.0, "not_met"
+    title = (attrs.title_text or "").lower()
     for t in icp.titles:
         checks = []
         if t.seniority:
             checks.append(attrs.seniority in t.seniority)
         if t.function:
             checks.append(attrs.function in t.function)
-        if not checks:
+        keyword_hit = any(
+            re.search(rf"(?<![a-z0-9]){re.escape(k.strip().lower())}(?![a-z0-9])", title)
+            for k in t.keywords
+            if k.strip()
+        )
+        if not checks and not t.keywords:
             continue
         f = t.weight / weight
-        if all(checks) and f > best:
+        if (keyword_hit or (checks and all(checks))) and f > best:
             best, status = f, "met"
-        elif any(checks) and best < 0.5 * f:
+        elif checks and any(checks) and best < 0.5 * f:
             best, status = 0.5 * f, "partial"
     return _Criterion("title", weight, status, best, attrs.title_text, "title")
 

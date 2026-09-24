@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.contracts.score import ScoreCompany, ScoreData, ScorePerson, ScoreRequest
 from app.scoring import taxonomy
+from app.scoring.explain import why_fit
 from app.scoring.icp import SCORING_VERSION, Attributes, score_icp
 from app.scoring.intent import SignalInput, score_intent
 
@@ -40,4 +41,5 @@ def score(request: ScoreRequest) -> ScoreData:
         icp=icp,
         intent=intent,
         qualified=(not excluded) and icp.score >= request.icp.min_score_to_qualify,
+        why_fit=why_fit(request.icp, icp),
     )

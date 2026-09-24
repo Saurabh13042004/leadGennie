@@ -214,3 +214,67 @@ def test_attributes_dataclass_is_frozen() -> None:
     with pytest.raises(AttributeError):
         a.industry = "x"  # type: ignore[misc]
     assert score_icp(ICP, a).score >= 0
+
+
+# ---- free-text ICP inputs (Phase 2B maps the workspace's plain lists onto these) ------------------------
+
+
+def test_geography_may_be_a_plain_name_a_city_an_iso_code_or_a_region() -> None:
+    for target in ("India", "IN", "Bengaluru", "APAC"):
+        icp = Icp(geographies=[WeightedValue(value=target, weight=10)])
+        r = score(ScoreRequest(icp=icp, company=ScoreCompany(country="Bengaluru, India"), as_of=AS_OF)).icp
+        assert r.breakdown[0].status == "met", target
+    miss = score(
+        ScoreRequest(
+            icp=Icp(geographies=[WeightedValue(value="Germany", weight=10)]),
+            company=ScoreCompany(country="India"),
+            as_of=AS_OF,
+        )
+    ).icp
+    assert miss.breakdown[0].status == "not_met"
+
+
+def test_title_keywords_match_whole_words_only() -> None:
+    icp = Icp(titles=[TitleCriterion(keywords=["cto", "vp of engineering"], weight=10)])
+
+    def status(title: str) -> str:
+        r = score(
+            ScoreRequest(icp=icp, company=ScoreCompany(), person=ScorePerson(title=title), as_of=AS_OF)
+        ).icp
+        return r.breakdown[0].status
+
+    assert (
+        status("CTO") == "met"
+        and status("Co-founder & CTO") == "met"
+        and status("VP of Engineering") == "met"
+    )
+    assert status("Director of Sales") == "not_met"  # "cto" must not match inside "dire-cto-r"
+
+
+def test_scoring_inputs_are_returned_for_rescoring() -> None:
+    import asyncio
+
+    from app.contracts.runs import RunRequest
+    from app.fake.pipeline import FakePipeline
+    from app.pipeline.context import PipelineContext
+
+    from tests.conftest import run_body
+
+    result = asyncio.run(
+        FakePipeline().execute(PipelineContext("r", RunRequest.model_validate(run_body("acme.example"))))
+    )
+    si = result.scoring_inputs
+    assert (si.industry, si.country, si.employee_count, si.person_title) == (
+        "b2b_saas",
+        "IN",
+        120,
+        "VP Sales",
+    )
+    assert si.keywords_found == ["outbound"]
+
+
+def test_score_endpoint_logic_returns_a_why_fit_checklist_matching_the_breakdown() -> None:
+    r = score(req(industry="B2B SaaS", country="India", employee_count=120, keywords_found=["outbound"]))
+    assert [w.criterion for w in r.why_fit] == [i.criterion for i in r.icp.breakdown]
+    size = next(w for w in r.why_fit if w.criterion == "employee_range")
+    assert size.status == "met" and "120" in size.text and "50" in size.text

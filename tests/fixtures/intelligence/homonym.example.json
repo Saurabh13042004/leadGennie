@@ -1,0 +1,193 @@
+{
+  "company": {
+    "business_model": null,
+    "description": "Small company.",
+    "domain": "homonym.example",
+    "employee_band": null,
+    "fields": [
+      {
+        "evidence_ids": [
+          "ev_1"
+        ],
+        "field": "employee_count",
+        "value": "40"
+      }
+    ],
+    "industry": null,
+    "location": null,
+    "market": null,
+    "name": "Homonym",
+    "products": []
+  },
+  "evidence": [
+    {
+      "captured_at": "2026-09-24T10:00:00Z",
+      "claim": "Homonym Ltd has 40 employees",
+      "content_hash": "sha256:9e36b840645502f57ba68d58ecdff4d7c8b21c03f24a166365fc131b13a7aada",
+      "id": "ev_1",
+      "snippet": "Our company has 40 employees.",
+      "source_title": "About",
+      "source_type": "website",
+      "source_url": "https://homonym.example/about",
+      "verification": {
+        "checked_at": "2026-09-24T10:00:00Z",
+        "confidence": 0.95,
+        "method": [
+          "url_fetched",
+          "snippet_present",
+          "entity_match",
+          "entailment",
+          "recency"
+        ],
+        "notes": [],
+        "verified": true
+      }
+    },
+    {
+      "captured_at": "2026-09-24T10:00:00Z",
+      "claim": "Homonym raised a Series B",
+      "content_hash": "sha256:2239348e1191847ec4d4d09f38c81918444453ada4c2b378ec781acd70a12483",
+      "id": "ev_2",
+      "snippet": "Homonym Inc. (Boston) raised a Series B.",
+      "source_title": "Other company raises",
+      "source_type": "news",
+      "source_url": "https://news.example/other-homonym",
+      "verification": {
+        "checked_at": "2026-09-24T10:00:00Z",
+        "confidence": 0.3,
+        "method": [
+          "url_fetched"
+        ],
+        "notes": [
+          "entity_match: source is about a different company (different domain/HQ)"
+        ],
+        "verified": false
+      }
+    }
+  ],
+  "icp": {
+    "breakdown": [
+      {
+        "criterion": "industry",
+        "evidence_ids": [],
+        "points": 0.0,
+        "status": "unknown",
+        "value_found": null,
+        "weight": 25.0
+      },
+      {
+        "criterion": "employee_range",
+        "evidence_ids": [],
+        "points": 10.0,
+        "status": "partial",
+        "value_found": "40",
+        "weight": 20.0
+      },
+      {
+        "criterion": "geography",
+        "evidence_ids": [],
+        "points": 0.0,
+        "status": "unknown",
+        "value_found": null,
+        "weight": 15.0
+      },
+      {
+        "criterion": "title",
+        "evidence_ids": [],
+        "points": 25.0,
+        "status": "met",
+        "value_found": "VP Sales",
+        "weight": 25.0
+      },
+      {
+        "criterion": "keyword:outbound",
+        "evidence_ids": [],
+        "points": 0.0,
+        "status": "not_met",
+        "value_found": null,
+        "weight": 15.0
+      }
+    ],
+    "confidence": 0.76,
+    "score": 35
+  },
+  "intent": {
+    "breakdown": [],
+    "score": 0
+  },
+  "outreach": {
+    "avoid": [],
+    "evidence_ids": [],
+    "insufficient_evidence": true,
+    "potential_problem": "",
+    "recommended_angle": "Lead with a role-relevant, low-pressure question.",
+    "why_contact": "Homonym could be relevant based on limited public information.",
+    "why_now": "No recent verified triggers found.",
+    "why_person": ""
+  },
+  "people": [],
+  "qualified": false,
+  "schema_version": "1",
+  "scoring_inputs": {
+    "country": null,
+    "employee_count": 40,
+    "industry": null,
+    "keywords_found": [],
+    "person_title": "VP Sales"
+  },
+  "scoring_version": "1",
+  "signals": [
+    {
+      "confidence": 0.3,
+      "conflicts_with": [],
+      "description": "",
+      "detected_at": "2026-08-01",
+      "evidence_ids": [
+        "ev_2"
+      ],
+      "id": "sg_1",
+      "title": "Series B (unverified)",
+      "type": "FUNDING",
+      "verified": false
+    }
+  ],
+  "unknowns": [
+    "industry",
+    "location"
+  ],
+  "warnings": [
+    "ambiguous_entity"
+  ],
+  "why_fit": [
+    {
+      "criterion": "industry",
+      "evidence_ids": [],
+      "status": "unknown",
+      "text": "industry: unknown"
+    },
+    {
+      "criterion": "employee_range",
+      "evidence_ids": [],
+      "status": "partial",
+      "text": "employee_range: 40"
+    },
+    {
+      "criterion": "geography",
+      "evidence_ids": [],
+      "status": "unknown",
+      "text": "geography: unknown"
+    },
+    {
+      "criterion": "title",
+      "evidence_ids": [],
+      "status": "met",
+      "text": "title: VP Sales"
+    },
+    {
+      "criterion": "keyword:outbound",
+      "evidence_ids": [],
+      "status": "not_met",
+      "text": "keyword:outbound: unknown"
+    }
+  ]
+}

@@ -1088,6 +1088,9 @@
             "title": "Schema Version",
             "type": "string"
           },
+          "scoring_inputs": {
+            "$ref": "#/components/schemas/ScoringInputs"
+          },
           "scoring_version": {
             "default": "1",
             "title": "Scoring Version",
@@ -1440,6 +1443,13 @@
           "scoring_version": {
             "title": "Scoring Version",
             "type": "string"
+          },
+          "why_fit": {
+            "items": {
+              "$ref": "#/components/schemas/WhyFitItem"
+            },
+            "title": "Why Fit",
+            "type": "array"
           }
         },
         "required": [
@@ -1596,6 +1606,65 @@
         "title": "ScoreSignal",
         "type": "object"
       },
+      "ScoringInputs": {
+        "additionalProperties": false,
+        "description": "The normalized, VERIFIED attributes the score was computed from. Persisting them lets the app re-score\nafter an ICP edit as a pure function of stored inputs (no re-research).",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "employee_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee Count"
+          },
+          "industry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry"
+          },
+          "keywords_found": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords Found",
+            "type": "array"
+          },
+          "person_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person Title"
+          }
+        },
+        "title": "ScoringInputs",
+        "type": "object"
+      },
       "Signal": {
         "additionalProperties": false,
         "properties": {
@@ -1719,12 +1788,20 @@
       },
       "TitleCriterion": {
         "additionalProperties": false,
+        "description": "A target role. Met when the title matches any `keywords` (whole-word, case-insensitive: \"cto\", \"vp of\nengineering\") OR satisfies every given `seniority`/`function` constraint.",
         "properties": {
           "function": {
             "items": {
               "type": "string"
             },
             "title": "Function",
+            "type": "array"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
             "type": "array"
           },
           "seniority": {
