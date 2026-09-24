@@ -1,0 +1,2417 @@
+{
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "details": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "retryable": {
+            "default": false,
+            "title": "Retryable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ApiError",
+        "type": "object"
+      },
+      "Budgets": {
+        "additionalProperties": false,
+        "description": "Hard limits. On exhaustion the run finishes gracefully with a partial result + a warning.",
+        "properties": {
+          "max_cost_usd": {
+            "default": 0.6,
+            "exclusiveMinimum": 0.0,
+            "maximum": 10.0,
+            "title": "Max Cost Usd",
+            "type": "number"
+          },
+          "max_llm_calls": {
+            "default": 12,
+            "maximum": 60.0,
+            "minimum": 1.0,
+            "title": "Max Llm Calls",
+            "type": "integer"
+          },
+          "max_pages": {
+            "default": 25,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Max Pages",
+            "type": "integer"
+          },
+          "max_search_queries": {
+            "default": 8,
+            "maximum": 30.0,
+            "minimum": 0.0,
+            "title": "Max Search Queries",
+            "type": "integer"
+          },
+          "max_seconds": {
+            "default": 120,
+            "maximum": 900.0,
+            "minimum": 5.0,
+            "title": "Max Seconds",
+            "type": "integer"
+          }
+        },
+        "title": "Budgets",
+        "type": "object"
+      },
+      "Capabilities": {
+        "additionalProperties": false,
+        "properties": {
+          "connectors": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectorStatus"
+            },
+            "title": "Connectors",
+            "type": "array"
+          },
+          "contract_version": {
+            "default": "1.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "fake_mode": {
+            "default": false,
+            "title": "Fake Mode",
+            "type": "boolean"
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model"
+          },
+          "task_costs": {
+            "items": {
+              "$ref": "#/components/schemas/TaskCost"
+            },
+            "title": "Task Costs",
+            "type": "array"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/RunTask"
+            },
+            "title": "Tasks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tasks",
+          "connectors",
+          "task_costs"
+        ],
+        "title": "Capabilities",
+        "type": "object"
+      },
+      "CapabilitiesResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Capabilities"
+          },
+          "ok": {
+            "const": true,
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "CapabilitiesResponse",
+        "type": "object"
+      },
+      "ClaimCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "hard": {
+            "title": "Hard",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "passed",
+          "hard"
+        ],
+        "title": "ClaimCheck",
+        "type": "object"
+      },
+      "ClaimInput": {
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Claim",
+            "type": "string"
+          },
+          "company_domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Domain"
+          },
+          "company_name": {
+            "title": "Company Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "signal_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignalType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "snippet": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Snippet",
+            "type": "string"
+          },
+          "source_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Date"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "claim",
+          "source_url",
+          "snippet",
+          "company_name"
+        ],
+        "title": "ClaimInput",
+        "type": "object"
+      },
+      "ClaimVerdict": {
+        "additionalProperties": false,
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/ClaimCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "narrowed_claim": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narrowed Claim"
+          },
+          "verdict": {
+            "$ref": "#/components/schemas/Verification"
+          }
+        },
+        "required": [
+          "id",
+          "verdict"
+        ],
+        "title": "ClaimVerdict",
+        "type": "object"
+      },
+      "CompanyInput": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "anyOf": [
+              {
+                "maxLength": 253,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain"
+          },
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CompanyInput",
+        "type": "object"
+      },
+      "CompanyProfile": {
+        "additionalProperties": false,
+        "properties": {
+          "business_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Model"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain"
+          },
+          "employee_band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee Band"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldValue"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "industry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "market": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "products": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Products",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CompanyProfile",
+        "type": "object"
+      },
+      "ConnectorStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "name",
+          "available"
+        ],
+        "title": "ConnectorStatus",
+        "type": "object"
+      },
+      "EmployeeRange": {
+        "additionalProperties": false,
+        "properties": {
+          "max": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "weight": {
+            "default": 20,
+            "minimum": 0.0,
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "title": "EmployeeRange",
+        "type": "object"
+      },
+      "ErrorCode": {
+        "enum": [
+          "VALIDATION",
+          "UNAUTHENTICATED",
+          "NOT_FOUND",
+          "RATE_LIMITED",
+          "QUOTA_EXCEEDED",
+          "PROVIDER_ERROR",
+          "BUDGET_EXCEEDED",
+          "TIMEOUT",
+          "UNAVAILABLE",
+          "INTERNAL"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "Evidence": {
+        "additionalProperties": false,
+        "properties": {
+          "captured_at": {
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          },
+          "claim": {
+            "title": "Claim",
+            "type": "string"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "snippet": {
+            "title": "Snippet",
+            "type": "string"
+          },
+          "source_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Title"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "verification": {
+            "$ref": "#/components/schemas/Verification"
+          }
+        },
+        "required": [
+          "id",
+          "claim",
+          "source_url",
+          "source_type",
+          "snippet",
+          "content_hash",
+          "captured_at",
+          "verification"
+        ],
+        "title": "Evidence",
+        "type": "object"
+      },
+      "Exclusions": {
+        "additionalProperties": false,
+        "properties": {
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Domains",
+            "type": "array"
+          },
+          "industries": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Industries",
+            "type": "array"
+          },
+          "titles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Titles",
+            "type": "array"
+          }
+        },
+        "title": "Exclusions",
+        "type": "object"
+      },
+      "FieldValue": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "value"
+        ],
+        "title": "FieldValue",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "checks": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {},
+            "title": "Checks",
+            "type": "object"
+          },
+          "status": {
+            "default": "ok",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "Icp": {
+        "additionalProperties": false,
+        "description": "Workspace ICP definition (docs/intelligence-engine/scoring.md). Sent as data with every request.",
+        "properties": {
+          "employee_range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmployeeRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exclusions": {
+            "$ref": "#/components/schemas/Exclusions"
+          },
+          "geographies": {
+            "items": {
+              "$ref": "#/components/schemas/WeightedValue"
+            },
+            "title": "Geographies",
+            "type": "array"
+          },
+          "industries": {
+            "items": {
+              "$ref": "#/components/schemas/WeightedValue"
+            },
+            "title": "Industries",
+            "type": "array"
+          },
+          "keyword_signals": {
+            "items": {
+              "$ref": "#/components/schemas/KeywordSignal"
+            },
+            "title": "Keyword Signals",
+            "type": "array"
+          },
+          "min_score_to_qualify": {
+            "default": 70,
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Min Score To Qualify",
+            "type": "integer"
+          },
+          "titles": {
+            "items": {
+              "$ref": "#/components/schemas/TitleCriterion"
+            },
+            "title": "Titles",
+            "type": "array"
+          }
+        },
+        "title": "Icp",
+        "type": "object"
+      },
+      "IcpBreakdownItem": {
+        "additionalProperties": false,
+        "properties": {
+          "criterion": {
+            "title": "Criterion",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "points": {
+            "title": "Points",
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "met",
+              "partial",
+              "not_met",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "value_found": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Found"
+          },
+          "weight": {
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "criterion",
+          "status",
+          "weight",
+          "points"
+        ],
+        "title": "IcpBreakdownItem",
+        "type": "object"
+      },
+      "IcpResult": {
+        "additionalProperties": false,
+        "properties": {
+          "breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/IcpBreakdownItem"
+            },
+            "title": "Breakdown",
+            "type": "array"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "score": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "score",
+          "confidence"
+        ],
+        "title": "IcpResult",
+        "type": "object"
+      },
+      "IntentBreakdownItem": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "points": {
+            "title": "Points",
+            "type": "number"
+          },
+          "recency_factor": {
+            "title": "Recency Factor",
+            "type": "number"
+          },
+          "signal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Id"
+          },
+          "signal_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignalType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "weight": {
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "weight",
+          "confidence",
+          "recency_factor",
+          "points"
+        ],
+        "title": "IntentBreakdownItem",
+        "type": "object"
+      },
+      "IntentResult": {
+        "additionalProperties": false,
+        "properties": {
+          "breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/IntentBreakdownItem"
+            },
+            "title": "Breakdown",
+            "type": "array"
+          },
+          "score": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "score"
+        ],
+        "title": "IntentResult",
+        "type": "object"
+      },
+      "KeywordSignal": {
+        "additionalProperties": false,
+        "properties": {
+          "keyword": {
+            "title": "Keyword",
+            "type": "string"
+          },
+          "weight": {
+            "default": 10,
+            "minimum": 0.0,
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "keyword"
+        ],
+        "title": "KeywordSignal",
+        "type": "object"
+      },
+      "LeadInput": {
+        "additionalProperties": false,
+        "properties": {
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "LeadInput",
+        "type": "object"
+      },
+      "Outreach": {
+        "additionalProperties": false,
+        "properties": {
+          "avoid": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Avoid",
+            "type": "array"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "insufficient_evidence": {
+            "default": false,
+            "title": "Insufficient Evidence",
+            "type": "boolean"
+          },
+          "potential_problem": {
+            "default": "",
+            "title": "Potential Problem",
+            "type": "string"
+          },
+          "recommended_angle": {
+            "default": "",
+            "title": "Recommended Angle",
+            "type": "string"
+          },
+          "why_contact": {
+            "default": "",
+            "title": "Why Contact",
+            "type": "string"
+          },
+          "why_now": {
+            "default": "",
+            "title": "Why Now",
+            "type": "string"
+          },
+          "why_person": {
+            "default": "",
+            "title": "Why Person",
+            "type": "string"
+          }
+        },
+        "title": "Outreach",
+        "type": "object"
+      },
+      "Person": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "relevance": {
+            "default": "",
+            "title": "Relevance",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "Person",
+        "type": "object"
+      },
+      "Progress": {
+        "additionalProperties": false,
+        "properties": {
+          "pct": {
+            "default": 0,
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Pct",
+            "type": "integer"
+          },
+          "stage": {
+            "default": "queued",
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "title": "Progress",
+        "type": "object"
+      },
+      "ResearchResult": {
+        "additionalProperties": false,
+        "properties": {
+          "company": {
+            "$ref": "#/components/schemas/CompanyProfile"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "icp": {
+            "$ref": "#/components/schemas/IcpResult"
+          },
+          "intent": {
+            "$ref": "#/components/schemas/IntentResult"
+          },
+          "outreach": {
+            "$ref": "#/components/schemas/Outreach"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/Person"
+            },
+            "title": "People",
+            "type": "array"
+          },
+          "qualified": {
+            "default": false,
+            "title": "Qualified",
+            "type": "boolean"
+          },
+          "schema_version": {
+            "default": "1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "scoring_version": {
+            "default": "1",
+            "title": "Scoring Version",
+            "type": "string"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/Signal"
+            },
+            "title": "Signals",
+            "type": "array"
+          },
+          "unknowns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unknowns",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "why_fit": {
+            "items": {
+              "$ref": "#/components/schemas/WhyFitItem"
+            },
+            "title": "Why Fit",
+            "type": "array"
+          }
+        },
+        "required": [
+          "company",
+          "icp",
+          "intent"
+        ],
+        "title": "ResearchResult",
+        "type": "object"
+      },
+      "RunContext": {
+        "additionalProperties": false,
+        "description": "Workspace context as DATA. The engine has no notion of workspace identity.",
+        "properties": {
+          "icp": {
+            "$ref": "#/components/schemas/Icp"
+          },
+          "locale": {
+            "default": "en",
+            "title": "Locale",
+            "type": "string"
+          },
+          "offer_keywords": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Offer Keywords",
+            "type": "array"
+          },
+          "positioning": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Positioning",
+            "type": "string"
+          }
+        },
+        "title": "RunContext",
+        "type": "object"
+      },
+      "RunCreated": {
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          }
+        },
+        "required": [
+          "run_id",
+          "status"
+        ],
+        "title": "RunCreated",
+        "type": "object"
+      },
+      "RunCreatedResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RunCreated"
+          },
+          "ok": {
+            "const": true,
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "RunCreatedResponse",
+        "type": "object"
+      },
+      "RunInput": {
+        "additionalProperties": false,
+        "properties": {
+          "company": {
+            "$ref": "#/components/schemas/CompanyInput"
+          },
+          "freshness_days": {
+            "default": 14,
+            "maximum": 365.0,
+            "minimum": 0.0,
+            "title": "Freshness Days",
+            "type": "integer"
+          },
+          "lead": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeadInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "questions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Questions"
+          }
+        },
+        "required": [
+          "company"
+        ],
+        "title": "RunInput",
+        "type": "object"
+      },
+      "RunRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "budgets": {
+            "$ref": "#/components/schemas/Budgets"
+          },
+          "context": {
+            "$ref": "#/components/schemas/RunContext"
+          },
+          "idempotency_key": {
+            "maxLength": 200,
+            "minLength": 8,
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "input": {
+            "$ref": "#/components/schemas/RunInput"
+          },
+          "task": {
+            "$ref": "#/components/schemas/RunTask"
+          }
+        },
+        "required": [
+          "idempotency_key",
+          "task",
+          "input"
+        ],
+        "title": "RunRequest",
+        "type": "object"
+      },
+      "RunStatus": {
+        "enum": [
+          "queued",
+          "running",
+          "succeeded",
+          "failed",
+          "canceled"
+        ],
+        "title": "RunStatus",
+        "type": "string"
+      },
+      "RunTask": {
+        "enum": [
+          "company_research",
+          "lead_research",
+          "find_signals"
+        ],
+        "title": "RunTask",
+        "type": "string"
+      },
+      "RunView": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "progress": {
+            "$ref": "#/components/schemas/Progress"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResearchResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStep"
+            },
+            "title": "Trace",
+            "type": "array"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/UsageItem"
+            },
+            "title": "Usage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "run_id",
+          "status"
+        ],
+        "title": "RunView",
+        "type": "object"
+      },
+      "RunViewResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RunView"
+          },
+          "ok": {
+            "const": true,
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "RunViewResponse",
+        "type": "object"
+      },
+      "ScoreCompany": {
+        "additionalProperties": false,
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain"
+          },
+          "employee_count": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee Count"
+          },
+          "industry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry"
+          },
+          "keywords_found": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords Found",
+            "type": "array"
+          }
+        },
+        "title": "ScoreCompany",
+        "type": "object"
+      },
+      "ScoreData": {
+        "additionalProperties": false,
+        "properties": {
+          "icp": {
+            "$ref": "#/components/schemas/IcpResult"
+          },
+          "intent": {
+            "$ref": "#/components/schemas/IntentResult"
+          },
+          "qualified": {
+            "title": "Qualified",
+            "type": "boolean"
+          },
+          "scoring_version": {
+            "title": "Scoring Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scoring_version",
+          "icp",
+          "intent",
+          "qualified"
+        ],
+        "title": "ScoreData",
+        "type": "object"
+      },
+      "ScorePerson": {
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "ScorePerson",
+        "type": "object"
+      },
+      "ScoreRequest": {
+        "additionalProperties": false,
+        "description": "Pure scoring. Inputs are the caller's *verified* attributes; unverified signals are ignored.",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "company": {
+            "$ref": "#/components/schemas/ScoreCompany"
+          },
+          "evidence": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Evidence",
+            "type": "object"
+          },
+          "icp": {
+            "$ref": "#/components/schemas/Icp"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScorePerson"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreSignal"
+            },
+            "title": "Signals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "icp"
+        ],
+        "title": "ScoreRequest",
+        "type": "object"
+      },
+      "ScoreResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ScoreData"
+          },
+          "ok": {
+            "const": true,
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "ScoreResponse",
+        "type": "object"
+      },
+      "ScoreSignal": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "detected_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detected At"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SignalType"
+          },
+          "verified": {
+            "default": true,
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "type",
+          "confidence"
+        ],
+        "title": "ScoreSignal",
+        "type": "object"
+      },
+      "Signal": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "conflicts_with": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Conflicts With",
+            "type": "array"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "detected_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detected At"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SignalType"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "title",
+          "confidence",
+          "verified"
+        ],
+        "title": "Signal",
+        "type": "object"
+      },
+      "SignalType": {
+        "enum": [
+          "FUNDING",
+          "HIRING",
+          "EXPANSION",
+          "PRODUCT_LAUNCH",
+          "LEADERSHIP_CHANGE",
+          "TECH_CHANGE",
+          "JOB_POSTING",
+          "NEWS"
+        ],
+        "title": "SignalType",
+        "type": "string"
+      },
+      "SourceType": {
+        "enum": [
+          "website",
+          "careers",
+          "news",
+          "search",
+          "jobs_board",
+          "press_release",
+          "public_data"
+        ],
+        "title": "SourceType",
+        "type": "string"
+      },
+      "TaskCost": {
+        "additionalProperties": false,
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/RunTask"
+          },
+          "typical_cost_usd": {
+            "title": "Typical Cost Usd",
+            "type": "number"
+          },
+          "typical_llm_calls": {
+            "title": "Typical Llm Calls",
+            "type": "integer"
+          },
+          "typical_pages": {
+            "title": "Typical Pages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "task",
+          "typical_llm_calls",
+          "typical_pages",
+          "typical_cost_usd"
+        ],
+        "title": "TaskCost",
+        "type": "object"
+      },
+      "TitleCriterion": {
+        "additionalProperties": false,
+        "properties": {
+          "function": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Function",
+            "type": "array"
+          },
+          "seniority": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Seniority",
+            "type": "array"
+          },
+          "weight": {
+            "default": 25,
+            "minimum": 0.0,
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "title": "TitleCriterion",
+        "type": "object"
+      },
+      "TraceStep": {
+        "additionalProperties": false,
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "input_summary": {
+            "default": "",
+            "title": "Input Summary",
+            "type": "string"
+          },
+          "output_summary": {
+            "default": "",
+            "title": "Output Summary",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "error",
+              "skipped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tokens_in": {
+            "default": 0,
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "default": 0,
+            "title": "Tokens Out",
+            "type": "integer"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool"
+          }
+        },
+        "required": [
+          "seq",
+          "stage",
+          "started_at",
+          "duration_ms",
+          "status"
+        ],
+        "title": "TraceStep",
+        "type": "object"
+      },
+      "UsageItem": {
+        "additionalProperties": false,
+        "properties": {
+          "cost_estimate": {
+            "default": 0.0,
+            "title": "Cost Estimate",
+            "type": "number"
+          },
+          "kind": {
+            "enum": [
+              "llm",
+              "search",
+              "fetch",
+              "provider"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "tokens_in": {
+            "default": 0,
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "default": 0,
+            "title": "Tokens Out",
+            "type": "integer"
+          },
+          "units": {
+            "default": 1.0,
+            "title": "Units",
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "provider"
+        ],
+        "title": "UsageItem",
+        "type": "object"
+      },
+      "ValidateData": {
+        "additionalProperties": false,
+        "properties": {
+          "verdicts": {
+            "items": {
+              "$ref": "#/components/schemas/ClaimVerdict"
+            },
+            "title": "Verdicts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "verdicts"
+        ],
+        "title": "ValidateData",
+        "type": "object"
+      },
+      "ValidateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/ClaimInput"
+            },
+            "maxItems": 25,
+            "minItems": 1,
+            "title": "Claims",
+            "type": "array"
+          },
+          "refetch": {
+            "default": true,
+            "title": "Refetch",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "claims"
+        ],
+        "title": "ValidateRequest",
+        "type": "object"
+      },
+      "ValidateResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ValidateData"
+          },
+          "ok": {
+            "const": true,
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "ValidateResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "Verification": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "method": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Method",
+            "type": "array"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "verified",
+          "confidence",
+          "checked_at"
+        ],
+        "title": "Verification",
+        "type": "object"
+      },
+      "WeightedValue": {
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "weight": {
+            "default": 10,
+            "minimum": 0.0,
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "WeightedValue",
+        "type": "object"
+      },
+      "WhyFitItem": {
+        "additionalProperties": false,
+        "properties": {
+          "criterion": {
+            "title": "Criterion",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "met",
+              "partial",
+              "not_met",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "criterion",
+          "status",
+          "text"
+        ],
+        "title": "WhyFitItem",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Private service: investigates the public web, verifies evidence, scores fit.",
+    "title": "LeadGennie Intelligence Engine",
+    "version": "1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Healthz",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Readyz",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/v1/capabilities": {
+      "get": {
+        "description": "What is actually available right now. The Next.js planner shapes plans from this \u2014 nothing is assumed.",
+        "operationId": "capabilities_v1_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilitiesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Capabilities",
+        "tags": [
+          "capabilities"
+        ]
+      }
+    },
+    "/v1/evidence/validate": {
+      "post": {
+        "operationId": "validate_claims_v1_evidence_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validate Claims",
+        "tags": [
+          "evidence"
+        ]
+      }
+    },
+    "/v1/runs": {
+      "post": {
+        "operationId": "create_run_v1_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunCreatedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Run",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}": {
+      "get": {
+        "operationId": "get_run_v1_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunViewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/cancel": {
+      "post": {
+        "operationId": "cancel_run_v1_runs__run_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunViewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Run",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/events": {
+      "get": {
+        "description": "Optional Server-Sent Events progress stream (Next polls by default).",
+        "operationId": "run_events_v1_runs__run_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Events",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/v1/score": {
+      "post": {
+        "description": "Pure, synchronous ICP/intent scoring: no network, no LLM. Unverified signals are ignored.",
+        "operationId": "score_endpoint_v1_score_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScoreRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Score Endpoint",
+        "tags": [
+          "score"
+        ]
+      }
+    }
+  }
+}

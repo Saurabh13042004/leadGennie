@@ -1,0 +1,41 @@
+# Local full-stack helpers. The Next.js app itself runs with `npm run dev`; point it at the engine with
+#   INTELLIGENCE_URL=http://localhost:8000   INTELLIGENCE_SIGNING_SECRET=dev-secret   INTELLIGENCE_SERVICE_TOKEN=dev-token
+#
+#   docker compose up engine-fake          # deterministic fake engine, no keys needed
+#   docker compose --profile real up       # real engine + local Postgres (`intel` schema); needs OPENAI_API_KEY
+services:
+  engine-fake:
+    build: ./services/intelligence
+    environment:
+      ENGINE_FAKE_MODE: "1"
+      INTELLIGENCE_SERVICE_TOKEN: dev-token
+      INTELLIGENCE_SIGNING_SECRET: dev-secret
+    ports: ["8000:8000"]
+
+  intel-db:
+    profiles: [real]
+    image: postgres:16
+    environment: { POSTGRES_PASSWORD: pw }
+    ports: ["55432:5432"]
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "postgres"], interval: 3s, retries: 20 }
+
+  engine-migrate:
+    profiles: [real]
+    build: ./services/intelligence
+    command: ["python", "scripts/migrate.py"]
+    environment: { INTEL_DATABASE_URL: "postgresql://postgres:pw@intel-db:5432/postgres" }
+    depends_on: { intel-db: { condition: service_healthy } }
+
+  engine:
+    profiles: [real]
+    build: ./services/intelligence
+    environment:
+      INTEL_DATABASE_URL: "postgresql://postgres:pw@intel-db:5432/postgres"
+      INTELLIGENCE_SERVICE_TOKEN: dev-token
+      INTELLIGENCE_SIGNING_SECRET: dev-secret
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      SEARCH_PROVIDER: ${SEARCH_PROVIDER:-none}
+      BRAVE_API_KEY: ${BRAVE_API_KEY:-}
+    ports: ["8000:8000"]
+    depends_on: { engine-migrate: { condition: service_completed_successfully } }

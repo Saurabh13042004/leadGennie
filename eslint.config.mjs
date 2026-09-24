@@ -18,6 +18,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Not part of the Next.js app: the Python Intelligence Engine (its venv contains thousands of JS files
+    // from dependencies). It has its own toolchain: `npm run verify:engine`.
+    "services/**",
   ]),
 ]);
 

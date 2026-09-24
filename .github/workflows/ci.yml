@@ -1,0 +1,32 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run verify
+
+  engine:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: services/intelligence } }
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: pw }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+      - run: make verify           # ruff, mypy strict, import-linter, pytest (fake LLM/network), contract + OpenAPI drift
+      - run: uv run pytest -m pg   # Postgres store integration
+        env: { INTEL_TEST_DATABASE_URL: "postgresql://postgres:pw@localhost:5432/postgres" }

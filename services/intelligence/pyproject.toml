@@ -1,0 +1,97 @@
+[project]
+name = "leadgennie-intelligence"
+version = "0.1.0"
+description = "LeadGennie Intelligence Engine — investigates the public web, verifies evidence, scores fit."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.8",
+  "pydantic-settings>=2.4",
+  "httpx>=0.27",
+  "openai>=1.50",
+  "structlog>=24.1",
+  "psycopg[binary,pool]>=3.2",
+  "beautifulsoup4>=4.12",
+  "defusedxml>=0.7",
+  "tldextract>=5.1",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "pytest-asyncio>=0.24",
+  "respx>=0.21",
+  "hypothesis>=6.100",
+  "ruff>=0.6",
+  "mypy>=1.11",
+  "import-linter>=2.0",
+  "types-defusedxml",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+  "live: hits real network/LLM; run with `make live` (never in CI)",
+  "pg: needs INTEL_TEST_DATABASE_URL (a disposable Postgres)",
+]
+addopts = "-m 'not live and not pg' -q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+src = ["app", "tests"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends"]
+
+[tool.ruff.lint.per-file-ignores]
+"app/evidence/matching.py" = ["RUF001"]  # smart quotes/dashes are the point: they are normalized
+"app/sources/html.py" = ["RUF001"]
+"app/agents/qualification.py" = ["RUF001"]
+"app/pipeline/research.py" = ["RUF001"]
+"tests/**" = ["RUF059", "ASYNC109", "SIM117", "B017"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC", "RUF"]
+ignore = ["RUF012", "E501"]  # the formatter owns line layout
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["app"]
+
+[[tool.mypy.overrides]]
+module = ["tldextract.*"]
+ignore_missing_imports = true
+
+[tool.importlinter]
+root_package = "app"
+
+[[tool.importlinter.contracts]]
+name = "agents and scoring never import sources (they consume collected data only)"
+type = "forbidden"
+source_modules = ["app.agents", "app.scoring", "app.evidence"]
+forbidden_modules = ["app.sources"]
+
+[[tool.importlinter.contracts]]
+name = "sources never import agents"
+type = "forbidden"
+source_modules = ["app.sources"]
+forbidden_modules = ["app.agents", "app.evidence", "app.scoring"]
+
+[[tool.importlinter.contracts]]
+name = "scoring is pure: no llm, no store, no sources"
+type = "forbidden"
+source_modules = ["app.scoring"]
+forbidden_modules = ["app.llm", "app.store", "app.sources", "app.pipeline"]

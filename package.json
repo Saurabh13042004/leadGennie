@@ -12,6 +12,8 @@
     "test:watch": "vitest",
     "check:fake-metrics": "node scripts/checks/no-fake-metrics.mjs",
     "verify": "npm run typecheck && npm run lint && npm run check:fake-metrics && npm run check:tenancy && npm run test && npm run build",
+    "verify:engine": "make -C services/intelligence verify",
+    "verify:all": "npm run verify && npm run verify:engine",
     "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
     "db:migrate:status": "node --env-file=.env.local scripts/migrate.mjs --status",
     "db:seed": "node --env-file=.env.local scripts/seed.mjs",
