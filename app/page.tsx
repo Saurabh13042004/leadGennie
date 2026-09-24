@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { log } from '@/lib/log';
 
 export default function Home() {
   const initialized = useRef(false);
@@ -13,13 +14,14 @@ export default function Home() {
 
     const root = document.documentElement;
     const themeToggle = document.getElementById('themeToggle');
-    let savedTheme = null;
-    try { savedTheme = localStorage.getItem('leadgennie-theme'); } catch(e) {}
+    let savedTheme: string | null = null;
+    try { savedTheme = localStorage.getItem('leadgennie-theme'); } catch {}
     if(savedTheme === 'light' || savedTheme === 'dark') root.setAttribute('data-theme', savedTheme);
     function syncThemeIcon(){
       const dark = root.getAttribute('data-theme') === 'dark';
-      if (themeToggle) {
-        themeToggle.querySelector('.theme-icon').textContent = dark ? '☾' : '☼';
+      const icon = themeToggle?.querySelector('.theme-icon');
+      if (icon) {
+        icon.textContent = dark ? '☾' : '☼';
       }
     }
     syncThemeIcon();
@@ -27,7 +29,7 @@ export default function Home() {
       themeToggle.addEventListener('click',()=>{
         const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         root.setAttribute('data-theme',next);
-        try { localStorage.setItem('leadgennie-theme',next); } catch(e) {}
+        try { localStorage.setItem('leadgennie-theme',next); } catch {}
         syncThemeIcon();
       });
     }
@@ -40,14 +42,20 @@ export default function Home() {
     const modal = document.getElementById('accessModal');
     const openers = document.querySelectorAll('[data-open-access]');
     const closeModal = document.getElementById('closeModal');
-    function openModal(e){ if(e) e.preventDefault(); modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); setTimeout(()=>document.getElementById('emailField').focus(),50); }
-    function shut(){ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
+    function openModal(e?: Event){
+      if(e) e.preventDefault();
+      if(!modal) return;
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden','false');
+      setTimeout(()=>document.getElementById('emailField')?.focus(),50);
+    }
+    function shut(){ if(!modal) return; modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
     openers.forEach(el=>el.addEventListener('click',openModal));
     if (closeModal) closeModal.addEventListener('click',shut);
     if (modal) modal.addEventListener('click',e=>{if(e.target===modal) shut();});
     document.addEventListener('keydown',e=>{if(e.key==='Escape') shut();});
 
-    async function submitToBackend(email, role) {
+    async function submitToBackend(email: string, role: string): Promise<boolean> {
       try {
         const res = await fetch('/api/book-demo', {
           method: 'POST',
@@ -63,60 +71,69 @@ export default function Home() {
         });
         return res.ok;
       } catch (err) {
-        console.error(err);
+        log.error('landing.book_demo_submit_failed', { err });
         return false;
       }
     }
 
-    const submitBtn = document.getElementById('submitAccess');
+    const submitBtn = document.getElementById('submitAccess') as HTMLButtonElement | null;
     if (submitBtn) {
       submitBtn.addEventListener('click', async ()=>{
-        const emailEl = document.getElementById('emailField');
-        const roleEl = document.getElementById('roleField');
-        if(!emailEl.checkValidity()){ emailEl.reportValidity(); return; }
-        
+        const emailEl = document.getElementById('emailField') as HTMLInputElement | null;
+        const roleEl = document.getElementById('roleField') as HTMLInputElement | null;
+        if(!emailEl || !emailEl.checkValidity()){ emailEl?.reportValidity(); return; }
+
         submitBtn.disabled = true;
         submitBtn.textContent = 'Submitting...';
-        
+
         const success = await submitToBackend(emailEl.value, roleEl ? roleEl.value : '');
-        
+
         submitBtn.disabled = false;
         submitBtn.textContent = 'Request Early Access →';
-        
-        if (success) {
-          document.getElementById('modalSuccess').style.display='block';
-          document.getElementById('modalSuccess').textContent = 'Request captured successfully!';
-        } else {
-          document.getElementById('modalSuccess').style.display='block';
-          document.getElementById('modalSuccess').textContent = 'Error capturing request. Try again later.';
-          document.getElementById('modalSuccess').style.color = 'var(--danger)';
+
+        const modalSuccess = document.getElementById('modalSuccess');
+        if (modalSuccess) {
+          modalSuccess.style.display = 'block';
+          if (success) {
+            modalSuccess.textContent = 'Request captured successfully!';
+          } else {
+            modalSuccess.textContent = 'Error capturing request. Try again later.';
+            modalSuccess.style.color = 'var(--danger)';
+          }
         }
       });
     }
 
-    const accessForm = document.getElementById('accessForm');
+    const accessForm = document.getElementById('accessForm') as HTMLFormElement | null;
     if (accessForm) {
       accessForm.addEventListener('submit', async e=>{
         e.preventDefault();
         const btn = accessForm.querySelector('button');
         const input = accessForm.querySelector('input');
+        if (!input) return;
         const email = input.value;
-        
-        btn.disabled = true;
-        btn.textContent = 'Submitting...';
-        
+
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'Submitting...';
+        }
+
         const success = await submitToBackend(email, 'Homepage Form');
-        
-        btn.disabled = false;
-        btn.textContent = 'Get Early Access →';
-        
+
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Get Early Access →';
+        }
+
         const successEl = document.getElementById('formSuccess');
-        successEl.style.display='block';
-        if (success) {
-          successEl.textContent = 'Thanks! Your early-access request has been recorded.';
-        } else {
-          successEl.textContent = 'An error occurred. Please try again.';
-          successEl.style.color = 'var(--danger)';
+        if (successEl) {
+          successEl.style.display = 'block';
+          if (success) {
+            successEl.textContent = 'Thanks! Your early-access request has been recorded.';
+          } else {
+            successEl.textContent = 'An error occurred. Please try again.';
+            successEl.style.color = 'var(--danger)';
+          }
         }
       });
     }
