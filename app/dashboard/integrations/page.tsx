@@ -22,36 +22,36 @@ export default async function Page({
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <div className="flex items-start gap-3 mb-8">
-        <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-          <Plug className="w-5 h-5 text-blue-400" />
+        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+          <Plug className="w-5 h-5 text-indigo-600" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold text-white">Integrations</h1>
+          <h1 className="text-xl font-bold tracking-tight text-neutral-900">Integrations</h1>
           <p className="text-sm text-neutral-500">Connect your tools</p>
         </div>
       </div>
 
       {connected && (
-        <div className="mb-6 flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-400">
+        <div className="mb-6 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           Connected to HubSpot successfully.
         </div>
       )}
       {error && (
-        <div className="mb-6 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div className="mb-6 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           <AlertCircle className="w-4 h-4 shrink-0" />
           Couldn&apos;t connect HubSpot: {error}
         </div>
       )}
 
-      <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6 mb-6">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 mb-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-lg bg-[#FF7A59]/10 flex items-center justify-center shrink-0 border border-[#FF7A59]/20">
+            <div className="w-11 h-11 rounded-xl bg-[#FF7A59]/10 flex items-center justify-center shrink-0 ring-1 ring-inset ring-[#FF7A59]/20">
               <span className="text-[#FF7A59] font-bold text-sm">HS</span>
             </div>
             <div>
-              <p className="text-white font-medium">HubSpot</p>
+              <p className="text-neutral-900 font-semibold">HubSpot</p>
               <p className="text-sm text-neutral-500">
                 Sync contacts, companies, and deals via OAuth 2.0
               </p>
@@ -60,26 +60,26 @@ export default async function Page({
           {canManage ? (
             <a
               href="/api/integrations/hubspot/connect"
-              className="bg-white text-black text-sm font-semibold px-4 py-2 rounded-lg hover:bg-neutral-200 transition-colors"
+              className="bg-neutral-900 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-neutral-800 transition-colors"
             >
               + Add HubSpot account
             </a>
           ) : (
-            <span className="text-xs text-neutral-500 border border-white/10 rounded-lg px-3 py-2">
+            <span className="text-xs text-neutral-500 border border-neutral-200 rounded-lg px-3 py-2 bg-neutral-50">
               Admin or owner role required
             </span>
           )}
         </div>
 
         {hubspotConnections.length > 0 && (
-          <div className="mt-6 space-y-3 border-t border-white/10 pt-6">
+          <div className="mt-6 space-y-2 border-t border-neutral-100 pt-6">
             {hubspotConnections.map((conn) => (
               <div
                 key={conn.id}
-                className="flex items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3"
+                className="flex items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-neutral-50/60 px-4 py-3"
               >
                 <div>
-                  <p className="text-sm text-white font-medium">
+                  <p className="text-sm text-neutral-900 font-medium">
                     {conn.label ?? `Portal ${conn.portal_id ?? conn.id}`}
                   </p>
                   <p className="text-xs text-neutral-500">
@@ -87,7 +87,7 @@ export default async function Page({
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-1 rounded-full">
+                  <span className="text-xs font-medium text-emerald-700 bg-emerald-50 ring-1 ring-inset ring-emerald-200 px-2.5 py-1 rounded-full">
                     {conn.status}
                   </span>
                   {canManage && <DisconnectButton id={conn.id} />}
@@ -98,14 +98,15 @@ export default async function Page({
         )}
       </div>
 
+      <p className="text-xs font-bold uppercase tracking-wide text-neutral-400 mb-3">More integrations</p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {OTHER_PROVIDERS.map((name) => (
           <div
             key={name}
-            className="rounded-xl border border-dashed border-white/10 bg-[#0A0A0A] p-5 flex items-center justify-between opacity-60"
+            className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 p-5 flex items-center justify-between"
           >
-            <p className="text-white font-medium">{name}</p>
-            <span className="text-xs text-neutral-500">Coming soon</span>
+            <p className="text-neutral-500 font-medium">{name}</p>
+            <span className="text-xs text-neutral-400">Coming soon</span>
           </div>
         ))}
       </div>

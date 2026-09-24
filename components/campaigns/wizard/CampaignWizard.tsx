@@ -28,13 +28,13 @@ export default function CampaignWizard({
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
       <Link
         href="/dashboard/campaigns"
-        className="inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white mb-6 transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Back
       </Link>
 
-      <h1 className="text-xl font-semibold text-white mb-1">Create campaign</h1>
+      <h1 className="text-xl font-bold tracking-tight text-neutral-900 mb-1">Create campaign</h1>
       <p className="text-sm text-neutral-500 mb-6">Multi-channel sequence builder</p>
 
       <WizardStepper current={draft.step} />

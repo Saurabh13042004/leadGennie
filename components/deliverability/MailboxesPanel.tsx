@@ -16,9 +16,9 @@ import type { Domain } from "@/lib/actions/domains";
 import AddMailboxModal from "./AddMailboxModal";
 
 const STATUS_STYLES: Record<string, string> = {
-  active: "bg-green-500/10 text-green-300 border-green-500/20",
-  pending_approval: "bg-purple-500/10 text-purple-300 border-purple-500/20",
-  paused: "bg-yellow-500/10 text-yellow-300 border-yellow-500/20",
+  active: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
+  pending_approval: "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200",
+  paused: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
 };
 
 export default function MailboxesPanel({

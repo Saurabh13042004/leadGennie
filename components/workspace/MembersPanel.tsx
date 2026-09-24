@@ -16,6 +16,11 @@ const ROLE_LABEL: Record<Role, string> = {
   viewer: "Viewer",
 };
 
+const inputCls =
+  "w-full rounded-lg bg-neutral-50 border border-neutral-200 px-4 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300";
+const selectCls =
+  "bg-neutral-50 border border-neutral-200 rounded-lg text-sm text-neutral-900 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300";
+
 export default function MembersPanel({
   initialMembers,
   currentUserId,
@@ -88,25 +93,25 @@ export default function MembersPanel({
       {canManage && (
         <form
           onSubmit={handleInvite}
-          className="rounded-xl border border-white/10 bg-[#0A0A0A] p-5 flex flex-col sm:flex-row gap-2 items-start sm:items-end"
+          className="rounded-2xl border border-neutral-200 bg-white p-5 flex flex-col sm:flex-row gap-3 items-start sm:items-end"
         >
           <div className="flex-1 w-full">
-            <label className="block text-sm text-neutral-300 mb-1.5">Invite by email</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Invite by email</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="teammate@company.com"
-              className="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20"
+              className={inputCls}
             />
           </div>
           <div>
-            <label className="block text-sm text-neutral-300 mb-1.5">Role</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Role</label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
-              className="bg-white/5 border border-white/10 rounded-lg text-sm text-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-white/20"
+              className={selectCls}
             >
               {INVITABLE_ROLES.map((r) => (
                 <option key={r} value={r}>
@@ -118,7 +123,7 @@ export default function MembersPanel({
           <button
             type="submit"
             disabled={inviting}
-            className="flex items-center justify-center gap-2 bg-white text-black font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50 shrink-0"
+            className="flex items-center justify-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50 shrink-0"
           >
             {inviting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
             Invite
@@ -127,30 +132,30 @@ export default function MembersPanel({
       )}
 
       {error && (
-        <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>
+        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{error}</p>
       )}
 
-      <div className="rounded-xl border border-white/10 bg-[#0A0A0A] overflow-hidden">
+      <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wider text-neutral-500">
-                <th className="px-4 py-3 font-medium">Member</th>
-                <th className="px-4 py-3 font-medium">Role</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                {canManage && <th className="px-4 py-3 font-medium text-right">Actions</th>}
+              <tr className="bg-neutral-50 text-left text-xs font-bold uppercase tracking-wide text-neutral-500">
+                <th className="px-4 py-3">Member</th>
+                <th className="px-4 py-3">Role</th>
+                <th className="px-4 py-3">Status</th>
+                {canManage && <th className="px-4 py-3 text-right">Actions</th>}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-neutral-100">
               {members.map((m) => {
                 const isSelf = m.userId === currentUserId;
                 const isBusy = busyId === m.id;
                 return (
-                  <tr key={m.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
+                  <tr key={m.id} className="hover:bg-neutral-50 transition-colors">
                     <td className="px-4 py-3">
-                      <p className="text-white">{m.name ?? m.email}</p>
+                      <p className="text-neutral-900">{m.name ?? m.email}</p>
                       {m.name && <p className="text-xs text-neutral-500">{m.email}</p>}
-                      {isSelf && <span className="text-[11px] text-blue-400">You</span>}
+                      {isSelf && <span className="text-[11px] font-medium text-indigo-600">You</span>}
                     </td>
                     <td className="px-4 py-3">
                       {canManage && !isSelf ? (
@@ -158,7 +163,7 @@ export default function MembersPanel({
                           value={m.role}
                           disabled={isBusy}
                           onChange={(e) => handleRoleChange(m, e.target.value as Role)}
-                          className="bg-white/5 border border-white/10 rounded-lg text-xs text-white px-2 py-1 focus:outline-none disabled:opacity-50"
+                          className="bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-900 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-50"
                         >
                           {ROLES.map((r) => (
                             <option key={r} value={r}>
@@ -167,7 +172,14 @@ export default function MembersPanel({
                           ))}
                         </select>
                       ) : (
-                        <span className="text-xs text-neutral-300 border border-white/10 rounded-full px-2.5 py-1">
+                        <span
+                          className={cn(
+                            "text-xs font-medium rounded-full px-2.5 py-1 ring-1 ring-inset",
+                            m.role === "owner"
+                              ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                              : "bg-neutral-100 text-neutral-600 ring-neutral-200"
+                          )}
+                        >
                           {ROLE_LABEL[m.role]}
                         </span>
                       )}
@@ -175,10 +187,10 @@ export default function MembersPanel({
                     <td className="px-4 py-3">
                       <span
                         className={cn(
-                          "text-xs border rounded-full px-2.5 py-1",
+                          "text-xs font-medium rounded-full px-2.5 py-1 ring-1 ring-inset",
                           m.status === "active"
-                            ? "bg-green-500/10 text-green-300 border-green-500/20"
-                            : "bg-yellow-500/10 text-yellow-300 border-yellow-500/20"
+                            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                            : "bg-amber-50 text-amber-700 ring-amber-200"
                         )}
                       >
                         {m.status === "active" ? "Active" : "Invited"}
@@ -190,7 +202,7 @@ export default function MembersPanel({
                           <button
                             onClick={() => handleRemove(m)}
                             disabled={isBusy}
-                            className="text-neutral-500 hover:text-red-400 transition-colors disabled:opacity-50"
+                            className="text-neutral-400 hover:text-rose-600 transition-colors disabled:opacity-50"
                             aria-label="Remove member"
                           >
                             {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}

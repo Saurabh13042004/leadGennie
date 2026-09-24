@@ -1,45 +1,52 @@
-import { CircleCheckBig } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const STEPS = ["Audience", "Sequence", "Review"];
+const STEPS = [
+  { label: "Audience", description: "Pick who to reach" },
+  { label: "Sequence", description: "Write the touchpoints" },
+  { label: "Review", description: "Confirm & submit" },
+];
 
 export default function WizardStepper({ current }: { current: number }) {
   return (
-    <div className="flex items-center gap-2 flex-wrap mb-8">
-      {STEPS.map((label, i) => {
+    <ol className="flex items-center mb-8">
+      {STEPS.map((s, i) => {
         const stepNum = i + 1;
         const isDone = stepNum < current;
         const isActive = stepNum === current;
         return (
-          <div key={label} className="flex items-center gap-2">
-            <div
-              className={cn(
-                "flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm",
-                isActive
-                  ? "border-blue-500/40 bg-blue-500/10 text-white"
-                  : isDone
-                    ? "border-white/10 bg-white/5 text-neutral-300"
-                    : "border-white/10 text-neutral-600"
-              )}
-            >
-              {isDone ? (
-                <CircleCheckBig className="w-4 h-4 text-green-400" />
-              ) : (
-                <span
+          <li key={s.label} className={cn("flex items-center", stepNum < STEPS.length && "flex-1")}>
+            <div className="flex items-center gap-2.5">
+              <div
+                className={cn(
+                  "flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold shrink-0 transition-colors",
+                  isActive
+                    ? "bg-indigo-600 text-white"
+                    : isDone
+                      ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+                      : "border border-neutral-200 bg-white text-neutral-400"
+                )}
+              >
+                {isDone ? <Check className="w-4 h-4" /> : stepNum}
+              </div>
+              <div className="hidden sm:block">
+                <p
                   className={cn(
-                    "w-4 h-4 rounded-full text-[10px] flex items-center justify-center",
-                    isActive ? "bg-blue-400 text-black" : "bg-white/10 text-neutral-500"
+                    "text-sm font-semibold",
+                    isActive ? "text-neutral-900" : isDone ? "text-neutral-700" : "text-neutral-400"
                   )}
                 >
-                  {stepNum}
-                </span>
-              )}
-              {label}
+                  {s.label}
+                </p>
+                <p className="text-xs text-neutral-400">{s.description}</p>
+              </div>
             </div>
-            {stepNum < STEPS.length && <div className="w-4 h-px bg-white/10" />}
-          </div>
+            {stepNum < STEPS.length && (
+              <div className={cn("flex-1 h-px mx-3", isDone ? "bg-emerald-200" : "bg-neutral-200")} />
+            )}
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }

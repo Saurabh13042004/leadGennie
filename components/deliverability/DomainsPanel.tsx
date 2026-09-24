@@ -8,12 +8,12 @@ import { refreshDomain, triggerVerify, removeDomain, type Domain } from "@/lib/a
 import AddDomainModal from "./AddDomainModal";
 
 const STATUS_STYLES: Record<string, string> = {
-  verified: "bg-green-500/10 text-green-300 border-green-500/20",
-  pending: "bg-yellow-500/10 text-yellow-300 border-yellow-500/20",
-  not_started: "bg-white/5 text-neutral-400 border-white/10",
-  failed: "bg-red-500/10 text-red-300 border-red-500/20",
-  partially_verified: "bg-yellow-500/10 text-yellow-300 border-yellow-500/20",
-  partially_failed: "bg-red-500/10 text-red-300 border-red-500/20",
+  verified: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
+  pending: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
+  not_started: "bg-neutral-100 text-neutral-500 ring-1 ring-inset ring-neutral-200",
+  failed: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
+  partially_verified: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
+  partially_failed: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
 };
 
 export default function DomainsPanel({ domains, canAdd, canManage }: { domains: Domain[]; canAdd: boolean; canManage: boolean }) {
@@ -75,7 +75,7 @@ export default function DomainsPanel({ domains, canAdd, canManage }: { domains: 
         {canAdd && (
           <button
             onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 bg-white text-black font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors"
+            className="flex items-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-800 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Add domain
@@ -83,12 +83,14 @@ export default function DomainsPanel({ domains, canAdd, canManage }: { domains: 
         )}
       </div>
 
-      {error && <p className="text-sm text-red-400 mb-3">{error}</p>}
+      {error && (
+        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-3">{error}</p>
+      )}
 
       {domains.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/15 bg-[#0A0A0A] flex flex-col items-center justify-center text-center py-20 px-6">
-          <ShieldCheck className="w-10 h-10 text-neutral-600 mb-3" />
-          <p className="text-white font-medium">No sending domains yet</p>
+        <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 flex flex-col items-center justify-center text-center py-20 px-6">
+          <ShieldCheck className="w-10 h-10 text-neutral-300 mb-3" />
+          <p className="text-neutral-900 font-semibold">No sending domains yet</p>
           <p className="text-sm text-neutral-500 mt-1 max-w-sm">
             Add a domain to get real SPF/DKIM/DMARC records from Resend — no email can send until its domain is
             verified.
@@ -99,22 +101,27 @@ export default function DomainsPanel({ domains, canAdd, canManage }: { domains: 
           {domains.map((d) => {
             const isBusy = busyId === d.id && isPending;
             return (
-              <div key={d.id} className="rounded-xl border border-white/10 bg-[#0A0A0A] overflow-hidden">
+              <div key={d.id} className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
                 <div className="flex items-center justify-between gap-3 px-4 py-3">
                   <button
                     onClick={() => setExpanded(expanded === d.id ? null : d.id)}
                     className="flex items-center gap-2 min-w-0 text-left"
                   >
                     {expanded === d.id ? (
-                      <ChevronDown className="w-4 h-4 text-neutral-500 shrink-0" />
+                      <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
                     ) : (
-                      <ChevronRight className="w-4 h-4 text-neutral-500 shrink-0" />
+                      <ChevronRight className="w-4 h-4 text-neutral-400 shrink-0" />
                     )}
-                    <Globe className="w-4 h-4 text-blue-400 shrink-0" />
-                    <span className="text-sm text-white truncate">{d.name}</span>
+                    <Globe className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span className="text-sm font-medium text-neutral-900 truncate">{d.name}</span>
                   </button>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={cn("text-xs border rounded-full px-2.5 py-1", STATUS_STYLES[d.status] ?? STATUS_STYLES.not_started)}>
+                    <span
+                      className={cn(
+                        "text-xs font-medium rounded-full px-2.5 py-1",
+                        STATUS_STYLES[d.status] ?? STATUS_STYLES.not_started
+                      )}
+                    >
                       {d.status.replace(/_/g, " ")}
                     </span>
                     {canManage && (
@@ -122,7 +129,7 @@ export default function DomainsPanel({ domains, canAdd, canManage }: { domains: 
                         <button
                           onClick={() => handleRefresh(d.id)}
                           disabled={isBusy}
-                          className="text-neutral-500 hover:text-white transition-colors disabled:opacity-50"
+                          className="text-neutral-400 hover:text-neutral-900 transition-colors disabled:opacity-50"
                           aria-label="Refresh status"
                         >
                           {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
@@ -130,14 +137,14 @@ export default function DomainsPanel({ domains, canAdd, canManage }: { domains: 
                         <button
                           onClick={() => handleVerify(d.id)}
                           disabled={isBusy}
-                          className="text-xs text-blue-300 hover:text-blue-200 border border-blue-500/30 rounded-lg px-2.5 py-1 transition-colors disabled:opacity-50"
+                          className="text-xs font-medium text-indigo-600 hover:text-indigo-700 border border-indigo-200 bg-indigo-50 rounded-lg px-2.5 py-1 transition-colors disabled:opacity-50"
                         >
                           Verify now
                         </button>
                         <button
                           onClick={() => handleRemove(d.id)}
                           disabled={isBusy}
-                          className="text-neutral-500 hover:text-red-400 transition-colors disabled:opacity-50"
+                          className="text-neutral-400 hover:text-rose-600 transition-colors disabled:opacity-50"
                           aria-label="Remove domain"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -148,26 +155,31 @@ export default function DomainsPanel({ domains, canAdd, canManage }: { domains: 
                 </div>
 
                 {expanded === d.id && (
-                  <div className="border-t border-white/10 overflow-x-auto">
+                  <div className="border-t border-neutral-100 overflow-x-auto">
                     <table className="w-full text-xs">
-                      <thead>
-                        <tr className="text-left text-neutral-500 uppercase tracking-wider">
-                          <th className="px-4 py-2 font-medium">Record</th>
-                          <th className="px-4 py-2 font-medium">Type</th>
-                          <th className="px-4 py-2 font-medium">Name</th>
-                          <th className="px-4 py-2 font-medium">Value</th>
-                          <th className="px-4 py-2 font-medium">Status</th>
+                      <thead className="bg-neutral-50">
+                        <tr className="text-left text-neutral-500 uppercase tracking-wide font-bold">
+                          <th className="px-4 py-2 font-bold">Record</th>
+                          <th className="px-4 py-2 font-bold">Type</th>
+                          <th className="px-4 py-2 font-bold">Name</th>
+                          <th className="px-4 py-2 font-bold">Value</th>
+                          <th className="px-4 py-2 font-bold">Status</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="divide-y divide-neutral-100">
                         {d.records.map((r, i) => (
-                          <tr key={i} className="border-t border-white/5">
-                            <td className="px-4 py-2 text-white">{r.record}</td>
-                            <td className="px-4 py-2 text-neutral-400">{r.type}</td>
-                            <td className="px-4 py-2 text-neutral-400 font-mono break-all">{r.name}</td>
-                            <td className="px-4 py-2 text-neutral-400 font-mono break-all max-w-xs">{r.value}</td>
+                          <tr key={i}>
+                            <td className="px-4 py-2 text-neutral-900 font-medium">{r.record}</td>
+                            <td className="px-4 py-2 text-neutral-500">{r.type}</td>
+                            <td className="px-4 py-2 text-neutral-500 font-mono break-all">{r.name}</td>
+                            <td className="px-4 py-2 text-neutral-500 font-mono break-all max-w-xs">{r.value}</td>
                             <td className="px-4 py-2">
-                              <span className={cn("border rounded-full px-2 py-0.5", STATUS_STYLES[r.status] ?? STATUS_STYLES.not_started)}>
+                              <span
+                                className={cn(
+                                  "rounded-full px-2 py-0.5 font-medium",
+                                  STATUS_STYLES[r.status] ?? STATUS_STYLES.not_started
+                                )}
+                              >
                                 {r.status}
                               </span>
                             </td>

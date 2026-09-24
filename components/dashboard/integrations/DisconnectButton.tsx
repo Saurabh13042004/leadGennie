@@ -23,7 +23,7 @@ export default function DisconnectButton({ id }: { id: number }) {
     <button
       onClick={handleClick}
       disabled={isPending}
-      className="text-sm text-neutral-400 hover:text-red-400 transition-colors disabled:opacity-50 flex items-center gap-2"
+      className="text-sm text-neutral-500 hover:text-rose-600 transition-colors disabled:opacity-50 flex items-center gap-2"
     >
       {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
       Disconnect

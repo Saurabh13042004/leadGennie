@@ -49,12 +49,14 @@ export default function AiFilterBuilder() {
     : [];
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-5">
-      <div className="flex items-center gap-2 mb-1">
-        <Sparkles className="w-4 h-4 text-blue-400" />
-        <h3 className="text-sm font-medium text-white">AI Filter Builder</h3>
+    <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+      <div className="flex items-center gap-2.5 mb-1">
+        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+          <Sparkles className="w-4 h-4 text-indigo-600" />
+        </div>
+        <h3 className="text-sm font-bold text-neutral-900">AI Filter Builder</h3>
       </div>
-      <p className="text-xs text-neutral-500 mb-4">
+      <p className="text-xs text-neutral-500 mb-4 ml-[42px]">
         Describe your ideal customer in plain English. AI builds the filter.
       </p>
 
@@ -64,12 +66,12 @@ export default function AiFilterBuilder() {
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
           placeholder="MNC tech companies in India with more than 500 employees and a VP of Engineering"
-          className="flex-1 rounded-lg bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20"
+          className="flex-1 rounded-lg bg-neutral-50 border border-neutral-200 px-4 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
         />
         <button
           onClick={handleGenerate}
           disabled={loading || !prompt.trim()}
-          className="flex items-center justify-center gap-2 bg-white text-black font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50 shrink-0"
+          className="flex items-center justify-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50 shrink-0"
         >
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           Generate
@@ -77,13 +79,13 @@ export default function AiFilterBuilder() {
       </div>
 
       <div className="mt-4">
-        <p className="text-xs text-neutral-600 mb-2">Try:</p>
+        <p className="text-xs font-medium text-neutral-400 mb-2">Try:</p>
         <div className="flex flex-col gap-1.5">
           {EXAMPLES.map((ex) => (
             <button
               key={ex}
               onClick={() => setPrompt(ex)}
-              className="text-left text-xs text-neutral-400 hover:text-white truncate transition-colors"
+              className="text-left text-xs text-neutral-500 hover:text-indigo-600 truncate transition-colors"
               title={ex}
             >
               {ex}
@@ -92,13 +94,13 @@ export default function AiFilterBuilder() {
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-400 mt-4">{error}</p>}
+      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mt-4">{error}</p>}
 
       {result && (
-        <div className="mt-5 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+        <div className="mt-5 rounded-xl border border-indigo-200 bg-indigo-50/60 p-4">
           <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
-            <p className="text-sm text-white font-medium">Segment created</p>
-            <span className="text-sm text-blue-300 tabular-nums">
+            <p className="text-sm text-neutral-900 font-semibold">Segment created</p>
+            <span className="text-sm text-indigo-700 tabular-nums font-medium">
               {result.estimateMethod === "unmeasurable"
                 ? "Not measurable"
                 : `${result.estimatedCount.toLocaleString()} matching leads`}
@@ -117,7 +119,7 @@ export default function AiFilterBuilder() {
               criteriaChips.map((chip) => (
                 <span
                   key={chip}
-                  className="text-xs text-neutral-300 bg-white/5 border border-white/10 rounded-full px-2.5 py-1"
+                  className="text-xs text-neutral-700 bg-white border border-neutral-200 rounded-full px-2.5 py-1"
                 >
                   {chip}
                 </span>
