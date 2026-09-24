@@ -1,4 +1,4 @@
-import { generateJson, Type } from "@/lib/ai/gemini";
+import { generateJson, Type } from "@/lib/ai/client";
 
 export type ClickableCandidate = {
   index: number;
@@ -27,12 +27,12 @@ const SCHEMA = {
  * confidently disambiguate the right element (see [[leadgennie-linkedin-dm-
  * debugging-chain]] — five rounds of pattern-guessing still couldn't locate
  * the real "Message" trigger on a real profile). Rather than add a sixth
- * selector guess, hand Gemini the actual list of clickable elements the page
+ * selector guess, hand the model the actual list of clickable elements the page
  * rendered and let it reason about which one matches the task semantically
  * — the same way a human visually distinguishes "the profile's own action
  * button" from "a sidebar suggestion card for someone else." Deliberately
  * only called as a fallback, not on every send, since it costs a real
- * Gemini quota unit each time.
+ * LLM call each time.
  */
 export async function pickLinkedInElement(
   candidates: ClickableCandidate[],

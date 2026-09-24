@@ -85,7 +85,7 @@ export default function SecurityPage() {
                 Responsible Disclosure Program
               </h2>
               <p>
-                We appreciate the security community's work in keeping applications safe. If you discover a vulnerability or security issue within the LeadGennie platform, please report it to our team:
+                We appreciate the security community&apos;s work in keeping applications safe. If you discover a vulnerability or security issue within the LeadGennie platform, please report it to our team:
               </p>
               <div className="bg-neutral-900 border border-white/10 rounded-md p-5 font-mono text-sm space-y-2">
                 <p className="text-white font-semibold">Report Vulnerabilities:</p>

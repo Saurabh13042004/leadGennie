@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { listSegments } from "@/lib/actions/leads";
 import AiFilterBuilder from "@/components/leads/AiFilterBuilder";
 import AudienceList from "@/components/leads/AudienceList";
+import LeadsSubNav from "@/components/leads/LeadsSubNav";
 
 export const metadata = {
   title: "Audience | LeadGennie",
@@ -14,6 +15,7 @@ export default async function AudiencePage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
+      <LeadsSubNav />
       <div className="flex items-start gap-3 mb-6">
         <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
           <List className="w-5 h-5 text-blue-400" />

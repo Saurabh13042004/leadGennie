@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { listLeads } from "@/lib/actions/leads";
 import LeadsHeader from "@/components/leads/LeadsHeader";
 import LeadsTable from "@/components/leads/LeadsTable";
+import LeadsSubNav from "@/components/leads/LeadsSubNav";
 
 export const metadata = {
   title: "All Leads | LeadGennie",
@@ -15,6 +16,7 @@ export default async function LeadsPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
+      <LeadsSubNav />
       <LeadsHeader canEdit={canEdit} />
 
       <div className="space-y-6">

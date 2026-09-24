@@ -4,7 +4,7 @@
 The extension is a **lead-capture mechanism**: on a prospect's page, one click adds them to LeadGennie (with company + domain), and optionally triggers "Research with Gennie". It does not send LinkedIn messages in V1.
 
 ## Starting point (already built — reuse)
-Manifest V3 extension: `content.js` injects Add-to-Lead-List / Generate-Message buttons on LinkedIn profiles, an activity log, raw-page-text scraping with **server-side Gemini extraction** (`/api/extension/personalize`, `pick-element`), workspace API-token auth (`lib/auth/extension-token.ts`), `/api/extension/leads`, `/api/extension/queue` (LinkedIn DM queue; real sends with `DRY_RUN=false`), Google Sheets export service, direct Gemini call code (`services/gemini.js` — **hardcoded key removed earlier; verify none remain**).
+Manifest V3 extension: `content.js` injects Add-to-Lead-List / Generate-Message buttons on LinkedIn profiles, an activity log, raw-page-text scraping with **server-side LLM extraction** (`/api/extension/personalize`, `pick-element`), workspace API-token auth (`lib/auth/extension-token.ts`), `/api/extension/leads`, `/api/extension/queue` (LinkedIn DM queue; real sends with `DRY_RUN=false`), Google Sheets export service, `services/gemini.js` (historical filename — now only a thin client for our backend's `/api/extension/personalize`; the extension holds no AI key).
 
 ## Decision dependency
 **D-05**: LinkedIn auto-send off by default in V1. This phase implements the *capture-only* posture and gates the send path behind `FEATURE_LINKEDIN_AUTOMATION`.
@@ -22,7 +22,7 @@ Optional button → `POST /api/leads/:id/research` (Phase 2) via extension token
 
 ### WP7.3 — Auth & security hardening
 - Extension token: workspace-scoped, **stored hashed server-side** (Phase 0), revocable/rotatable from Settings → API Credentials; scope limited to `leads:create`, `leads:read-status`, `research:trigger`.
-- Remove direct-to-Gemini calls from the extension; all LLM work server-side (usage tracked, no keys in client).
+- Remove direct-to-LLM calls and the unused `generativelanguage.googleapis.com` host permission from the extension; all LLM work server-side (usage tracked, no keys in client).
 - Least-privilege `manifest.json` (host permissions limited to `linkedin.com` + LeadGennie origin + `activeTab`), remove unused permissions/`gsheets` if unused in V1.
 - Rate-limit `/api/extension/*` per token.
 

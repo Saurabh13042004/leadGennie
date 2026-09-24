@@ -12,7 +12,7 @@ From a lead detail page, a user can research a lead and see an explainable ICP s
 - [ ] D-02 resolved (paid quota) for real-engine runs · D-11/D-12 recorded
 
 ## Read first
-`lib/ai/gemini.ts`, `lib/actions/leads.ts`, `lib/activity.ts`, `lib/auth/workspace-context.ts`, Phase 0 `lib/api/*`, Phase 1 domain code, `docs/02-architecture.md` (jobs, tenancy, evidence pipeline), `docs/03-data-model.md`, `docs/intelligence-engine/{README,api-contract,scoring}.md`.
+`lib/ai/client.ts` + `lib/ai/providers/openai.ts`, `lib/actions/leads.ts`, `lib/activity.ts`, `lib/auth/workspace-context.ts`, Phase 0 `lib/api/*`, Phase 1 domain code, `docs/02-architecture.md` (jobs, tenancy, evidence pipeline), `docs/03-data-model.md`, `docs/intelligence-engine/{README,api-contract,scoring}.md`.
 
 ## Work packages
 1. **WP2B.1 Foundations** — `lib/ai/client.ts` (+`FakeLlm`), `usage_records`, minimal `jobs` + `enqueue()` + `/api/jobs/tick`, minimal `agent_runs/agent_run_steps`, `lib/intelligence/{client,schemas,fake}.ts`, `npm run gen:intelligence`, env vars in `.env.example`. *Exit:* a job that calls the **fake** engine runs end-to-end and appears as an agent run.

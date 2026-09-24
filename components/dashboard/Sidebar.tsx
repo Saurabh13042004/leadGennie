@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { navGroups } from "@/lib/nav-config";
+import { isNavItemActive, navGroups } from "@/lib/nav-config";
 
 export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -22,15 +22,14 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
         {navGroups.map((group) => (
           <div key={group.label}>
-            <p className="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-neutral-600">
-              {group.label}
-            </p>
+            {group.label && (
+              <p className="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-neutral-600">
+                {group.label}
+              </p>
+            )}
             <div className="space-y-0.5">
               {group.items.map((item) => {
-                const isActive =
-                  item.href === "/dashboard"
-                    ? pathname === "/dashboard"
-                    : pathname.startsWith(item.href);
+                const isActive = isNavItemActive(item, pathname);
                 const Icon = item.icon;
                 return (
                   <Link

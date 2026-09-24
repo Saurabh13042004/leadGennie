@@ -28,7 +28,7 @@ Resolves decision **D-10** (deployment topology was undocumented). This file des
 
 ## Environment variables
 
-See [`.env.example`](../.env.example) for the authoritative, commented list. Required in every environment: `DATABASE_URL`, `AUTH_SECRET`, `CREDENTIALS_ENCRYPTION_KEY`, `CRON_SECRET`. Features degrade without: `GEMINI_API_KEY` (AI), `RESEND_API_KEY`/`RESEND_WEBHOOK_SECRET` (email), `HUBSPOT_*` (integration).
+See [`.env.example`](../.env.example) for the authoritative, commented list. Required in every environment: `DATABASE_URL`, `AUTH_SECRET`, `CREDENTIALS_ENCRYPTION_KEY`, `CRON_SECRET`. Features degrade without: `OPENAI_API_KEY` (AI), `RESEND_API_KEY`/`RESEND_WEBHOOK_SECRET` (email), `HUBSPOT_*` (integration).
 
 `RESEND_FROM_EMAIL` appears in some `.env.local` files but **is not read by any code** — sender addresses come from `mailboxes`.
 

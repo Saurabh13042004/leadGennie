@@ -3,12 +3,11 @@
 import { sql } from "@/lib/db/client";
 import { revalidatePath } from "next/cache";
 import { extractCriteriaWithAi } from "@/lib/ai/filter";
-import { GeminiError } from "@/lib/ai/gemini";
+import { LlmError } from "@/lib/ai/client";
 import { requireRole } from "@/lib/auth/workspace-context";
 import {
   countMatchingLeads,
   extractCriteriaRegex,
-  hashToRange,
   hasStructuredCriteria,
   matchKnownCompanies,
   normalize as normalizeCriteria,
@@ -76,7 +75,7 @@ export async function deleteLead(id: number): Promise<void> {
   const leadRows = await sql`select id from leads where id = ${id} and workspace_id = ${workspaceId}`;
   if (leadRows.length === 0) throw new Error("Lead not found");
 
-  const sendCount = await sql`select count(*)::int as count from campaign_sends where lead_id = ${id}`;
+  const sendCount = await sql`select count(*)::int as count from campaign_sends where lead_id = ${id} and workspace_id = ${workspaceId}`;
   if ((sendCount[0].count as number) > 0) {
     throw new Error(
       "This lead has message history and can't be deleted — add them to Do Not Contact instead if you want to stop contacting them."
@@ -234,7 +233,7 @@ export async function importLeadsCsv(rows: ImportRow[], fileName?: string): Prom
   };
 }
 
-export type EstimateMethod = "measured" | "no_matches" | "guessed";
+export type EstimateMethod = "measured" | "no_matches" | "unmeasurable";
 
 export type AiFilterResult = {
   id: number;
@@ -253,7 +252,7 @@ export async function generateAiFilter(prompt: string): Promise<AiFilterResult> 
   try {
     criteria = await extractCriteriaWithAi(trimmed);
   } catch (error) {
-    if (!(error instanceof GeminiError)) throw error;
+    if (!(error instanceof LlmError)) throw error;
     criteria = extractCriteriaRegex(trimmed);
   }
 
@@ -273,9 +272,10 @@ export async function generateAiFilter(prompt: string): Promise<AiFilterResult> 
   // DAS-01: never present a fabricated number as if it were observed — every
   // caller gets `estimateMethod` alongside the count so the UI can label it.
   const estimateMethod: EstimateMethod =
-    matchedCount > 0 ? "measured" : hasStructuredCriteria(criteria) ? "no_matches" : "guessed";
-  const estimatedCount =
-    matchedCount > 0 ? matchedCount : estimateMethod === "no_matches" ? 0 : hashToRange(trimmed, 150, 2200);
+    matchedCount > 0 ? "measured" : hasStructuredCriteria(criteria) ? "no_matches" : "unmeasurable";
+  // No structured filter → nothing to count against real data, so report 0 and
+  // let `estimateMethod: "unmeasurable"` say so. Never invent a number.
+  const estimatedCount = matchedCount;
 
   const name = trimmed.length > 60 ? `${trimmed.slice(0, 57)}...` : trimmed;
 
@@ -338,7 +338,7 @@ export async function listSegments(): Promise<SegmentSummary[]> {
     }
     const matchedCount = await countMatchingLeads(workspaceId, criteria);
     const estimateMethod: EstimateMethod =
-      matchedCount > 0 ? "measured" : hasStructuredCriteria(criteria) ? "no_matches" : "guessed";
+      matchedCount > 0 ? "measured" : hasStructuredCriteria(criteria) ? "no_matches" : "unmeasurable";
 
     segments.push({
       id: r.id as number,

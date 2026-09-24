@@ -1,4 +1,4 @@
-import { generateJson, Type } from "@/lib/ai/gemini";
+import { generateJson, Type } from "@/lib/ai/client";
 import type { FilterCriteria } from "@/lib/db/lead-matching";
 
 const FILTER_SCHEMA = {

@@ -15,7 +15,7 @@ Phase 2 ships in two sub-phases, each independently verifiable:
 2B can start against the **fake engine** as soon as the 2A contract is merged (WP2A.1), so the two run in parallel after the contract lands.
 
 ## Starting point
-No research/scoring/signals/evidence exists (`/dashboard/signals`, `/accounts` are stubs); no Python in the repo. `generateJson` (Gemini) exists in TS. Gemini free tier blocks meaningful testing (**D-02**). Data-source decision **D-03**: this phase uses web search + first-party sites + news + job pages on leads the user already has; **no people/company discovery provider yet** (Phase 8).
+No research/scoring/signals/evidence exists (`/dashboard/signals`, `/accounts` are stubs); no Python in the repo. `generateJson` exists in TS (OpenAI `gpt-4o` since 2026-09-24, `lib/ai/client.ts`). LLM cost/quota needs a spend limit on the key (**D-02**, decided). Data-source decision **D-03**: this phase uses web search + first-party sites + news + job pages on leads the user already has; **no people/company discovery provider yet** (Phase 8).
 
 ---
 
@@ -53,7 +53,7 @@ Prompt-injection fixtures pass (no behavior change, no verification uplift); loa
 ## Phase 2B — Lead intelligence in the app (Next.js)
 
 ### WP2B.1 — App foundations (needed by 2B and every later phase)
-- **`lib/ai/client.ts`** — the single LLM entry for the Next side (zod validation, retry-once, token accounting, quota → `QUOTA_EXCEEDED`, `FakeLlm`). Wraps `gemini.ts`.
+- **`lib/ai/client.ts`** — the single LLM entry for the Next side (zod validation, retry-once, token accounting, quota → `QUOTA_EXCEEDED`, `FakeLlm`). Builds on the existing `lib/ai/client.ts` / `providers/openai.ts` (add zod validation, retry-once, token accounting → `usage_records`, `FakeLlm`).
 - **`usage_records`**, **minimal `jobs` + `enqueue()`** + `/api/jobs/tick` (hardened in Phase 5), **minimal `agent_runs/agent_run_steps`** (so research runs are already observable; Phase 8 is additive).
 - **`lib/intelligence/`** — `client.ts` (signed HTTP, timeouts, retries, idempotency), `schemas.ts` (zod mirrors; `npm run gen:intelligence` for generated types), `fake.ts` (`FakeIntelligenceClient`), `persist.ts` (see 2B.2). Env: `INTELLIGENCE_URL`, `INTELLIGENCE_SIGNING_SECRET`.
 

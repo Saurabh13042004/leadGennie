@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/workspace-context";
 import { logActivity } from "@/lib/activity";
 import { createApprovalRequest } from "@/lib/approvals-core";
-import { generateJson, GeminiError, MODEL_NAME, Type } from "@/lib/ai/gemini";
+import { generateJson, LlmError, MODEL_NAME, Type } from "@/lib/ai/client";
 import type { PromptType } from "@/lib/prompts-constants";
 
 export type VersionStatus = "draft" | "pending_approval" | "published" | "deprecated" | "rejected";
@@ -264,7 +264,7 @@ export async function updateDraftVersion(versionId: number, patch: DraftPatch) {
   revalidatePath("/dashboard/ai-prompts");
 }
 
-function fieldToGeminiType(f: SchemaField) {
+function fieldToLlmType(f: SchemaField) {
   return f.type === "number" ? Type.NUMBER : Type.STRING;
 }
 
@@ -303,7 +303,7 @@ export async function testVersion(versionId: number, sampleInput: Record<string,
   } else {
     const schema = {
       type: Type.OBJECT,
-      properties: Object.fromEntries(outputSchema.map((f) => [f.key, { type: fieldToGeminiType(f) }])),
+      properties: Object.fromEntries(outputSchema.map((f) => [f.key, { type: fieldToLlmType(f) }])),
       required: outputSchema.filter((f) => f.required).map((f) => f.key),
     };
 
@@ -314,7 +314,8 @@ export async function testVersion(versionId: number, sampleInput: Record<string,
           errors.push(`Missing required field "${field.key}"`);
           continue;
         }
-        if (field.key in output) {
+        // Optional fields come back as null under strict structured outputs — same as absent.
+        if (field.key in output && output[field.key] !== null) {
           const actualType = typeof output[field.key];
           const expected = field.type === "number" ? "number" : "string";
           if (actualType !== expected) {
@@ -323,7 +324,7 @@ export async function testVersion(versionId: number, sampleInput: Record<string,
         }
       }
     } catch (error) {
-      errors.push(error instanceof GeminiError ? error.message : "Generation failed unexpectedly");
+      errors.push(error instanceof LlmError ? error.message : "Generation failed unexpectedly");
     }
   }
 
@@ -347,7 +348,7 @@ export async function submitForApproval(versionId: number) {
   const testedRows = await sql`
     select last_test_passed, p.name as prompt_name, pv.version_number, pv.template, pv.output_schema
     from prompt_versions pv join prompts p on p.id = pv.prompt_id
-    where pv.id = ${versionId}
+    where pv.id = ${versionId} and pv.workspace_id = ${workspaceId}
   `;
   const tested = testedRows[0];
   if (!tested.last_test_passed) {
@@ -366,7 +367,8 @@ export async function submitForApproval(versionId: number) {
   });
 
   await sql`
-    update prompt_versions set status = 'pending_approval', approval_id = ${approvalId} where id = ${versionId}
+    update prompt_versions set status = 'pending_approval', approval_id = ${approvalId}
+    where id = ${versionId} and workspace_id = ${workspaceId}
   `;
 
   await logActivity({

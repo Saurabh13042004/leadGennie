@@ -1,11 +1,8 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
-import SocialProof from "@/components/SocialProof";
 import Problem from "@/components/Problem";
 import Features from "@/components/Features";
-import AiTerminal from "@/components/AiTerminal";
 import HowItWorks from "@/components/HowItWorks";
-import Integrations from "@/components/Integrations";
 import Waitlist from "@/components/Waitlist";
 import Footer from "@/components/Footer";
 import BackgroundEffects from "@/components/BackgroundEffects";
@@ -20,12 +17,9 @@ export default function Home() {
       
       <main className="flex flex-col relative z-10">
         <Hero />
-        <SocialProof />
         <Problem />
         <Features />
-        <AiTerminal />
         <HowItWorks />
-        <Integrations />
         <Waitlist />
       </main>
 

@@ -84,7 +84,7 @@ export async function decideApproval(approvalId: number, decision: "approved" | 
   await sql`
     update approvals
     set status = ${decision}, decided_by_user_id = ${userId}, decided_at = now(), decision_note = ${note?.trim() || null}
-    where id = ${approvalId}
+    where id = ${approvalId} and workspace_id = ${workspaceId}
   `;
 
   if (approval.type === "campaign_launch") {
@@ -299,7 +299,7 @@ export async function decideApproval(approvalId: number, decision: "approved" | 
         summary: `Approved: ${approval.title}`,
       });
     }
-    revalidatePath("/dashboard/inbox");
+    revalidatePath("/dashboard/leads/inbound");
     revalidatePath("/dashboard/leads");
   }
 

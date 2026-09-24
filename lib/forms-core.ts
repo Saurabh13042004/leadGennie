@@ -45,7 +45,7 @@ export async function proposeLeadFromSubmission(input: {
   await sql`
     update form_submissions
     set approval_id = ${approvalId}, status = 'proposed', matched_lead_id = coalesce(${input.leadId ?? null}, matched_lead_id)
-    where id = ${input.submissionId}
+    where id = ${input.submissionId} and workspace_id = ${input.workspaceId}
   `;
 
   await logActivity({

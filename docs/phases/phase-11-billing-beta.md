@@ -33,7 +33,7 @@ Activation events tracked (privacy-respecting, workspace-level): imported leads,
 
 ### WP11.5 — Operations
 **Two services:** Next.js app + Python Intelligence Engine. Engine production checklist (`intelligence-engine/development.md`): ≥2 replicas, private networking, secret rotation drill, `intel` schema backups/retention, alerts on engine error rate / p95 run duration / LLM & search quota errors / fetch-block rate / budget-exhaustion rate, status shown in-app when the engine or a provider is degraded, runbook section for the engine (restart, key rotation, cache purge, stuck-run handling). Compliance note for the fetch layer: honest User-Agent + bot info page, robots respected, takedown/opt-out contact for companies who don't want to be researched.
-Error tracking (Sentry or equivalent), uptime + queue-lag alerts (jobs `queued` age > N min, dead-job count, bounce-rate spikes), structured-log retention, DB backups + tested restore, migration runbook, on-call/incident notes in `docs/runbook.md`. Status of provider dependencies (Gemini, Resend, Google) surfaced in-app when degraded.
+Error tracking (Sentry or equivalent), uptime + queue-lag alerts (jobs `queued` age > N min, dead-job count, bounce-rate spikes), structured-log retention, DB backups + tested restore, migration runbook, on-call/incident notes in `docs/runbook.md`. Status of provider dependencies (OpenAI, Resend, Google) surfaced in-app when degraded.
 
 ### WP11.6 — Beta program
 Invite-code signup gate (`beta_invites`), feedback widget (in-app, stores to DB), support email, changelog page, known-issues page, cohort of 5–10 design partners, weekly metrics review template. Chrome Web Store submission (unlisted) for the extension.

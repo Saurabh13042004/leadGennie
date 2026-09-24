@@ -1,62 +1,62 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Bot, Mail, Send, Filter, RefreshCw, BarChart3, Sliders, Layers } from "lucide-react";
+import { Bot, Mail, Filter, RefreshCw, BarChart3, Sliders, Layers } from "lucide-react";
 
 const FEATURES = [
   {
     icon: <Bot className="w-5 h-5 text-neutral-300" />,
     title: "Automated Workflows",
-    tag: "[+] Active 24/7",
-    desc: "An automated engine that researches prospects and secures meetings 24/7.",
+    tag: "[+] Approval-gated",
+    desc: "Automated sequences run on a schedule — and nothing sends until an owner or admin approves it.",
     colSpan: "md:col-span-2",
     bgImage: "/ai_sdr_agent.png",
   },
   {
     icon: <Filter className="w-5 h-5 text-neutral-300" />,
     title: "Smart Lead Filtering",
-    tag: "[+] High Match Accuracy",
-    desc: "Describe your ideal customer and automatically find your best-fit accounts.",
+    tag: "[+] Natural-language filters",
+    desc: "Describe your ideal customer in plain English and get a saved, reusable audience of the leads you already have.",
     colSpan: "md:col-span-1",
     bgImage: "/ai_filters.png",
   },
   {
     icon: <Mail className="w-5 h-5 text-neutral-300" />,
     title: "Personalized Outreach",
-    tag: "[+] News & LinkedIn intent",
-    desc: "Craft hyper-specific emails using recent news and company developments.",
+    tag: "[+] Grounded in your pitch",
+    desc: "Draft emails around your actual offer and audience, then review every message before it goes out.",
     colSpan: "md:col-span-1",
     bgImage: "/ai_personalisation.png",
   },
   {
     icon: <Layers className="w-5 h-5 text-neutral-300" />,
     title: "Multi-channel Sequences",
-    tag: "[+] Email + LinkedIn + SMS",
-    desc: "Orchestrate automated outreach across email, LinkedIn, and SMS easily.",
+    tag: "[+] Email + LinkedIn",
+    desc: "Build multi-step sequences across email and LinkedIn with wait times between touches.",
     colSpan: "md:col-span-2",
     bgImage: "/ready_to_launch_campagin.png",
   },
   {
     icon: <RefreshCw className="w-5 h-5 text-neutral-300" />,
     title: "CRM Sync",
-    tag: "[+] Fast CRM Sync",
-    desc: "Native bi-directional sync with HubSpot, Salesforce, and Pipedrive.",
+    tag: "[+] HubSpot connection",
+    desc: "Connect HubSpot securely today. More CRM connectors are on the roadmap.",
     colSpan: "md:col-span-1",
     bgImage: "/integrations.png",
   },
   {
     icon: <BarChart3 className="w-5 h-5 text-neutral-300" />,
     title: "Live Analytics",
-    tag: "[+] +31% Avg Reply Rate",
-    desc: "Test and track campaign performance from a unified dashboard.",
+    tag: "[+] Real campaign metrics",
+    desc: "See sends, replies, and suppressions counted from what actually happened — never estimated.",
     colSpan: "md:col-span-1",
     bgImage: "/dashboard.png",
   },
   {
     icon: <Sliders className="w-5 h-5 text-neutral-300" />,
     title: "Automated Scale",
-    tag: "[+] High Deliverability",
-    desc: "Dynamic domain rotation and warm-ups keep your reputation securely high.",
+    tag: "[+] Deliverability controls",
+    desc: "Verified sending domains, per-mailbox daily limits, and automatic suppression of bounces and complaints.",
     colSpan: "md:col-span-1",
     bgImage: "/quick_ai_actions.png",
   },

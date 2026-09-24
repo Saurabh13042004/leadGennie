@@ -15,10 +15,11 @@ Open questions that change what gets built. Each has a **recommendation** so wor
 **Decision:** _pending_
 
 ## D-02 — LLM provider, billing tier, and model routing
-**Blocking for:** Phase 2A/2B testing (free tier = 20 requests/day; a single 50-lead research run exceeds it — the engine makes several LLM calls per company: extraction, synthesis, signals, entailment, outreach).
-**Recommendation:** Enable paid billing on the existing Gemini key now. Wrap all calls in a single client per runtime (`lib/ai/client.ts` in Next, `llm/client.py` in the engine — structured output + usage tracking + quota mapping) so the provider is swappable; route cheap tasks (classification, scoring) to a small/fast model and personalization/planning to a stronger one. Keep Gemini unless quality evals in Phase 3 say otherwise.
-**Also:** rotate the Gemini key that was previously hardcoded in the extension.
-**Decision:** _pending_
+**Status: DECIDED (owner, 2026-09-24): OpenAI `gpt-4o`.** Migrated off Gemini; a stronger model isn't needed. The Gemini free tier (20 requests/day) is no longer a blocker.
+**Implemented (Next.js side):** all LLM calls go through `lib/ai/client.ts` (`generateJson`, `generateText`, `MODEL_NAME`) over an `LlmProvider` adapter (`lib/ai/providers/openai.ts`); strict JSON-schema structured outputs; `OPENAI_API_KEY`, optional `OPENAI_MODEL` (default `gpt-4o`); errors mapped to `QUOTA_EXCEEDED` / `RATE_LIMITED` / `NOT_CONFIGURED` / `PROVIDER_ERROR`. `@google/genai` removed.
+**Still to do:** the Python engine's `llm/client.py` uses the OpenAI Python SDK with the same rules (structured output, usage accounting, quota mapping); cheap tasks (normalization, entailment, classification) may later route to a smaller model via per-task env overrides — only if evals show it's worth it.
+**Operational:** set a monthly spend limit on the OpenAI key; budgets per engine run (`max_llm_calls`, `max_cost_usd`) cap research cost. Revoke the old Gemini key that was once hardcoded in the extension (no longer used).
+**Decision:** _decided_
 
 ## D-03 — Data sources for the Intelligence Engine (search, news, jobs, people/company data)
 **Blocking for:** Phase 2A (`web_search` + `news` provider) and Phase 8 (`public_data`: `search_companies`/`search_people`).

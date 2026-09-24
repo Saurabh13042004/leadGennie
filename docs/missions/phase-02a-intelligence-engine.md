@@ -9,11 +9,11 @@ A private, HMAC-authenticated Python service that, given a company (+ optional l
 ## Preconditions
 - [ ] Phase 0 Done (Phase 1 is *not* required — the engine doesn't depend on the lead schema)
 - [ ] **D-11** recorded; **D-12** answered enough to pick a staging host, or use the recommendation and note it
-- [ ] **D-02**: paid Gemini quota available for evals · **D-03**: a search/news provider chosen for `web_search`/`news` (verify current API terms/pricing) or explicitly use a minimal free option for the smoke tests
+- [ ] **D-02**: OpenAI key with budget available for evals · **D-03**: a search/news provider chosen for `web_search`/`news` (verify current API terms/pricing) or explicitly use a minimal free option for the smoke tests
 - [ ] Python 3.12 + `uv` + Docker available locally
 
 ## Read first
-`docs/intelligence-engine/{README,api-contract,sources,scoring,development}.md`, all five `agents/*.md`, `docs/02-architecture.md` (evidence pipeline, tenancy), `docs/04-engineering-rules.md`. Verify current APIs/docs for: FastAPI, pydantic v2, google-genai Python SDK, your chosen search/news provider, Alembic/psycopg.
+`docs/intelligence-engine/{README,api-contract,sources,scoring,development}.md`, all five `agents/*.md`, `docs/02-architecture.md` (evidence pipeline, tenancy), `docs/04-engineering-rules.md`. Verify current APIs/docs for: FastAPI, pydantic v2, OpenAI Python SDK, your chosen search/news provider, Alembic/psycopg.
 
 ## Work packages (in order — commit each)
 1. **WP2A.1 Skeleton + contract + auth + fake mode** — pydantic contract models exactly per `api-contract.md`, OpenAPI export, HMAC/bearer/skew auth, error envelope, health/readiness/capabilities, `intel` schema + Alembic, fake mode with 4 fixture companies, `verify:all` + `docker-compose.yml` + CI job. **Merge this first; announce the contract is stable** so app work (2B) can start on the fake.

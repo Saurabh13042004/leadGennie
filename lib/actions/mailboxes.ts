@@ -92,7 +92,7 @@ export async function requestAddMailbox(input: { email: string; domainId: number
     requestedByUserId: userId,
   });
 
-  await sql`update mailboxes set approval_id = ${approvalId} where id = ${mailboxId}`;
+  await sql`update mailboxes set approval_id = ${approvalId} where id = ${mailboxId} and workspace_id = ${workspaceId}`;
 
   await logActivity({
     workspaceId,

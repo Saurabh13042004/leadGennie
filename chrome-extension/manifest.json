@@ -16,7 +16,6 @@
     "http://localhost:3000/*",
     "https://leadgennie.com/*",
     "https://*.vercel.app/*",
-    "https://generativelanguage.googleapis.com/*",
     "https://sheets.googleapis.com/*"
   ],
   "oauth2": {

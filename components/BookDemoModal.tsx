@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Check } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 interface BookDemoModalProps {
@@ -103,10 +103,12 @@ export default function BookDemoModal({ isOpen, onClose }: BookDemoModalProps) {
   const companySize = formData.companySize;
   const isBestForStartups = companySize === "1-5" || companySize === "5-20";
 
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // false on the server / first render, true once hydrated — needed for the portal.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   const modalContent = (
     <AnimatePresence>
@@ -223,7 +225,7 @@ export default function BookDemoModal({ isOpen, onClose }: BookDemoModalProps) {
                         transition={{ delay: 0.3 }}
                         className="text-2xl font-bold text-white mb-2"
                       >
-                        You're in.
+                        You&apos;re in.
                       </motion.h3>
                       <motion.p
                         initial={{ opacity: 0 }}
@@ -231,7 +233,7 @@ export default function BookDemoModal({ isOpen, onClose }: BookDemoModalProps) {
                         transition={{ delay: 0.35 }}
                         className="text-neutral-400 text-sm max-w-xs"
                       >
-                        We'll reach out shortly to schedule your personalized LeadGennie walkthrough.
+                        We&apos;ll reach out shortly to schedule your personalized LeadGennie walkthrough.
                       </motion.p>
                     </motion.div>
                   ) : (

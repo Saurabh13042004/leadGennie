@@ -116,7 +116,7 @@ export async function triggerVerify(id: number) {
 export async function removeDomain(id: number) {
   const { workspaceId, userId } = await requireRole("admin");
 
-  const mailboxCount = await sql`select count(*)::int as count from mailboxes where domain_id = ${id}`;
+  const mailboxCount = await sql`select count(*)::int as count from mailboxes where domain_id = ${id} and workspace_id = ${workspaceId}`;
   if ((mailboxCount[0].count as number) > 0) {
     throw new Error("Remove or reassign this domain's mailboxes first.");
   }

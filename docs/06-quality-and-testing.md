@@ -23,7 +23,7 @@ From Phase 2A on, **`npm run verify:all`** = Next `verify` **+** engine `make ve
 
 - **Vitest** for unit + integration; `@testing-library/react` for component tests where logic lives in components.
 - **Integration DB:** dedicated Neon branch via `DATABASE_URL_TEST` (decision D-08); harness migrates from empty, provides `createWorkspace()`/`createLead()` factories, truncates between files. Guard: abort if it equals `DATABASE_URL`.
-- **Fakes, not network:** `FakeLlm` (scripted/structured outputs, can emit invalid JSON), `FakeMailProvider`, **`FakeIntelligenceClient`** (Next side; canned Research Results incl. invariant-violating, partial, engine-down, quota) and the engine's `ENGINE_FAKE_MODE`. CI never calls Gemini/Resend/search/data providers or the public web.
+- **Fakes, not network:** `FakeLlm` (scripted/structured outputs, can emit invalid JSON), `FakeMailProvider`, **`FakeIntelligenceClient`** (Next side; canned Research Results incl. invariant-violating, partial, engine-down, quota) and the engine's `ENGINE_FAKE_MODE`. CI never calls OpenAI/Resend/search/data providers or the public web.
 - **E2E:** Playwright for the golden path from Phase 4 on (against a seeded test DB and fakes).
 - **Static gates** (scripts in `scripts/checks/`): (a) no fake-metric patterns in authenticated UI, (b) `lib/agent/**` doesn't import the db client, (c) every `campaigns/leads/...` SQL `update/delete` contains `workspace_id`.
 

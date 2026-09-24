@@ -25,7 +25,7 @@ You are working in the existing **LeadGennie** repository (`/Users/saurabh/Deskt
 - **Next.js runs the product; the Python Intelligence Engine (`services/intelligence/`) investigates the world** (D-11). Read `docs/intelligence-engine/README.md` before touching either side of the boundary.
 - Next.js is the **single writer** of product data; the engine never writes product tables and never sends email. Engine results are **re-validated** (zod + invariants) before persistence. No research/scraping/scoring logic in TypeScript. If the engine is down, show it — never substitute a guess.
 - Contract-first: pydantic → OpenAPI → generated TS types + zod mirrors; additive-only within `/v1`. Use `FakeIntelligenceClient` / `ENGINE_FAKE_MODE` in tests; no live network/LLM in default CI.
-- Python work: follow `docs/intelligence-engine/development.md` (uv, ruff, mypy strict, pytest, pydantic everywhere, LLM only via `llm/client.py`, budgets checked before external calls). The "read Next.js docs first" rule applies to Next code; for Python, **verify current library docs** (FastAPI, pydantic v2, the Gemini Python SDK, your search provider) instead of relying on memory.
+- Python work: follow `docs/intelligence-engine/development.md` (uv, ruff, mypy strict, pytest, pydantic everywhere, LLM only via `llm/client.py`, budgets checked before external calls). The "read Next.js docs first" rule applies to Next code; for Python, **verify current library docs** (FastAPI, pydantic v2, the OpenAI Python SDK, your search provider) instead of relying on memory.
 - Verification is `npm run verify` (Next) and, once the engine exists, `npm run verify:all`.
 
 ## 2. Repo facts you'll need

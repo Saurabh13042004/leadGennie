@@ -14,6 +14,12 @@ vi.mock("@/lib/db/client", async () => {
   return { sql };
 });
 
+// Session lookup is faked; role checks stay real (see tests/helpers/session.ts).
+vi.mock("@/lib/auth/workspace-context", async () => {
+  const { fakeRequireWorkspace, fakeRequireRole } = await import("./helpers/session");
+  return { requireWorkspace: fakeRequireWorkspace, requireRole: fakeRequireRole };
+});
+
 // Server actions call revalidatePath; outside a Next request it would throw.
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),

@@ -1,6 +1,6 @@
 # 02 — Architecture
 
-Keep: Next.js 16 App Router + Neon Postgres + NextAuth + Resend + Gemini. Add: a durable job layer, a tool-based agent layer, a structured-output validation layer, and a **Python Intelligence Engine** (separate service, decision D-11) that investigates the world.
+Keep: Next.js 16 App Router + Neon Postgres + NextAuth + Resend + OpenAI (gpt-4o). Add: a durable job layer, a tool-based agent layer, a structured-output validation layer, and a **Python Intelligence Engine** (separate service, decision D-11) that investigates the world.
 
 > **Next.js runs the business/product. Python investigates the world.**
 
@@ -72,7 +72,7 @@ type Err    = { ok: false; error: { code: ErrorCode; message: string; details?: 
 
 ## Validation
 
-**zod** (Next) and **pydantic v2** (engine). One schema per API input and per AI output, colocated with the code that uses it. Gemini's native `responseSchema` is a *hint*, not trusted: every AI response is parsed with the schema before anything is written (rule 8). Failure → one retry with the validation error appended → else the job/tool fails with `VALIDATION`, nothing is written. Engine responses are **re-validated in Next** with zod mirrors (generated from OpenAPI + contract tests) before persistence.
+**zod** (Next) and **pydantic v2** (engine). One schema per API input and per AI output, colocated with the code that uses it. The provider's native structured-output mode (OpenAI `json_schema`, `strict: true`) is a *hint*, not trusted: every AI response is parsed with the schema before anything is written (rule 8). Failure → one retry with the validation error appended → else the job/tool fails with `VALIDATION`, nothing is written. Engine responses are **re-validated in Next** with zod mirrors (generated from OpenAPI + contract tests) before persistence.
 
 ## Durable jobs (PLAN §32, §41)
 
@@ -163,7 +163,7 @@ The existing precheck logic in `lib/campaigns/dispatch.ts` and `lib/compliance.t
 
 ## LLM usage
 
-- **Next:** single entry `lib/ai/client.ts` (wrapping `lib/ai/gemini.ts`): structured output, token accounting, `usage_record`, per-workspace limits, quota mapping, mockable. Used for: planner, personalization copy, reply classification/drafts, AI filter builder.
+- **Next:** single entry `lib/ai/client.ts` (**exists**: provider-neutral `generateJson`/`generateText` over an `LlmProvider` adapter — `lib/ai/providers/openai.ts`, model from `OPENAI_MODEL`, default `gpt-4o`): structured output, token accounting, `usage_record`, per-workspace limits, quota mapping, mockable. Used for: planner, personalization copy, reply classification/drafts, AI filter builder.
 - **Engine:** single entry `llm/client.py` with the same guarantees; returns `usage[]` to Next (Next writes `usage_records` — single writer).
 - Model choice per task via config (cheap for classification/normalization/entailment, stronger for planning/personalization). Provider swappable (D-02).
 

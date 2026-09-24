@@ -10,7 +10,7 @@ Audit date: 2026-09-24, against `main` @ `89c93dd`. Typecheck (`tsc --noEmit`) p
 | Auth | NextAuth v5 beta, Credentials provider, JWT session carrying `workspaceId`, `role` (`auth.ts`); route protection in `proxy.ts` (Next 16 replacement for middleware) |
 | DB | Neon Postgres via `@neondatabase/serverless` HTTP driver (`lib/db/client.ts`, tagged-template `sql`). No ORM |
 | Migrations | Single idempotent `lib/db/schema.sql` executed by `scripts/migrate.mjs`, which splits on `;`. No version table, no ordering, can't hold functions/`DO` blocks |
-| AI | Gemini via `@google/genai` (`lib/ai/gemini.ts`, `generateJson` with JSON schema). Default `gemini-2.5-flash`. **Free tier = 20 req/day, shared by every AI feature** |
+| AI | **OpenAI `gpt-4o`** (migrated from Gemini on 2026-09-24) behind `lib/ai/client.ts` (`generateJson` with strict JSON-schema structured outputs, `LlmProvider` adapter in `lib/ai/providers/openai.ts`, `OPENAI_API_KEY`/`OPENAI_MODEL`). Errors mapped to `QUOTA_EXCEEDED`/`RATE_LIMITED`/`NOT_CONFIGURED` |
 | Email | Resend (`lib/email/resend.ts`, domains via `resend-domains.ts`). Bounce/complaint webhook only |
 | Scheduling | `GET /api/cron/send-campaigns` (Bearer `CRON_SECRET`), hit by `scripts/scheduler.mjs` (node-cron, always-on process) or an external pinger. Batch of 25, in-request |
 | Validation | Hand-rolled per action. No zod/valibot |
@@ -72,10 +72,10 @@ Legend: **Keep** = maps directly to V1 · **Extend** = exists, needs work · **H
 2. **Decorative wizard options** (news research, tone, localize, A/B) with no behaviour — remove until real (Phases 2/3 make two of them real).
 3. **`scripts/test-campaign-compliance.mjs`** mutates workspace 1 in the live DB — replace with a real test harness against a dedicated test database.
 4. **Migration runner** can't handle versioning or complex SQL — replace with ordered migrations + `schema_migrations` table.
-5. **Hardcoded logo.dev publishable key** fallback in `SocialProof.tsx`; **rotate the previously hardcoded Gemini key** (noted in earlier session) if not already done.
+5. **Hardcoded logo.dev publishable key** fallback in `SocialProof.tsx`; **delete/rotate the previously hardcoded Gemini key** (noted in earlier session) — Gemini is no longer used, so simply revoke it in Google AI Studio.
 6. **Error handling** is inconsistent: server actions `throw new Error("…")`, API routes return ad-hoc `{ error }`.
 7. **`owner_email`** columns still `NOT NULL` — plan a deprecation (stop writing, then drop) rather than leaving them as a second identity.
-8. **Gemini free-tier quota** (20/day) makes any multi-lead research flow impossible; billing must be enabled before Phase 2 testing (decision D-02).
+8. **LLM billing:** OpenAI is a paid API — set usage limits on the key and watch spend during Phase 2 research runs (decision D-02, decided).
 
 ## What is reusable as-is (do not rebuild)
 

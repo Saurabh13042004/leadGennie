@@ -103,7 +103,7 @@ export async function processEmailSends(workspaceId?: number) {
     if (!row.lead_email) {
       await sql`
         update campaign_sends set status = 'failed', error_message = 'Lead has no email address'
-        where id = ${row.id}
+        where id = ${row.id} and workspace_id = ${row.workspace_id}
       `;
       failed++;
       continue;
@@ -116,7 +116,7 @@ export async function processEmailSends(workspaceId?: number) {
       await sql`
         update campaign_sends
         set status = 'blocked', error_message = 'Sending mailbox is no longer active on a verified domain'
-        where id = ${row.id}
+        where id = ${row.id} and workspace_id = ${row.workspace_id}
       `;
       blocked++;
       continue;
@@ -129,7 +129,7 @@ export async function processEmailSends(workspaceId?: number) {
     if (blockReason) {
       await sql`
         update campaign_sends set status = 'blocked', error_message = ${blockReason}
-        where id = ${row.id}
+        where id = ${row.id} and workspace_id = ${row.workspace_id}
       `;
       blocked++;
       continue;
@@ -145,17 +145,18 @@ export async function processEmailSends(workspaceId?: number) {
       await sql`
         update campaign_sends
         set status = 'sent', sent_at = now(), subject = ${subject}, body = ${body}, provider_message_id = ${result?.id ?? null}
-        where id = ${row.id}
+        where id = ${row.id} and workspace_id = ${row.workspace_id}
       `;
       await sql`
-        update campaigns set sent_count = sent_count + 1 where id = ${row.campaign_id}
+        update campaigns set sent_count = sent_count + 1
+        where id = ${row.campaign_id} and workspace_id = ${row.workspace_id}
       `;
       sent++;
     } catch (error) {
       await sql`
         update campaign_sends
         set status = 'failed', error_message = ${error instanceof Error ? error.message : "Send failed"}
-        where id = ${row.id}
+        where id = ${row.id} and workspace_id = ${row.workspace_id}
       `;
       failed++;
     }
@@ -208,7 +209,7 @@ export async function processLinkedinSends(workspaceId?: number) {
     if (blockReason) {
       await sql`
         update campaign_sends set status = 'blocked', error_message = ${blockReason}
-        where id = ${row.id}
+        where id = ${row.id} and workspace_id = ${row.workspace_id}
       `;
       blocked++;
       continue;
@@ -218,7 +219,7 @@ export async function processLinkedinSends(workspaceId?: number) {
     const body = personalize(row.body, lead);
     await sql`
       update campaign_sends set status = 'queued', body = ${body}
-      where id = ${row.id}
+      where id = ${row.id} and workspace_id = ${row.workspace_id}
     `;
     queued++;
   }

@@ -75,7 +75,7 @@ export async function createForm(input: { name: string; consentText: string; fie
     summary: `Created form "${input.name.trim()}"`,
   });
 
-  revalidatePath("/dashboard/inbox");
+  revalidatePath("/dashboard/leads/inbound");
   return { id: formId, embedKey };
 }
 
@@ -94,7 +94,7 @@ export async function toggleFormStatus(id: number, status: "active" | "paused") 
     entityId: id,
     summary: `${status === "active" ? "Resumed" : "Paused"} form "${rows[0].name}"`,
   });
-  revalidatePath("/dashboard/inbox");
+  revalidatePath("/dashboard/leads/inbound");
 }
 
 export type Submission = {
@@ -174,7 +174,7 @@ export async function createLeadFromSubmission(submissionId: number) {
     requestedByUserId: userId,
   });
 
-  revalidatePath("/dashboard/inbox");
+  revalidatePath("/dashboard/leads/inbound");
   return { approvalId };
 }
 
@@ -200,7 +200,7 @@ export async function linkSubmissionToLead(submissionId: number, leadId: number)
     requestedByUserId: userId,
   });
 
-  revalidatePath("/dashboard/inbox");
+  revalidatePath("/dashboard/leads/inbound");
   return { approvalId };
 }
 
@@ -218,7 +218,7 @@ export async function markSubmissionSpam(id: number) {
     entityId: id,
     summary: "Marked form submission as spam",
   });
-  revalidatePath("/dashboard/inbox");
+  revalidatePath("/dashboard/leads/inbound");
 }
 
 export async function applyDncFromSubmission(id: number) {
@@ -236,7 +236,7 @@ export async function applyDncFromSubmission(id: number) {
     values (${workspaceId}, ${email.toLowerCase()}, 'Requested via form submission review', 'form_review', ${userId})
     on conflict (workspace_id, lower(email)) do nothing
   `;
-  await sql`update form_submissions set status = 'resolved' where id = ${id}`;
+  await sql`update form_submissions set status = 'resolved' where id = ${id} and workspace_id = ${workspaceId}`;
 
   await logActivity({
     workspaceId,
@@ -246,7 +246,7 @@ export async function applyDncFromSubmission(id: number) {
     entityId: id,
     summary: `Added ${email} to Do Not Contact from form review`,
   });
-  revalidatePath("/dashboard/inbox");
+  revalidatePath("/dashboard/leads/inbound");
 }
 
 export async function assignSubmission(id: number, ownerUserId: number) {
@@ -265,7 +265,7 @@ export async function assignSubmission(id: number, ownerUserId: number) {
     entityId: id,
     summary: "Assigned form submission for follow-up",
   });
-  revalidatePath("/dashboard/inbox");
+  revalidatePath("/dashboard/leads/inbound");
 }
 
 export async function ignoreSubmission(id: number) {
@@ -282,5 +282,5 @@ export async function ignoreSubmission(id: number) {
     entityId: id,
     summary: "Ignored form submission",
   });
-  revalidatePath("/dashboard/inbox");
+  revalidatePath("/dashboard/leads/inbound");
 }

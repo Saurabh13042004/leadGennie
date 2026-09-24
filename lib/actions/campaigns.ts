@@ -240,7 +240,7 @@ export async function createCampaign(input: CreateCampaignInput) {
     requestedByUserId: userId,
   });
 
-  await sql`update campaigns set approval_id = ${approvalId} where id = ${campaignId}`;
+  await sql`update campaigns set approval_id = ${approvalId} where id = ${campaignId} and workspace_id = ${workspaceId}`;
 
   await logActivity({
     workspaceId,

@@ -1,4 +1,4 @@
-import { generateJson, GeminiError, Type, MODEL_NAME } from "@/lib/ai/gemini";
+import { generateJson, LlmError, Type, MODEL_NAME } from "@/lib/ai/client";
 
 export type Channel = "email" | "linkedin_dm";
 
@@ -116,7 +116,7 @@ export async function draftFromPromptVersion(
       model: version.model,
     };
   } catch (error) {
-    if (error instanceof GeminiError) return null;
+    if (error instanceof LlmError) return null;
     throw error;
   }
 }

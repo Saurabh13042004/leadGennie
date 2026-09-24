@@ -58,7 +58,7 @@ Summary is in `AGENTS.md`; this is the working detail. Rule of thumb: **use a pa
 |---|---|---|
 | Strategy | scoring criteria, providers, tone/seniority rules, retry/backoff policies | one interface, several implementations, chosen by config/context |
 | Registry / Factory | agent tools, job handlers, connectors | unknown key ⇒ fail closed; registration is data, not `if` chains |
-| Adapter | Resend, Gmail, Gemini, search/news APIs, the Intelligence Engine | external shapes never leak past the adapter |
+| Adapter | Resend, Gmail, OpenAI, search/news APIs, the Intelligence Engine | external shapes never leak past the adapter |
 | State machine | campaign, campaign_lead, job, agent run, approval, draft | explicit transition table + tests for illegal transitions |
 | Command + idempotency | jobs, engine runs, sends | payload + idempotency key; handler = "make state X true" |
 | Repository / query module | all SQL | in `lib/db/*` or domain repositories; workspace_id mandatory in signatures |

@@ -99,8 +99,9 @@ export default function AiFilterBuilder() {
           <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
             <p className="text-sm text-white font-medium">Segment created</p>
             <span className="text-sm text-blue-300 tabular-nums">
-              {result.estimateMethod === "measured" ? "" : "≈ "}
-              {result.estimatedCount.toLocaleString()} matching leads
+              {result.estimateMethod === "unmeasurable"
+                ? "Not measurable"
+                : `${result.estimatedCount.toLocaleString()} matching leads`}
             </span>
           </div>
           <p className="text-xs text-neutral-500 mb-3">
@@ -108,8 +109,8 @@ export default function AiFilterBuilder() {
               "Measured — counted against your actual leads in this workspace."}
             {result.estimateMethod === "no_matches" &&
               "Measured — no leads in your workspace currently match this criteria."}
-            {result.estimateMethod === "guessed" &&
-              "Rough guess — the AI couldn't extract a structured filter, so this isn't counted against real data."}
+            {result.estimateMethod === "unmeasurable" &&
+              "The AI couldn't extract a structured filter from this prompt, so there is nothing to count against your leads. Try naming a title, industry, company or location."}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {criteriaChips.length > 0 ? (

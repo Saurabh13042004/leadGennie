@@ -1,4 +1,6 @@
 import type { LucideIcon } from "lucide-react";
+import { notFound } from "next/navigation";
+import { SHOW_LEGACY_MODULES } from "@/lib/feature-flags";
 
 export default function ComingSoon({
   title,
@@ -9,6 +11,9 @@ export default function ComingSoon({
   description: string;
   icon: LucideIcon;
 }) {
+  // Stub pages are not part of V1: 404 unless legacy modules are switched on.
+  if (!SHOW_LEGACY_MODULES) notFound();
+
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <div className="flex items-start gap-3 mb-8">

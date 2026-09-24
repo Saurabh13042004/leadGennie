@@ -80,14 +80,6 @@ export function extractCriteriaRegex(prompt: string): FilterCriteria {
   };
 }
 
-export function hashToRange(input: string, min: number, max: number) {
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
-  }
-  return min + (hash % (max - min));
-}
-
 /**
  * Neither the AI extraction nor the regex fallback can reliably pull a
  * literal company name out of free text (casing is inconsistent, and no
@@ -110,8 +102,20 @@ export async function matchKnownCompanies(workspaceId: number, prompt: string): 
 // Segments saved before `companies` existed on FilterCriteria have no such
 // key in their stored jsonb — normalize on read so old segments don't crash
 // instead of just filtering with fewer criteria than a fresh one would.
-export function normalize(criteria: FilterCriteria): FilterCriteria {
-  return { ...criteria, companies: criteria.companies ?? [] };
+export function normalize(criteria: Partial<FilterCriteria> | null | undefined): FilterCriteria {
+  // segments.criteria defaults to '{}' and older rows predate some keys, so
+  // every field must be defaulted — never assume a stored key exists.
+  const c = criteria ?? {};
+  return {
+    companies: c.companies ?? [],
+    regions: c.regions ?? [],
+    industries: c.industries ?? [],
+    titles: c.titles ?? [],
+    fundingStage: c.fundingStage ?? null,
+    minEmployees: c.minEmployees ?? null,
+    maxEmployees: c.maxEmployees ?? null,
+    minRevenueM: c.minRevenueM ?? null,
+  };
 }
 
 function patterns(criteria: FilterCriteria) {

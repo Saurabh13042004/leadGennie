@@ -1,7 +1,7 @@
 import { CircleCheckBig } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const STEPS = ["Audience", "Sequence", "Personalization", "Review"];
+const STEPS = ["Audience", "Sequence", "Review"];
 
 export default function WizardStepper({ current }: { current: number }) {
   return (

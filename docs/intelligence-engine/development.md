@@ -8,7 +8,7 @@
 | Packaging | `uv` (`pyproject.toml` + committed `uv.lock`) — pin everything |
 | Web | FastAPI + Uvicorn; pydantic v2 models as the contract |
 | HTTP | httpx (async) |
-| LLM | Google GenAI Python SDK behind `llm/client.py` (provider-swappable; same D-02 decision as the app). Verify current SDK API before coding |
+| LLM | OpenAI Python SDK (`gpt-4o`, structured outputs via JSON schema / pydantic parsing) behind `llm/client.py` (provider-swappable; same D-02 decision as the app). Verify current SDK API before coding |
 | DB | psycopg 3 (async) or asyncpg to the **`intel` schema only**, Alembic migrations (separate from Next's `db/migrations`) |
 | Lint/format | ruff (lint + format) |
 | Types | mypy `--strict` (or pyright strict) — no untyped defs |
@@ -34,7 +34,7 @@ Repo-level: root `npm run verify:all` runs the Next `verify` **and** `make -C se
 
 ## Environment variables
 
-`INTELLIGENCE_SERVICE_TOKEN` / `INTELLIGENCE_SIGNING_SECRET(S)` · `INTEL_DATABASE_URL` (role limited to `intel` schema) · `GEMINI_API_KEY`, `GEMINI_MODEL_*` · search/news/jobs provider keys (per D-03) · `FETCH_USER_AGENT`, `FETCH_MAX_BYTES`, `FETCH_HOST_RPS` · `LOG_LEVEL` · `ENGINE_FAKE_MODE`. Next side: `INTELLIGENCE_URL`, same signing secret(s).
+`INTELLIGENCE_SERVICE_TOKEN` / `INTELLIGENCE_SIGNING_SECRET(S)` · `INTEL_DATABASE_URL` (role limited to `intel` schema) · `OPENAI_API_KEY`, `OPENAI_MODEL` (per-task overrides optional) · search/news/jobs provider keys (per D-03) · `FETCH_USER_AGENT`, `FETCH_MAX_BYTES`, `FETCH_HOST_RPS` · `LOG_LEVEL` · `ENGINE_FAKE_MODE`. Next side: `INTELLIGENCE_URL`, same signing secret(s).
 
 ## Testing strategy
 
