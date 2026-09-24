@@ -31,22 +31,36 @@ describe("CSV import", () => {
     expect(Number(job.total_rows)).toBe(4);
   });
 
-  it("is idempotent: re-importing the same file creates nothing new", async () => {
+  it("is idempotent: re-importing the same file creates and changes nothing", async () => {
     await importLeadsCsv(rows);
     const again = await importLeadsCsv(rows);
     expect(again.created).toBe(0);
-    expect(again.updated).toBe(2);
+    // Phase 1: existing leads are only touched to fill BLANK fields — a re-import has none to fill.
+    expect(again.updated).toBe(0);
     expect(await leadCount()).toBe(2);
   });
 
-  it("matches emails case-insensitively and enriches without erasing existing fields", async () => {
+  it("matches emails case-insensitively and NEVER overwrites existing values (Phase 1: fill blanks only)", async () => {
     await importLeadsCsv([{ full_name: "Grace Hopper", email: "grace@example.com", company: "Navy", job_title: "Admiral" }]);
-    const r = await importLeadsCsv([{ full_name: "Grace H.", email: "GRACE@EXAMPLE.COM" }]); // no company/title in this file
-    expect(r).toMatchObject({ created: 0, updated: 1 });
+    const r = await importLeadsCsv([{ full_name: "Grace H.", email: "GRACE@EXAMPLE.COM", company: "Army" }]);
+    expect(r).toMatchObject({ created: 0, updated: 0, duplicate: 1 });
     const [lead] = await sql`select full_name, company, job_title from leads where workspace_id = ${workspaceId}`;
-    expect(lead).toMatchObject({ full_name: "Grace H.", company: "Navy", job_title: "Admiral" });
+    expect(lead).toMatchObject({ full_name: "Grace Hopper", company: "Navy", job_title: "Admiral" }); // nothing overwritten
     expect(await leadCount()).toBe(1);
   });
 
-  it.todo("leads WITHOUT an email have no identity to dedupe on — re-import duplicates them (known gap; Phase 1 adds linkedin_url/domain matching)");
+  it("fills blank fields on an existing lead without touching the ones already set", async () => {
+    await sql`insert into leads (workspace_id, full_name, email, job_title) values (${workspaceId}, 'Grace Hopper', 'grace@example.com', 'Admiral')`;
+    const r = await importLeadsCsv([{ full_name: "Grace H.", email: "grace@example.com", company: "Navy", job_title: "Intern" }]);
+    expect(r).toMatchObject({ created: 0, updated: 1 });
+    const [lead] = await sql`select full_name, company, job_title from leads where workspace_id = ${workspaceId}`;
+    expect(lead).toMatchObject({ full_name: "Grace Hopper", company: "Navy", job_title: "Admiral" });
+  });
+
+  it("leads WITHOUT an email are deduped by LinkedIn profile, so re-import does not duplicate them", async () => {
+    const noEmail = [{ full_name: "Alan Turing", linkedin_url: "https://www.linkedin.com/in/aturing" }];
+    await importLeadsCsv(noEmail);
+    await importLeadsCsv([{ full_name: "Alan T", linkedin_url: "linkedin.com/in/ATuring/" }]);
+    expect(await leadCount()).toBe(1);
+  });
 });

@@ -64,5 +64,16 @@ Header auto-mapping table tests · email classification table tests · dedupe (i
 Name-only company matching creates false merges → conservative normalization, never auto-merge two *different domains*; surface "possible duplicate company" rather than merging.
 `full_name` split is lossy (e.g. single-token names) → keep `full_name` authoritative for display.
 
+## Delivered as (deviations from this spec — recorded 2026-09-24)
+- **Migrations** are `0005_companies_and_lead_fields`, `0006_import_job_progress`, `0007_workspace_positioning_icp` (`0004` was already taken by API-token hashing). Backfills also include a third script, `backfill-email-status.mjs`.
+- **`importLeadsChunk(importJobId, { index, rows })`** — the chunk *index* is what makes redelivery a no-op. Options (`skip` | `update_blank`, `checkMx`) are supplied once to `startImport` and stored on the job; a chunk cannot change them. Envelope responses via `lib/api/action.ts` (`runAction`).
+- **Email status semantics.** A syntactically invalid address rejects the row (reported, not imported); `invalid` therefore comes from the opt-in MX check (or later verifiers). `valid` = syntax OK + not risky + domain has an MX record (it does *not* prove the mailbox exists); default is `unverified`. `risky` = role account or disposable domain.
+- **DNC `blocked`** is derived live from `do_not_contact` (never stored), so it cannot go stale; enrollment is still blocked by the existing `filterCompliantLeads`.
+- **Import cap:** 5,000 rows per file; chunk size 200; error report capped at 5,000 entries. UI row numbers are spreadsheet rows (header = row 1).
+- **Bulk "assign segment" is deferred to Phase 4.** Segments are saved *criteria* with no static membership; adding membership now would not affect campaign audiences (`audience_definition` lands in Phase 4) and would silently mislead. Bulk add-to-DNC and bulk delete are built.
+- **ICP** is a simple v1 shape (`{version:1, industries, employee_range, geographies, titles, exclusions}`); Phase 2A maps it onto the engine's weighted schema.
+- **Legacy `importLeadsCsv`** stays as a deprecated wrapper over the new pipeline; its semantics changed to *fill blanks only* (the old upsert overwrote non-empty values, which this spec forbids).
+- **Companies without a name** (corporate email only) are named by their domain (`acme.com`) — never an invented display name. Free-mail-only leads with no company text get no company.
+
 ## Exit
 Tag `phase-1-complete`. Mission: [`missions/phase-01-lead-foundation.md`](../missions/phase-01-lead-foundation.md).

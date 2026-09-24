@@ -1,5 +1,6 @@
 import { ROLE_RANK, type Role } from "@/lib/workspace";
 import type { WorkspaceContext } from "@/lib/auth/workspace-context";
+import { AppError } from "@/lib/api/errors";
 
 /**
  * Stand-in for the NextAuth session behind requireWorkspace/requireRole.
@@ -13,14 +14,14 @@ export function setSession(ctx: { workspaceId: number; userId: number; email: st
 }
 
 export async function fakeRequireWorkspace(): Promise<WorkspaceContext> {
-  if (!current) throw new Error("Not authenticated");
+  if (!current) throw new AppError("UNAUTHENTICATED", "Not authenticated");
   return current;
 }
 
 export async function fakeRequireRole(minRole: Role): Promise<WorkspaceContext> {
   const ctx = await fakeRequireWorkspace();
   if (ROLE_RANK[ctx.role] < ROLE_RANK[minRole]) {
-    throw new Error(`This action requires the "${minRole}" role or higher in this workspace.`);
+    throw new AppError("FORBIDDEN", `This action requires the "${minRole}" role or higher in this workspace.`);
   }
   return ctx;
 }

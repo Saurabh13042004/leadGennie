@@ -66,3 +66,18 @@ Tests never touch Neon. `npm test` migrates an **in-process Postgres (PGlite) fr
 ## Verification before/after a deploy
 
 `npm run verify` (typecheck → lint → fake-metric gate → tests → build). Then smoke: sign up → log in → create lead → import CSV → save segment → launch campaign (dry) → unsubscribe link → Resend webhook → form submit → extension token call.
+
+
+## Phase 1 rollout (leads, companies, import, workspace ICP)
+
+No new environment variables. Order matters:
+
+1. `npm run db:migrate` — applies `0005` (companies + lead fields), `0006` (import progress), `0007` (workspace positioning/ICP; seeds it from each workspace creator's `users.pitch/company`). All additive — `ADD COLUMN` with constant defaults is metadata-only on Postgres 11+, so `leads` is not rewritten. **Applied migrations are frozen** (checksummed): fix forward with a new numbered file.
+2. Backfills (each batched at 1,000, keyset-paginated, idempotent — a second run changes nothing; they refuse to run without `--yes`):
+   ```
+   node --env-file=.env.local scripts/backfill-companies.mjs    --yes   # companies from leads.company (+ corporate email domains) → leads.company_id
+   node --env-file=.env.local scripts/backfill-lead-names.mjs   --yes   # first_name / last_name from full_name
+   node --env-file=.env.local scripts/backfill-email-status.mjs --yes   # offline email_status (syntax / role / disposable) — no DNS
+   ```
+   Add `--env=DATABASE_URL_TEST` to run against the test branch first. Node ≥ 22.18 is required (the scripts import the app's pure TypeScript normalizers via type-stripping; a harmless `MODULE_TYPELESS_PACKAGE_JSON` warning is printed).
+3. Nothing to schedule: imports run from the browser in ≤200-row chunks, each idempotent, so an interrupted import resumes with **Retry** in the modal.

@@ -3,6 +3,7 @@
 import { sql } from "@/lib/db/client";
 import { draftMessage, draftFromPromptVersion, type Channel } from "@/lib/ai/messages";
 import { requireRole } from "@/lib/auth/workspace-context";
+import { getSenderContext } from "@/lib/db/workspace-profile";
 import { getPublishedVersionForType } from "@/lib/actions/prompts";
 import type { PromptType } from "@/lib/prompts-constants";
 
@@ -18,11 +19,10 @@ export async function generateSequenceStepMessage(input: {
   audiencePrompt?: string | null;
   campaignName?: string;
 }) {
-  const { workspaceId, email: owner, userId } = await requireRole("member");
+  const { workspaceId, userId } = await requireRole("member");
 
-  const rows = await sql`select company, pitch from users where email = ${owner}`;
-  const senderCompany = (rows[0]?.company as string | null) ?? null;
-  const senderPitch = (rows[0]?.pitch as string | null) ?? null;
+  // D-07: positioning lives on the workspace (falls back to the user's legacy profile).
+  const { company: senderCompany, pitch: senderPitch } = await getSenderContext(workspaceId, userId);
 
   // Prefer the workspace's own published prompt for this channel over the
   // built-in default — falls back automatically if none is published yet,

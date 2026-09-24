@@ -2,6 +2,49 @@
 
 Evidence log for each phase. Newest first.
 
+## Phase 1 — Lead foundation (code complete 2026-09-24; live backfill done; browser click-through pending)
+
+### What changed
+
+| WP | Result |
+|---|---|
+| 1.1 Companies | `0005` `companies` (+`name_key`, two partial unique indexes) and lead columns. `lib/domain/companies`: pure planner (`matcher.ts`) + batch service (constant queries per chunk) — domain match first, then normalized name; a name-only company adopts its domain; **two different domains are never merged** (flagged as a possible duplicate); free-mail/disposable domains never make a company. Backfills `scripts/backfill-{companies,lead-names,email-status}.mjs` (batched, keyset-paginated, idempotent; shared logic in `scripts/lib/backfill.mjs` importing the app's own normalizers). `/dashboard/leads/[id]` stub links to the company's leads |
+| 1.2 Import pipeline | Upload → Map (header auto-mapper, override) → Review (first 20 rows, validation, in-file + existing dedupe, DNC) → chunked Import (≤200/chunk, progress bar, pause/**Retry** resumes the same job) → summary + issues-CSV download. Each chunk is ONE atomic statement (data-modifying CTEs) that writes rows **and** progress, and records its outcome under its index → redelivery is a no-op, a failed chunk never loses earlier ones, a poison row is isolated by a per-row fallback. Modes: skip existing / fill blank fields only (never overwrites). Email-less rows dedupe by LinkedIn profile slug. Server re-validates every row (never trusts the client preview) |
+| 1.3 Email validation | `lib/domain/leads/email.ts` (syntax, free-mail, role, disposable, versioned lists), opt-in cached MX (`mx.ts`, `EmailVerifier` stub for later) |
+| 1.4 Leads list | Server-side pagination (50), search, stage/source/email-status/company filters, sort (allow-listed), bulk add-to-DNC / delete, company autocomplete + domain + phone in the form; `blocked` derived live from DNC |
+| 1.5 Onboarding | `0007` workspace `positioning/company_name/icp`; `/dashboard/settings/positioning`; dual-write from `updateSenderPitch`, reads workspace-first with legacy fallback (also the AI message generator); Command Center checklist derived from real state (only "dismissed" is stored) |
+
+### Bugs found while building (not in the spec)
+1. Neon returns `bigint` as **strings** — `insertLead`/`updateLeadFields`/`listLeads` returned string ids typed as `number` (the new bulk actions rejected them). Now coerced.
+2. `requireWorkspace` did not guard a non-numeric `user.id` (the NaN bug the docs warn about) and threw plain `Error`s that server actions could not classify → now `AppError` (same messages) + guard.
+3. The Phase 0 baseline import tests asserted the old upsert (overwrites non-empty fields, counts every re-import as "updated"); updated to the spec'd fill-blanks semantics, and the `it.todo` about email-less leads is now a real test.
+4. Harness finding (not app): PGlite returns JS arrays for `text[]` where Postgres sends `{a,b}` — the Neon-protocol shim was fixed; it briefly made race-conflict reporting look wrong.
+
+### Acceptance criteria — evidence
+
+| Criterion | Status | Evidence / caveat |
+|---|---|---|
+| Import 1,000 leads without timeout; progress; re-import → 0 duplicates | ✅ tests, ✅ real server actions over HTTP, ⚠️ not on Neon, ⚠️ modal not clicked | Test: 1,000 rows/5 chunks, re-import created 0. Live-server run (built app, real NextAuth session, actions called with real action IDs; DB = in-memory PGlite behind a Neon-protocol shim, **not the real DB**): 1,000 messy rows (invalid, role, disposable, no-email, in-file dupes, DNC) → 958 created / 24 dup / 18 skipped / 17 risky in ~0.2 s, progress 200→1000; same file again → 0 created (982 dup); `update_blank` → 0 created; chunk redelivered → `alreadyProcessed`. Latency over real Neon (HTTP round trips) not measured |
+| Duplicates (in-file + existing) detected and reported before commit | ✅ logic + `lookupExistingLeads` action; ⚠️ Review step not viewed in a browser | `previewImport` / `classifyAgainstExisting` unit-tested; lookup exercised live |
+| Invalid/risky/disposable flagged with reasons before and after import | ✅ | Preview flags + stored `email_status` + report entries + list badge/tooltips; role/disposable/invalid tables (≈40 cases) |
+| Auto-mapping for common exports; user can override | ✅ unit (≈40 header variants, Apollo/HubSpot shapes); ⚠️ override UI not clicked | Company-level LinkedIn columns are never mapped to the person |
+| Every imported lead links to a company; existing leads backfilled; never crosses workspaces | ✅ code + tests + ✅ **live backfill run (approved)** | Live-server import: 2,161/2,161 leads linked. Backfill run twice = no-op (tests, incl. tiny batch size). Read-only dry run on the real DB (16 leads, 1 workspace): 8 distinct company strings → 8 companies, 0 merges; 9 single-word names (first name only, by design); 1 disposable email → `risky`. **Leads with free-mail and no company text get no company (by design).** Mission STOP conditions not triggered. **Live run 2026-09-24:** pass 1 → 8 companies created, 14 leads linked, 16 names split, 1 email flagged `risky`; pass 2 → 0/0/0 (no-op). Read back: 16 leads, 14 linked, 0 cross-workspace links; the 2 unlinked leads have no company text and no corporate email |
+| Server-side pagination; 5,000 leads first page < 1 s | ✅ in-process | Test asserts < 1 s on 5,000; live server with 5,360 leads: first page ≈ 67 ms end-to-end, page 50 ≈ 69 ms, search ≈ 114 ms. Real Neon adds ~2 sequential round trips (count/facets in parallel, then rows) |
+| DNC emails flagged and can't be enrolled | ✅ | Flag rendered ("Blocked"); imports keep DNC rows; enrollment gate is the existing `filterCompliantLeads` (existing compliance tests) |
+| Onboarding checklist real; positioning + ICP at workspace level | ✅ live server | Checklist 1/4 → 3/4 as real data appeared; legacy wizard reads the workspace pitch; invalid excluded domain → field-level error |
+| `npm run verify` green; isolation tests extended | ⚠️ | typecheck ✅, lint ✅ on all app code, `check:fake-metrics` ✅, `check:tenancy` ✅ (scans the new SQL), **288 tests ✅**, build ✅ (new routes compile). **`npm run lint` at repo root fails only on `services/intelligence/.venv/**` (a Python virtualenv from the parallel Phase 2A work is not in the ESLint ignores)** — not a Phase 1 file; fix is one `globalIgnores` entry. Isolation: new suite covers leads list/detail/bulk/companies/autocomplete/import/onboarding across two workspaces |
+| Tag `phase-1-complete` | ❌ not done | No commits made (convention) |
+
+### Not done / deferred (on purpose)
+- **Bulk "assign segment"** → Phase 4 (segments have no static membership; see spec "Delivered as").
+- `users.pitch/company` are **not dropped** (contract step of D-07), `owner_email` untouched.
+- No enrichment/scoring/research/CRM sync; no campaign logic changed. Campaign placeholders still read `leads.company` (the typed text), not the canonical company name.
+
+### Side effects on shared infrastructure
+- `0005`–`0007` had **already been applied to the live database** by the Phase 0 session's migration run (see Phase 0 notes). I edited `0005` after it was first written, which the checksum guard flagged as `MODIFIED` on the live DB; I restored the file byte-for-byte (`db:migrate:status` → all applied). One consequence: `leads_workspace_linkedin_idx` from the original `0005` exists live but current queries match on the profile slug, so it is unused (harmless; drop in a future migration if desired).
+- Read-only checks against the live DB (`db:migrate:status`, SELECT-only dry run), then — with your explicit approval — the three backfills (`--yes`), run twice. They wrote only `leads.company_id/first_name/last_name/email_status` and 8 `companies` rows (`source='backfill'`); reversible by nulling those columns and deleting those rows.
+- A throwaway Next.js server (port 3457) and Neon-protocol shim (port 4555, in-memory) were run from the session scratchpad and stopped; `.next` was rebuilt by `npm run build`.
+
 ## Phase 0 — Stabilization (in progress, started 2026-09-24)
 
 ### Baseline recorded 2026-09-24 (before any Phase 0 change)

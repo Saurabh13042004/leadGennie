@@ -51,7 +51,7 @@ Open questions that change what gets built. Each has a **recommendation** so wor
 
 ## D-07 — Sender positioning & ICP location
 **Recommendation:** Move `users.pitch/company` to `workspaces.positioning/company_name` and add `workspaces.icp` (jsonb) with a guided onboarding step. Personalization and scoring both read workspace-level config. Dual-write → switch reads → drop old columns.
-**Decision:** _pending_
+**Decision:** _recommendation adopted for Phase 1 (2026-09-24), as the Phase 1 mission allows — owner confirmation still welcome._ Delivered: `workspaces.positioning/company_name/icp/onboarding_dismissed_at` (migration `0007`), dual-write from `updateSenderPitch`, reads workspace-first with a `users.pitch/company` fallback. **Contract step (dropping the `users` columns) is intentionally NOT done** — a later release, after the fallback is confirmed unused.
 
 ## D-08 — Test database strategy
 **Recommendation:** Vitest; integration tests run against a dedicated Neon **branch** (`DATABASE_URL_TEST`) that the suite migrates from empty and truncates per file. Refuse to run if `DATABASE_URL_TEST` equals `DATABASE_URL`. No test may touch a real workspace (replaces `scripts/test-campaign-compliance.mjs`).

@@ -14,52 +14,91 @@ import {
   type FilterCriteria,
 } from "@/lib/db/lead-matching";
 import { insertLead, updateLeadFields } from "@/lib/db/leads-core";
+import { listLeadsPage, getLeadDetail, type LeadDetail, type LeadListPage } from "@/lib/db/leads-list";
+import { parseLeadListParams, type LeadListQuery, type RawSearchParams } from "@/lib/domain/leads/list-query";
+import { leadImportService } from "@/lib/domain/leads/import/service";
+import { DEFAULT_IMPORT_OPTIONS, IMPORT_CHUNK_SIZE } from "@/lib/domain/leads/import/preview";
+import { logActivity } from "@/lib/activity";
 
 export type Lead = {
   id: number;
   full_name: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string | null;
+  email_status: string;
   company: string | null;
+  company_id: number | null;
   job_title: string | null;
   linkedin_url: string | null;
+  phone: string | null;
   stage: string;
   source: string;
   created_at: string;
 };
 
+/** Up to 500 most recent leads, for pickers (Deals, Inbound matching). The Leads page uses getLeadsPage. */
 export async function listLeads(): Promise<Lead[]> {
   const { workspaceId } = await requireRole("viewer");
   const rows = await sql`
-    select id, full_name, email, company, job_title, linkedin_url, stage, source, created_at
+    select id, full_name, first_name, last_name, email, email_status, company, company_id, job_title,
+           linkedin_url, phone, stage, source, created_at
     from leads
     where workspace_id = ${workspaceId}
     order by created_at desc
     limit 500
   `;
-  return rows as Lead[];
+  return rows.map((r) => ({
+    ...(r as unknown as Lead),
+    id: Number(r.id),
+    company_id: r.company_id === null ? null : Number(r.company_id),
+  }));
 }
 
 export type LeadInput = {
   full_name: string;
   email?: string;
   company?: string;
+  company_domain?: string;
   job_title?: string;
   linkedin_url?: string;
+  phone?: string;
   stage?: string;
 };
 
 export async function createLead(input: LeadInput): Promise<Lead> {
-  const { workspaceId } = await requireRole("member");
+  const { workspaceId, userId } = await requireRole("member");
   const lead = await insertLead(workspaceId, input, "manual");
+  await logActivity({
+    workspaceId, actorUserId: userId, type: "lead.created", entityType: "lead", entityId: lead.id,
+    summary: `Added lead ${lead.full_name}`,
+  });
   revalidatePath("/dashboard/leads");
   return lead;
 }
 
 export async function updateLead(id: number, input: LeadInput): Promise<Lead> {
-  const { workspaceId } = await requireRole("member");
+  const { workspaceId, userId } = await requireRole("member");
   const lead = await updateLeadFields(workspaceId, id, input);
+  await logActivity({
+    workspaceId, actorUserId: userId, type: "lead.updated", entityType: "lead", entityId: lead.id,
+    summary: `Updated lead ${lead.full_name}`,
+  });
   revalidatePath("/dashboard/leads");
   return lead;
+}
+
+/** Server-side paginated lead list (page size 50). `sp` is the raw URL search params. */
+export async function getLeadsPage(sp: RawSearchParams): Promise<{ query: LeadListQuery; page: LeadListPage }> {
+  const { workspaceId } = await requireRole("viewer");
+  const query = parseLeadListParams(sp);
+  return { query, page: await listLeadsPage(workspaceId, query) };
+}
+
+export async function getLead(id: number): Promise<LeadDetail | null> {
+  const { workspaceId } = await requireRole("viewer");
+  if (!Number.isInteger(id) || id < 1) return null;
+  return getLeadDetail(workspaceId, id);
 }
 
 /**
@@ -70,7 +109,7 @@ export async function updateLead(id: number, input: LeadInput): Promise<Lead> {
  * "stop contacting this person" instead.
  */
 export async function deleteLead(id: number): Promise<void> {
-  const { workspaceId } = await requireRole("admin");
+  const { workspaceId, userId } = await requireRole("admin");
 
   const leadRows = await sql`select id from leads where id = ${id} and workspace_id = ${workspaceId}`;
   if (leadRows.length === 0) throw new Error("Lead not found");
@@ -83,6 +122,10 @@ export async function deleteLead(id: number): Promise<void> {
   }
 
   await sql`delete from leads where id = ${id} and workspace_id = ${workspaceId}`;
+  await logActivity({
+    workspaceId, actorUserId: userId, type: "lead.deleted", entityType: "lead", entityId: null,
+    summary: "Deleted a lead", metadata: { lead_id: id },
+  });
   revalidatePath("/dashboard/leads");
 }
 
@@ -107,129 +150,39 @@ export type ImportResult = {
   jobId: number;
 };
 
-type PendingRow = { row: ImportRow & { full_name: string; email?: string }; originalIndex: number };
-
-const UPSERT_SQL = `
-  insert into leads (workspace_id, full_name, email, company, job_title, linkedin_url, source)
-  select * from unnest($1::bigint[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[])
-  on conflict (workspace_id, lower(email)) where email is not null do update set
-    full_name = excluded.full_name,
-    company = coalesce(excluded.company, leads.company),
-    job_title = coalesce(excluded.job_title, leads.job_title),
-    linkedin_url = coalesce(excluded.linkedin_url, leads.linkedin_url)
-  returning (xmax = 0) as inserted
-`;
-
-function upsertParams(workspaceId: number, rows: PendingRow["row"][]) {
-  return [
-    rows.map(() => workspaceId),
-    rows.map((r) => r.full_name),
-    rows.map((r) => r.email?.trim() || null),
-    rows.map((r) => r.company?.trim() || null),
-    rows.map((r) => r.job_title?.trim() || null),
-    rows.map((r) => r.linkedin_url?.trim() || null),
-    rows.map(() => "csv"),
-  ];
-}
-
-async function upsertLeadRow(
-  workspaceId: number,
-  row: PendingRow["row"]
-): Promise<{ inserted: boolean }> {
-  const result = await sql.query(UPSERT_SQL, upsertParams(workspaceId, [row]));
-  return { inserted: result[0].inserted as boolean };
-}
-
 /**
- * Idempotent, resumable CSV import (CRM-03): safe to re-run the same file —
- * rows are matched by (workspace, email) and upserted rather than duplicated.
- * Every row is accounted for as created/updated/duplicate/skipped/failed and
- * the run is persisted to import_jobs for audit and to support re-upload.
+ * @deprecated Compatibility wrapper. The import UI uses the chunked pipeline in
+ * lib/actions/lead-import.ts (start → chunks → finish); this runs the same
+ * pipeline in one call for programmatic callers. Existing leads have only their
+ * BLANK fields filled — a re-import never overwrites values (unlike the old upsert).
  */
 export async function importLeadsCsv(rows: ImportRow[], fileName?: string): Promise<ImportResult> {
-  const { workspaceId, userId } = await requireRole("member");
-
-  const errors: ImportError[] = [];
-  let skipped = 0;
-  let duplicate = 0;
-  let created = 0;
-  let updated = 0;
-  let failed = 0;
-
-  const seenEmails = new Map<string, number>();
-  const pending: PendingRow[] = [];
-
-  rows.forEach((r, idx) => {
-    const fullName = r.full_name?.trim();
-    if (!fullName) {
-      skipped++;
-      errors.push({ row: idx + 1, reason: "Missing full name" });
-      return;
-    }
-    const email = r.email?.trim().toLowerCase();
-    if (email) {
-      const firstSeenAt = seenEmails.get(email);
-      if (firstSeenAt !== undefined) {
-        duplicate++;
-        errors.push({ row: idx + 1, reason: `Duplicate email — already seen at row ${firstSeenAt + 1}` });
-        return;
-      }
-      seenEmails.set(email, idx);
-    }
-    pending.push({ row: { ...r, full_name: fullName }, originalIndex: idx });
+  const ctx = await requireRole("member");
+  const job = await leadImportService.start(ctx, {
+    fileName: fileName ?? null,
+    totalRows: rows.length,
+    options: { ...DEFAULT_IMPORT_OPTIONS, existing: "update_blank" },
   });
-
-  // Try the whole batch as one upsert (fast path). If anything in the batch
-  // throws, Postgres rolls the whole statement back — fall back to row-by-row
-  // so a single bad row can't block the rest, and so failures are attributable.
-  if (pending.length > 0) {
-    try {
-      const result = await sql.query(
-        UPSERT_SQL,
-        upsertParams(workspaceId, pending.map((p) => p.row))
-      );
-      for (const r of result) {
-        if (r.inserted) created++;
-        else updated++;
-      }
-    } catch {
-      for (const p of pending) {
-        try {
-          const { inserted } = await upsertLeadRow(workspaceId, p.row);
-          if (inserted) created++;
-          else updated++;
-        } catch (err) {
-          failed++;
-          errors.push({ row: p.originalIndex + 1, reason: err instanceof Error ? err.message : "Insert failed" });
-        }
-      }
-    }
+  for (let i = 0; i * IMPORT_CHUNK_SIZE < rows.length; i++) {
+    const slice = rows.slice(i * IMPORT_CHUNK_SIZE, (i + 1) * IMPORT_CHUNK_SIZE);
+    await leadImportService.importChunk(ctx, job.id, {
+      index: i,
+      // Legacy contract: row numbers are 1-based data rows (the UI pipeline uses spreadsheet rows, header = 1).
+      rows: slice.map((r, j) => ({ row: i * IMPORT_CHUNK_SIZE + j + 1, data: r })),
+    });
   }
-
-  const jobInserted = await sql`
-    insert into import_jobs (
-      workspace_id, source, file_name, total_rows, created_count, updated_count,
-      duplicate_count, skipped_count, failed_count, error_report, status, created_by_user_id
-    )
-    values (
-      ${workspaceId}, 'csv', ${fileName ?? null}, ${rows.length}, ${created}, ${updated},
-      ${duplicate}, ${skipped}, ${failed}, ${JSON.stringify(errors)},
-      ${failed > 0 ? "completed_with_errors" : "completed"}, ${userId}
-    )
-    returning id
-  `;
-
+  const done = await leadImportService.finish(ctx, job.id);
+  const { entries } = await leadImportService.report(ctx, job.id);
   revalidatePath("/dashboard/leads");
-
   return {
-    total: rows.length,
-    created,
-    updated,
-    duplicate,
-    skipped,
-    failed,
-    errors,
-    jobId: jobInserted[0].id as number,
+    total: done.totalRows,
+    created: done.created,
+    updated: done.updated,
+    duplicate: done.duplicate,
+    skipped: done.skipped,
+    failed: done.failed,
+    errors: entries.filter((e) => e.severity === "error" || e.code.startsWith("duplicate")).map((e) => ({ row: e.row, reason: e.reason })),
+    jobId: job.id,
   };
 }
 

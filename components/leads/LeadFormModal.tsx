@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { createLead, updateLead, type Lead, type LeadInput } from "@/lib/actions/leads";
+import type { LeadListRow } from "@/lib/db/leads-list";
+import CompanyField from "./CompanyField";
 
 const STAGES = ["new", "outreached", "engaged"];
 
@@ -11,13 +13,15 @@ export default function LeadFormModal({
   onClose,
   onSaved,
 }: {
-  lead?: Lead;
+  lead?: LeadListRow;
   onClose: () => void;
   onSaved: (lead: Lead) => void;
 }) {
   const [fullName, setFullName] = useState(lead?.full_name ?? "");
   const [email, setEmail] = useState(lead?.email ?? "");
-  const [company, setCompany] = useState(lead?.company ?? "");
+  const [company, setCompany] = useState(lead?.company_name ?? lead?.company ?? "");
+  const [companyDomain, setCompanyDomain] = useState(lead?.company_domain ?? "");
+  const [phone, setPhone] = useState(lead?.phone ?? "");
   const [jobTitle, setJobTitle] = useState(lead?.job_title ?? "");
   const [linkedinUrl, setLinkedinUrl] = useState(lead?.linkedin_url ?? "");
   const [stage, setStage] = useState(lead?.stage ?? "new");
@@ -37,6 +41,8 @@ export default function LeadFormModal({
       full_name: fullName,
       email: email || undefined,
       company: company || undefined,
+      company_domain: companyDomain || undefined,
+      phone: phone || undefined,
       job_title: jobTitle || undefined,
       linkedin_url: linkedinUrl || undefined,
       stage,
@@ -84,20 +90,26 @@ export default function LeadFormModal({
             />
           </div>
 
+          <CompanyField
+            company={company}
+            domain={companyDomain}
+            onChange={(v) => { setCompany(v.company); setCompanyDomain(v.domain); }}
+          />
+
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm text-neutral-300 mb-1.5">Company</label>
-              <input
-                value={company}
-                onChange={(e) => setCompany(e.target.value)}
-                className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
-              />
-            </div>
             <div>
               <label className="block text-sm text-neutral-300 mb-1.5">Job title</label>
               <input
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
+                className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-neutral-300 mb-1.5">Phone</label>
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
               />
             </div>

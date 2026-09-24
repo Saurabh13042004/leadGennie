@@ -48,7 +48,7 @@ Update this table as phases land. A phase is only "Done" when every acceptance c
 | Phase | Name | Status |
 |---|---|---|
 | 0 | Codebase stabilization | **Code complete; live DB migrated and smoke-tested over HTTP. Pending: real-browser click-through** (see `CHANGELOG-phases.md`) |
-| 1 | Lead foundation | Not started |
+| 1 | Lead foundation | **Code complete; verified hermetically + over real Next server actions against a local Neon-protocol harness. Live DB backfilled. Pending: real-browser click-through, `npm run verify` blocked by an unrelated `services/` lint error** (see `CHANGELOG-phases.md`) |
 | 2A | Intelligence Engine (Python) | Not started |
 | 2B | Lead intelligence in the app | Not started |
 | 3 | AI personalization | Not started |

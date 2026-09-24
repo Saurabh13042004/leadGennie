@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { ROLE_RANK, type Role } from "@/lib/workspace";
+import { AppError } from "@/lib/api/errors";
 
 export type WorkspaceContext = {
   workspaceId: number;
@@ -13,13 +14,15 @@ export type WorkspaceContext = {
 export async function requireWorkspace(): Promise<WorkspaceContext> {
   const session = await auth();
   if (!session?.user?.email || !session.user.workspaceId) {
-    throw new Error("Not authenticated");
+    throw new AppError("UNAUTHENTICATED", "Not authenticated");
   }
+  const userId = Number(session.user.id);
+  if (!Number.isFinite(userId)) throw new AppError("UNAUTHENTICATED", "Not authenticated");
   return {
     workspaceId: session.user.workspaceId,
     workspaceName: session.user.workspaceName,
     role: (session.user.role ?? "member") as Role,
-    userId: Number(session.user.id),
+    userId,
     email: session.user.email,
   };
 }
@@ -28,7 +31,7 @@ export async function requireWorkspace(): Promise<WorkspaceContext> {
 export async function requireRole(minRole: Role): Promise<WorkspaceContext> {
   const ctx = await requireWorkspace();
   if (ROLE_RANK[ctx.role] < ROLE_RANK[minRole]) {
-    throw new Error(`This action requires the "${minRole}" role or higher in this workspace.`);
+    throw new AppError("FORBIDDEN", `This action requires the "${minRole}" role or higher in this workspace.`);
   }
   return ctx;
 }

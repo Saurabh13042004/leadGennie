@@ -33,10 +33,14 @@ Column lists are the contract; exact types/indexes finalised in each phase's mig
 ### `companies` (Phase 1)
 `id, workspace_id, name, domain, linkedin_url, industry, employee_count, location, description, source, created_at, updated_at`
 Unique `(workspace_id, lower(domain)) where domain is not null`. Name-only companies (from legacy `leads.company`) allowed with null domain; matched by normalized name within the workspace.
+**Delivered (migration `0005`):** plus `name_key text not null` (conservative normalized name, matching only — legal suffixes stripped, descriptive words kept) and a second partial unique index `(workspace_id, name_key) where domain is null`. A company with a domain may share a `name_key` with another domain (surfaced as a possible duplicate, never auto-merged). For a domain-only company `name` = the domain and `name_key` = its first label. Matching rules: `lib/domain/companies/matcher.ts`.
 
 ### `leads` (extend, Phase 1)
 Add: `first_name, last_name, phone, company_id → companies, source_url, icp_score int, intent_score int, scoring_version, research_status (none|queued|running|done|partial|failed), email_status (unverified|valid|invalid|risky), updated_at`. (`icp_score`/`intent_score` are written only from engine scoring results.)
-Keep `full_name` (derived/backfilled from first/last; existing code reads it). Keep `stage` (values: `new, researched, qualified, contacted, replied, interested, meeting, won, lost, unsubscribed, bounced`). **Stop writing `owner_email`** (Phase 0), drop it after a release.
+**Delivered in Phase 1 (`0005`):** `company_id, first_name, last_name, phone, source_url, email_status (check-constrained), updated_at`. `icp_score/intent_score/scoring_version/research_status` are **not** added yet (Phase 2). Keep `full_name` (derived/backfilled from first/last; existing code reads it). Keep `stage` (values: `new, researched, qualified, contacted, replied, interested, meeting, won, lost, unsubscribed, bounced`). **Stop writing `owner_email`** (Phase 0), drop it after a release.
+
+### `import_jobs` (extended in Phase 1, migration `0006`)
+Existing table + `processed_rows, blocked_count, risky_count, options jsonb, chunk_results jsonb` (per-chunk outcome keyed by chunk index — the idempotency record), `idempotency_key` (unique per workspace), `finished_at, updated_at`. Status: `running → completed | completed_with_errors | interrupted`. `error_report` now holds `{row, severity, code, reason}` (capped at 5,000).
 
 ### `lead_research` (Phase 2)
 `id, workspace_id, lead_id, company_id, summary, why_contact, why_now, why_person, potential_problem (hypothesis), recommended_angle, insufficient_evidence bool, icp_breakdown jsonb (criteria → {status, weight, points, value_found, evidence_ids}), icp_confidence, scoring_version, engine_run_id, engine_contract_version, status (complete|partial|failed), unknowns jsonb, warnings jsonb, agent_run_id, created_at, updated_at`. One current row per lead + history retained (versioned by `created_at`; `is_current`). Written **only** by `lib/intelligence/persist.ts` from a validated engine Research Result.
@@ -90,7 +94,7 @@ See `02-architecture.md`.
 
 ## Workspace-level config (extend `workspaces`)
 
-`positioning text` (what we sell, moved from `users.pitch`), `company_name`, `icp jsonb` (industries, employee range, geos, target titles/seniority, keyword signals, exclusions, weights, `min_score_to_qualify` — schema defined in `intelligence-engine/scoring.md`; taxonomy-valid values only), `default_tone text`, `sender_name`, `timezone`, `daily_send_cap`. ICP lives on the workspace so scoring, discovery and personalization all read the same definition.
+**Delivered in Phase 1 (`0007`): `positioning`, `company_name`, `icp` (v1 shape, see `lib/domain/workspace/icp.ts`), `onboarding_dismissed_at`.** Target list: `positioning text` (what we sell, moved from `users.pitch`), `company_name`, `icp jsonb` (industries, employee range, geos, target titles/seniority, keyword signals, exclusions, weights, `min_score_to_qualify` — schema defined in `intelligence-engine/scoring.md`; taxonomy-valid values only), `default_tone text`, `sender_name`, `timezone`, `daily_send_cap`. ICP lives on the workspace so scoring, discovery and personalization all read the same definition.
 
 ## Migration strategy
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Upload, Plus } from "lucide-react";
-import ImportLeadsModal from "./ImportLeadsModal";
+import ImportLeadsModal from "./import/ImportLeadsModal";
 import LeadFormModal from "./LeadFormModal";
 
 export default function LeadsHeader({ canEdit }: { canEdit: boolean }) {

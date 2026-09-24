@@ -1,2 +1,2 @@
-full_name,email,company,job_title,linkedin_url
-Jane Doe,jane@acme.com,Acme Inc,VP of Engineering,https://linkedin.com/in/janedoe
+first_name,last_name,email,company,company_domain,job_title,linkedin_url,phone
+Jane,Doe,jane@acme.com,Acme Inc,acme.com,VP of Engineering,https://linkedin.com/in/janedoe,+1 555 0100

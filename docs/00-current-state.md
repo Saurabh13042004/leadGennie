@@ -82,3 +82,15 @@ Legend: **Keep** = maps directly to V1 · **Extend** = exists, needs work · **H
 ## What is reusable as-is (do not rebuild)
 
 `requireWorkspace/requireRole` (tenant boundary), `approvals` engine + `decideApproval`, `activities` + `logActivity`, DNC/cooldown, `lib/crypto.ts` (AES-256-GCM secrets), CSV import + `import_jobs`, prompt library + `message_generations`, domains/mailboxes with approval gating, Resend send + webhook verification, extension token auth (`lib/auth/extension-token.ts`), `AiFilterBuilder`, DashboardShell/Sidebar/Topbar shell, `generateJson` structured-output wrapper.
+
+## Update — Phase 1 (2026-09-24)
+
+Changes to what is true above (the audit tables describe the pre-rebuild repo):
+
+- **Companies exist.** `companies` table + `leads.company_id`; `leads.company` (free text) is kept and remains the source for campaign placeholders. Matching lives in `lib/domain/companies` (pure planner + batch service); SQL in `lib/db/companies.ts`.
+- **CSV import is a pipeline**, not one request: Upload → Map (auto-mapped headers) → Review (validation, in-file + existing dedupe, DNC) → chunked Import (`startImport` → `importLeadsChunk` × N → `finishImport`) with progress and an issues CSV. Code: `lib/domain/leads/import/*`, `lib/db/lead-import.ts`, `lib/actions/lead-import.ts`, `components/leads/import/*`. The old single-call `importLeadsCsv` is a deprecated wrapper.
+- **Email validation:** `lib/domain/leads/email.ts` (syntax, free-mail, role, disposable, optional cached MX). Static lists are versioned (`EMAIL_LISTS_VERSION`).
+- **Leads page** is server-paginated (50/page) with search, stage/source/email-status/company filters, sort, bulk add-to-DNC and bulk delete; `/dashboard/leads/[id]` is a minimal detail stub.
+- **Positioning + ICP live on the workspace** (`/dashboard/settings/positioning`); `updateSenderPitch` dual-writes; the Command Center shows a checklist derived from real state.
+- `requireWorkspace`/`requireRole` now throw `AppError` (`UNAUTHENTICATED`/`FORBIDDEN`, same messages) and guard a non-numeric `user.id`. Server actions that need to show a reason return `ActionResult` (`lib/api/action.ts`).
+- Still true: no research/enrichment, no scoring, no CRM sync. Lead **stage** remains the only status column.

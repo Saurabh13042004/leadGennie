@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Settings, UsersRound, Mail, Ban, MessageSquare, Plug, KeyRound, Activity } from "lucide-react";
+import { Settings, UsersRound, Mail, Ban, MessageSquare, Plug, KeyRound, Activity, Target } from "lucide-react";
 
 export const metadata = {
   title: "Settings | LeadGennie",
 };
 
 const SECTIONS = [
+  { title: "Positioning & ICP", description: "What you sell and who you sell to", href: "/dashboard/settings/positioning", icon: Target },
   { title: "Workspace & team", description: "Members, roles and invitations", href: "/dashboard/workspace", icon: UsersRound },
   { title: "Mailboxes & domains", description: "Sending domains, mailboxes and daily limits", href: "/dashboard/deliverability", icon: Mail },
   { title: "Do Not Contact", description: "Suppression list and opt-outs", href: "/dashboard/do-not-contact", icon: Ban },
