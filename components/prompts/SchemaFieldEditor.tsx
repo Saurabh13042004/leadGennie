@@ -35,33 +35,33 @@ export default function SchemaFieldEditor({
             onChange={(e) => update(idx, { key: e.target.value })}
             disabled={disabled}
             placeholder="field_key"
-            className="flex-1 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20 disabled:opacity-50"
+            className="flex-1 rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-1.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 disabled:opacity-60"
           />
           {showType && (
             <select
               value={f.type}
               onChange={(e) => update(idx, { type: e.target.value as SchemaField["type"] })}
               disabled={disabled}
-              className="bg-white/5 border border-white/10 rounded-lg text-xs text-white px-2 py-1.5 focus:outline-none disabled:opacity-50"
+              className="bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-900 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 disabled:opacity-60"
             >
               <option value="string">string</option>
               <option value="number">number</option>
             </select>
           )}
-          <label className="flex items-center gap-1.5 text-xs text-neutral-400 shrink-0">
+          <label className="flex items-center gap-1.5 text-xs text-neutral-500 shrink-0">
             <input
               type="checkbox"
               checked={f.required}
               onChange={(e) => update(idx, { required: e.target.checked })}
               disabled={disabled}
-              className="w-3.5 h-3.5 accent-blue-500"
+              className="w-3.5 h-3.5 accent-indigo-600"
             />
             required
           </label>
           {!disabled && (
             <button
               onClick={() => remove(idx)}
-              className="text-neutral-500 hover:text-red-400 transition-colors shrink-0"
+              className="text-neutral-400 hover:text-rose-600 transition-colors shrink-0"
               aria-label="Remove field"
               type="button"
             >
@@ -74,13 +74,13 @@ export default function SchemaFieldEditor({
         <button
           onClick={add}
           type="button"
-          className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
           Add field
         </button>
       )}
-      {fields.length === 0 && disabled && <p className="text-xs text-neutral-600">No fields declared.</p>}
+      {fields.length === 0 && disabled && <p className="text-xs text-neutral-400">No fields declared.</p>}
     </div>
   );
 }
