@@ -15,11 +15,11 @@ export default function LeadsHeader({ canEdit }: { canEdit: boolean }) {
     <>
       <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-            <Users className="w-5 h-5 text-blue-400" />
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+            <Users className="w-5 h-5 text-indigo-600" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-white">Leads</h1>
+            <h1 className="text-xl font-bold tracking-tight text-neutral-900">Leads</h1>
             <p className="text-sm text-neutral-500">Import, enrich and segment your lead universe.</p>
           </div>
         </div>
@@ -28,14 +28,14 @@ export default function LeadsHeader({ canEdit }: { canEdit: boolean }) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setAddOpen(true)}
-              className="flex items-center gap-2 border border-white/10 text-white font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-white/5 transition-colors"
+              className="flex items-center gap-2 border border-neutral-200 bg-white text-neutral-700 font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Add lead
             </button>
             <button
               onClick={() => setImportOpen(true)}
-              className="flex items-center gap-2 bg-white text-black font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors"
+              className="flex items-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-neutral-800 transition-colors"
             >
               <Upload className="w-4 h-4" />
               Import leads

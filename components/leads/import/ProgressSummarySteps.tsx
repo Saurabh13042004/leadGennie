@@ -19,22 +19,22 @@ export function ProgressStep({
   return (
     <div className="space-y-4 py-4" role="status" aria-live="polite">
       <div className="flex items-center gap-3">
-        {paused ? <AlertTriangle className="w-5 h-5 text-yellow-300" /> : <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />}
-        <p className="text-white text-sm font-medium">{paused ? "Import paused" : "Importing leads…"}</p>
+        {paused ? <AlertTriangle className="w-5 h-5 text-amber-500" /> : <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />}
+        <p className="text-neutral-900 text-sm font-semibold">{paused ? "Import paused" : "Importing leads…"}</p>
       </div>
-      <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-        <div className="h-full bg-blue-400 transition-all duration-300" style={{ width: `${pct}%` }} />
+      <div className="h-2 rounded-full bg-neutral-100 overflow-hidden">
+        <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${pct}%` }} />
       </div>
       <p className="text-xs text-neutral-500 tabular-nums">
         {progress.processed.toLocaleString()} of {progress.total.toLocaleString()} rows processed ({pct}%)
       </p>
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-rose-600">{error}</p>}
       {paused && (
-        <button onClick={onRetry} className="w-full bg-white text-black font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors">
+        <button onClick={onRetry} className="w-full bg-neutral-900 text-white font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-neutral-800 transition-colors">
           Retry — continue where it stopped
         </button>
       )}
-      {!paused && <p className="text-xs text-neutral-600">Keep this window open. Leads already imported are saved even if something fails.</p>}
+      {!paused && <p className="text-xs text-neutral-400">Keep this window open. Leads already imported are saved even if something fails.</p>}
     </div>
   );
 }
@@ -50,18 +50,26 @@ export function SummaryStep({
   onDone: () => void;
 }) {
   const stats: [string, number, string][] = [
-    ["Created", job.created, "text-green-400"],
-    ["Updated", job.updated, "text-blue-400"],
-    ["Duplicates", job.duplicate, "text-neutral-400"],
-    ["Skipped", job.skipped, "text-yellow-400"],
-    ["Failed", job.failed, "text-red-400"],
+    ["Created", job.created, "text-emerald-600"],
+    ["Updated", job.updated, "text-indigo-600"],
+    ["Duplicates", job.duplicate, "text-neutral-500"],
+    ["Skipped", job.skipped, "text-amber-600"],
+    ["Failed", job.failed, "text-rose-600"],
   ];
   const interrupted = job.status === "interrupted";
   return (
     <div className="space-y-5">
       <div className="flex flex-col items-center text-center py-2">
-        {interrupted ? <AlertTriangle className="w-12 h-12 text-yellow-300 mb-4" /> : <CheckCircle2 className="w-12 h-12 text-green-400 mb-4" />}
-        <p className="text-white font-medium">{interrupted ? "Import incomplete" : "Import complete"}</p>
+        {interrupted ? (
+          <div className="w-14 h-14 rounded-xl bg-amber-50 flex items-center justify-center mb-4">
+            <AlertTriangle className="w-7 h-7 text-amber-500" />
+          </div>
+        ) : (
+          <div className="w-14 h-14 rounded-xl bg-emerald-50 flex items-center justify-center mb-4">
+            <CheckCircle2 className="w-7 h-7 text-emerald-500" />
+          </div>
+        )}
+        <p className="text-neutral-900 font-semibold">{interrupted ? "Import incomplete" : "Import complete"}</p>
         <p className="text-sm text-neutral-500 mt-1">
           {job.processedRows.toLocaleString()} of {job.totalRows.toLocaleString()} rows processed. Safe to re-upload the same file — existing leads are matched, never duplicated.
         </p>
@@ -69,37 +77,37 @@ export function SummaryStep({
 
       <div className="grid grid-cols-5 gap-2 text-center">
         {stats.map(([label, value, color]) => (
-          <div key={label} className="rounded-lg border border-white/10 bg-white/[0.02] py-3">
-            <p className={cn("text-lg font-semibold tabular-nums", color)}>{value.toLocaleString()}</p>
+          <div key={label} className="rounded-lg border border-neutral-200 bg-neutral-50 py-3">
+            <p className={cn("text-lg font-bold tabular-nums", color)}>{value.toLocaleString()}</p>
             <p className="text-[11px] text-neutral-500 mt-0.5">{label}</p>
           </div>
         ))}
       </div>
       {(job.risky > 0 || job.blocked > 0) && (
-        <p className="text-xs text-neutral-400 text-center">
-          {job.risky > 0 && <>{job.risky} imported with a <b className="text-yellow-300">risky</b> email (role/disposable). </>}
-          {job.blocked > 0 && <>{job.blocked} imported but <b className="text-orange-300">blocked</b> (Do Not Contact).</>}
+        <p className="text-xs text-neutral-500 text-center">
+          {job.risky > 0 && <>{job.risky} imported with a <b className="text-amber-600">risky</b> email (role/disposable). </>}
+          {job.blocked > 0 && <>{job.blocked} imported but <b className="text-orange-600">blocked</b> (Do Not Contact).</>}
         </p>
       )}
 
       {report.length > 0 && (
         <div className="space-y-2">
-          <div className="rounded-lg border border-white/10 bg-white/[0.02] max-h-40 overflow-y-auto">
-            <div className="px-3 py-2 border-b border-white/10 text-xs text-neutral-500 sticky top-0 bg-[#0A0A0A]">
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50 max-h-40 overflow-y-auto">
+            <div className="px-3 py-2 border-b border-neutral-200 text-xs text-neutral-500 sticky top-0 bg-neutral-50">
               Row-level detail ({report.length.toLocaleString()})
             </div>
-            <ul className="text-xs divide-y divide-white/5">
+            <ul className="text-xs divide-y divide-neutral-100">
               {report.slice(0, 200).map((e, i) => (
-                <li key={i} className="px-3 py-1.5 flex justify-between gap-3 text-neutral-400">
-                  <span className="text-neutral-500 shrink-0">Row {e.row}</span>
-                  <span className={cn("text-right", e.severity === "error" && "text-red-300")}>{e.reason}</span>
+                <li key={i} className="px-3 py-1.5 flex justify-between gap-3 text-neutral-500">
+                  <span className="text-neutral-400 shrink-0">Row {e.row}</span>
+                  <span className={cn("text-right", e.severity === "error" && "text-rose-600")}>{e.reason}</span>
                 </li>
               ))}
             </ul>
           </div>
           <button
             onClick={() => downloadCsv(`${fileName.replace(/\.csv$/i, "")}-import-issues.csv`, buildIssuesCsv(headers, rows, report))}
-            className="w-full flex items-center justify-center gap-2 text-sm text-white border border-white/10 rounded-lg px-3 py-2 hover:bg-white/5 transition-colors"
+            className="w-full flex items-center justify-center gap-2 text-sm text-neutral-700 border border-neutral-200 bg-white rounded-lg px-3 py-2 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
           >
             <Download className="w-4 h-4" />
             Download issues as CSV
@@ -107,7 +115,7 @@ export function SummaryStep({
         </div>
       )}
 
-      <button onClick={onDone} className="w-full bg-white text-black font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors">
+      <button onClick={onDone} className="w-full bg-neutral-900 text-white font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-neutral-800 transition-colors">
         Done
       </button>
     </div>

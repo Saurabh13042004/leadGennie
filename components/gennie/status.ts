@@ -2,13 +2,13 @@ import type { StepStatus } from "@/lib/agent/types";
 import type { GennieRunStatus } from "@/lib/db/gennie";
 
 export const RUN_STATUS: Record<GennieRunStatus, { label: string; tone: string }> = {
-  planned: { label: "Nothing to run", tone: "bg-white/5 text-neutral-300 border-white/10" },
-  awaiting_approval: { label: "Waiting for your approval", tone: "bg-amber-500/10 text-amber-300 border-amber-500/20" },
-  running: { label: "Running", tone: "bg-blue-500/10 text-blue-300 border-blue-500/20" },
-  paused: { label: "Paused", tone: "bg-amber-500/10 text-amber-300 border-amber-500/20" },
-  completed: { label: "Completed", tone: "bg-green-500/10 text-green-300 border-green-500/20" },
-  failed: { label: "Failed", tone: "bg-red-500/10 text-red-300 border-red-500/20" },
-  canceled: { label: "Canceled", tone: "bg-white/5 text-neutral-400 border-white/10" },
+  planned: { label: "Nothing to run", tone: "bg-neutral-100 text-neutral-600 ring-1 ring-inset ring-neutral-200" },
+  awaiting_approval: { label: "Waiting for your approval", tone: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200" },
+  running: { label: "Running", tone: "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200" },
+  paused: { label: "Paused", tone: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200" },
+  completed: { label: "Completed", tone: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" },
+  failed: { label: "Failed", tone: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200" },
+  canceled: { label: "Canceled", tone: "bg-neutral-100 text-neutral-500 ring-1 ring-inset ring-neutral-200" },
 };
 
 export const STEP_STATUS: Record<StepStatus, string> = {

@@ -29,14 +29,14 @@ export default function BarChartCard({
   const toY = (v: number) => padding.top + innerH - (v / max) * innerH;
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-5">
+    <div className="rounded-2xl border border-neutral-200 bg-white p-5">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 className="text-sm font-medium text-white">{title}</h3>
+        <h3 className="text-sm font-bold text-neutral-900">{title}</h3>
         <div className="flex items-center gap-3 flex-wrap">
           {series.map((s) => (
             <div key={s.name} className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: s.color }} />
-              <span className="text-xs text-neutral-400">{s.name}</span>
+              <span className="text-xs text-neutral-500">{s.name}</span>
             </div>
           ))}
         </div>
@@ -51,7 +51,7 @@ export default function BarChartCard({
               x2={width - padding.right}
               y1={padding.top + innerH * (1 - f)}
               y2={padding.top + innerH * (1 - f)}
-              stroke="#2c2c2a"
+              stroke="#eeeeec"
               strokeWidth={1}
             />
           ))}
@@ -91,7 +91,7 @@ export default function BarChartCard({
               y={height - 6}
               textAnchor="middle"
               fontSize={10}
-              fill="#898781"
+              fill="#9c9c97"
             >
               {label}
             </text>
@@ -100,13 +100,13 @@ export default function BarChartCard({
 
         {hover && (
           <div
-            className="absolute top-0 -translate-x-1/2 -translate-y-full rounded-lg border border-white/10 bg-[#1a1a19] px-3 py-2 text-xs shadow-xl pointer-events-none"
+            className="absolute top-0 -translate-x-1/2 -translate-y-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs shadow-lg pointer-events-none"
             style={{
               left: `${((padding.left + hover.group * groupW + groupW / 2) / width) * 100}%`,
             }}
           >
-            <p className="text-neutral-400 mb-1">{labels[hover.group]}</p>
-            <p className="text-white tabular-nums">
+            <p className="text-neutral-500 mb-1">{labels[hover.group]}</p>
+            <p className="text-neutral-900 tabular-nums">
               <span
                 className="inline-block w-2 h-2 rounded-sm mr-1.5"
                 style={{ backgroundColor: series[hover.s].color }}

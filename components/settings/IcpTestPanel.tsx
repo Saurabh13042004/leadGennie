@@ -6,8 +6,8 @@ import { testIcpAgainstSample, type IcpTestResult } from "@/lib/actions/intellig
 import type { Icp } from "@/lib/domain/workspace/icp";
 
 const inputCls =
-  "w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20";
-const DOT = { met: "bg-green-400", partial: "bg-yellow-300", not_met: "bg-red-400", unknown: "bg-neutral-600" } as const;
+  "w-full rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300";
+const DOT = { met: "bg-emerald-500", partial: "bg-amber-400", not_met: "bg-rose-500", unknown: "bg-neutral-300" } as const;
 
 /** Scores a made-up lead against the (possibly UNSAVED) ICP so the effect of a change is visible before saving. */
 export default function IcpTestPanel({ getIcp }: { getIcp: () => Icp | string }) {
@@ -36,10 +36,10 @@ export default function IcpTestPanel({ getIcp }: { getIcp: () => Icp | string })
   }
 
   return (
-    <section className="rounded-lg border border-white/10 p-4 space-y-4">
+    <section className="rounded-2xl border border-neutral-200 bg-white p-6 space-y-4">
       <div>
-        <p className="text-sm text-white">Test against a sample lead</p>
-        <p className="text-xs text-neutral-500">Nothing is saved or researched — this scores the values below with the ICP as currently edited.</p>
+        <h2 className="text-base font-bold text-neutral-900">Test against a sample lead</h2>
+        <p className="text-sm text-neutral-500">Nothing is saved or researched — this scores the values below with the ICP as currently edited.</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <input aria-label="Sample industry" placeholder="Industry" value={sample.industry} onChange={set("industry")} className={inputCls} />
@@ -48,20 +48,20 @@ export default function IcpTestPanel({ getIcp }: { getIcp: () => Icp | string })
         <input aria-label="Sample job title" placeholder="Job title" value={sample.title} onChange={set("title")} className={inputCls} />
         <input aria-label="Sample keywords found" placeholder="Keywords found (comma separated)" value={sample.keywords} onChange={set("keywords")} className={`${inputCls} col-span-2`} />
       </div>
-      <button type="button" onClick={run} disabled={pending} className="inline-flex items-center gap-2 rounded-lg border border-white/15 text-sm text-white px-4 py-2 hover:bg-white/5 disabled:opacity-50">
+      <button type="button" onClick={run} disabled={pending} className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white text-sm font-medium text-neutral-700 px-4 py-2 hover:bg-neutral-50 hover:border-neutral-300 transition-colors disabled:opacity-50">
         {pending && <Loader2 className="w-4 h-4 animate-spin" />} Score sample
       </button>
-      {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
+      {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
       {result && (
-        <div className="space-y-2" role="status">
-          <p className="text-sm text-white">
-            <span className="text-2xl font-semibold tabular-nums">{result.icpScore}</span> / 100
-            <span className={result.qualified ? "ml-3 text-green-300" : "ml-3 text-neutral-400"}>{result.qualified ? "Qualified" : "Below threshold"}</span>
+        <div className="space-y-2 rounded-xl border border-neutral-200 bg-neutral-50/60 p-4" role="status">
+          <p className="text-sm text-neutral-900">
+            <span className="text-2xl font-bold tabular-nums">{result.icpScore}</span> / 100
+            <span className={result.qualified ? "ml-3 text-emerald-600 font-medium" : "ml-3 text-neutral-500"}>{result.qualified ? "Qualified" : "Below threshold"}</span>
             <span className="ml-3 text-xs text-neutral-500">confidence {Math.round(result.confidence * 100)}%</span>
           </p>
           <ul className="space-y-1.5 text-sm">
             {result.whyFit.map((w) => (
-              <li key={w.criterion} className="flex items-center gap-2 text-neutral-300">
+              <li key={w.criterion} className="flex items-center gap-2 text-neutral-700">
                 <span className={`w-2 h-2 rounded-full ${DOT[w.status as keyof typeof DOT] ?? DOT.unknown}`} /> {w.text}
               </li>
             ))}

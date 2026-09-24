@@ -8,15 +8,15 @@ import IcpScoringSection, { type ScoringDraft } from "./IcpScoringSection";
 import IcpTestPanel from "./IcpTestPanel";
 
 const inputCls =
-  "w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20 disabled:opacity-60";
+  "w-full rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 disabled:opacity-60";
 const join = (l: string[]) => l.join(", ");
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-sm text-neutral-300 mb-1.5">{label}</span>
+      <span className="block text-sm font-medium text-neutral-700 mb-1.5">{label}</span>
       {children}
-      {hint && <span className="block text-xs text-neutral-600 mt-1">{hint}</span>}
+      {hint && <span className="block text-xs text-neutral-500 mt-1">{hint}</span>}
     </label>
   );
 }
@@ -89,10 +89,10 @@ export default function PositioningForm({ initial, canEdit }: { initial: Workspa
   }
 
   return (
-    <form onSubmit={submit} className="space-y-8">
-      <section className="space-y-4">
+    <form onSubmit={submit} className="space-y-6">
+      <section className="rounded-2xl border border-neutral-200 bg-white p-6 space-y-4">
         <div>
-          <h2 className="text-white font-semibold">What you sell</h2>
+          <h2 className="text-base font-bold text-neutral-900">What you sell</h2>
           <p className="text-sm text-neutral-500">Used as the starting point for every message. Be specific about the problem you solve.</p>
         </div>
         <Field label="Company name">
@@ -103,9 +103,9 @@ export default function PositioningForm({ initial, canEdit }: { initial: Workspa
         </Field>
       </section>
 
-      <section id="icp" className="space-y-4 scroll-mt-20">
+      <section id="icp" className="rounded-2xl border border-neutral-200 bg-white p-6 space-y-4 scroll-mt-20">
         <div>
-          <h2 className="text-white font-semibold">Ideal customer profile</h2>
+          <h2 className="text-base font-bold text-neutral-900">Ideal customer profile</h2>
           <p className="text-sm text-neutral-500">Who you want to reach. Separate multiple values with commas. Leave anything blank to not restrict on it.</p>
         </div>
         <Field label="Industries"><input value={industries} onChange={(e) => setIndustries(e.target.value)} disabled={!canEdit} placeholder="B2B SaaS, Fintech" className={inputCls} /></Field>
@@ -116,24 +116,27 @@ export default function PositioningForm({ initial, canEdit }: { initial: Workspa
         <Field label="Geographies"><input value={geographies} onChange={(e) => setGeographies(e.target.value)} disabled={!canEdit} placeholder="United States, India, EMEA" className={inputCls} /></Field>
         <Field label="Target titles"><input value={titles} onChange={(e) => setTitles(e.target.value)} disabled={!canEdit} placeholder="VP Sales, Head of Growth, Founder" className={inputCls} /></Field>
 
-        <div className="rounded-lg border border-white/10 p-4 space-y-4">
-          <p className="text-sm text-white">Exclusions <span className="text-neutral-600">— never target these</span></p>
+        <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-4 space-y-4">
+          <p className="text-sm font-semibold text-neutral-900">Exclusions <span className="font-normal text-neutral-500">— never target these</span></p>
           <Field label="Industries"><input value={exInd} onChange={(e) => setExInd(e.target.value)} disabled={!canEdit} className={inputCls} /></Field>
           <Field label="Company domains" hint="e.g. competitor.com, existing-customer.com"><input value={exDom} onChange={(e) => setExDom(e.target.value)} disabled={!canEdit} className={inputCls} /></Field>
           <Field label="Titles"><input value={exTitles} onChange={(e) => setExTitles(e.target.value)} disabled={!canEdit} placeholder="Intern, Student" className={inputCls} /></Field>
         </div>
       </section>
 
-      <IcpScoringSection value={scoring} onChange={setScoring} canEdit={canEdit} />
+      <section className="rounded-2xl border border-neutral-200 bg-white p-6">
+        <IcpScoringSection value={scoring} onChange={setScoring} canEdit={canEdit} />
+      </section>
+
       <IcpTestPanel getIcp={buildIcp} />
 
       {canEdit ? (
-        <div className="flex items-center gap-3">
-          <button type="submit" disabled={pending} className="flex items-center gap-2 bg-white text-black font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50">
+        <div className="flex items-center gap-3 pt-1">
+          <button type="submit" disabled={pending} className="flex items-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50">
             {pending && <Loader2 className="w-4 h-4 animate-spin" />} Save
           </button>
           {message && (
-            <span role="status" className={message.ok ? "inline-flex items-center gap-1.5 text-sm text-green-300" : "text-sm text-red-400"}>
+            <span role="status" className={message.ok ? "inline-flex items-center gap-1.5 text-sm text-emerald-600" : "text-sm text-rose-600"}>
               {message.ok && <CheckCircle2 className="w-4 h-4" />}{message.text}
             </span>
           )}

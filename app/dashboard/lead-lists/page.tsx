@@ -17,11 +17,11 @@ export default async function AudiencePage() {
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <LeadsSubNav />
       <div className="flex items-start gap-3 mb-6">
-        <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-          <List className="w-5 h-5 text-blue-400" />
+        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+          <List className="w-5 h-5 text-indigo-600" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold text-white">Audience</h1>
+          <h1 className="text-xl font-bold tracking-tight text-neutral-900">Audience</h1>
           <p className="text-sm text-neutral-500">Build and manage saved audiences from your lead universe.</p>
         </div>
       </div>

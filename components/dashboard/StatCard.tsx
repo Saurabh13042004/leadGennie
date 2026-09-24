@@ -51,17 +51,17 @@ export default function StatCard({
   const Icon = iconMap[icon];
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-5 flex flex-col gap-3">
+    <div className="rounded-2xl border border-neutral-200 bg-white p-5 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wider text-neutral-500">
+        <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">
           {label}
         </span>
-        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-          <Icon className="w-4 h-4 text-neutral-300" />
+        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+          <Icon className="w-4 h-4 text-indigo-600" />
         </div>
       </div>
       <div>
-        <p className="text-2xl font-semibold text-white tabular-nums">{value}</p>
+        <p className="text-2xl font-extrabold tracking-tight text-neutral-900 tabular-nums">{value}</p>
         <p className="text-xs text-neutral-500 mt-1">{sub}</p>
       </div>
     </div>

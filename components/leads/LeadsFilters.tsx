@@ -7,7 +7,7 @@ import { leadListQueryString, type LeadListQuery } from "@/lib/domain/leads/list
 import type { Facet } from "@/lib/db/leads-list";
 
 const selectCls =
-  "bg-white/5 border border-white/10 rounded-lg text-sm text-white px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-white/20";
+  "bg-neutral-50 border border-neutral-200 rounded-lg text-sm text-neutral-900 px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300";
 
 export default function LeadsFilters({
   query, stages, sources, companyName,
@@ -25,15 +25,15 @@ export default function LeadsFilters({
   const active = !!(query.search || query.stage || query.source || query.emailStatus || query.companyId || query.research || query.minScore);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="rounded-2xl border border-neutral-200 bg-white p-3 flex flex-wrap items-center gap-2">
       <form onSubmit={(e) => { e.preventDefault(); go({ search: search.trim() }); }} className="relative flex-1 min-w-[220px] max-w-sm">
-        <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
+        <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search name, email, company, title…"
           aria-label="Search leads"
-          className="w-full rounded-lg bg-white/5 border border-white/10 pl-9 pr-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20"
+          className="w-full rounded-lg bg-neutral-50 border border-neutral-200 pl-9 pr-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
         />
       </form>
 
@@ -74,15 +74,15 @@ export default function LeadsFilters({
       </select>
 
       {query.companyId && (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-200 text-xs px-3 py-1.5">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200 text-xs px-3 py-1.5">
           Company: {companyName ?? `#${query.companyId}`}
-          <button onClick={() => go({ companyId: null })} aria-label="Clear company filter"><X className="w-3 h-3" /></button>
+          <button onClick={() => go({ companyId: null })} aria-label="Clear company filter" className="hover:text-indigo-900"><X className="w-3 h-3" /></button>
         </span>
       )}
       {active && (
         <button
           onClick={() => { setSearch(""); router.push("/dashboard/leads"); }}
-          className="text-xs text-neutral-400 hover:text-white underline underline-offset-2"
+          className="text-xs text-neutral-500 hover:text-neutral-900 underline underline-offset-2 ml-auto"
         >
           Clear filters
         </button>

@@ -58,7 +58,7 @@ export default function ResearchActions({
         <button
           onClick={research}
           disabled={pending || busy || !engineConfigured}
-          className="inline-flex items-center gap-2 rounded-lg bg-white text-black font-semibold text-sm px-4 py-2 hover:bg-neutral-200 transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 text-white font-semibold text-sm px-4 py-2 hover:bg-neutral-800 transition-colors disabled:opacity-50"
         >
           {pending || busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
           {busy ? "Researching…" : hasResearch ? "Re-research" : "Research with Gennie"}
@@ -68,14 +68,14 @@ export default function ResearchActions({
             onClick={rescore}
             disabled={pending || busy || !engineConfigured}
             title="Re-score against your current ICP using the stored, verified data (no new research)"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 text-sm text-neutral-200 px-3 py-2 hover:bg-white/5 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white text-sm text-neutral-700 px-3 py-2 hover:bg-neutral-50 hover:border-neutral-300 disabled:opacity-50 transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5" /> Re-score
           </button>
         )}
       </div>
-      {!engineConfigured && <p className="text-xs text-yellow-200/80">The research engine isn&apos;t configured yet — ask an admin to set it up.</p>}
-      {message && <p role="status" className={message.ok ? "text-xs text-green-300" : "text-xs text-red-300"}>{message.text}</p>}
+      {!engineConfigured && <p className="text-xs text-amber-600">The research engine isn&apos;t configured yet — ask an admin to set it up.</p>}
+      {message && <p role="status" className={message.ok ? "text-xs text-emerald-600" : "text-xs text-rose-600"}>{message.text}</p>}
     </div>
   );
 }

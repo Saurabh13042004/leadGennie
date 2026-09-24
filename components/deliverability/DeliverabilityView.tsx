@@ -28,16 +28,16 @@ export default function DeliverabilityView({
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-2 mb-6 border-b border-neutral-200">
         {(["domains", "mailboxes"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={cn(
-              "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border capitalize",
+              "px-3 pb-3 -mb-px text-sm font-semibold transition-colors border-b-2 capitalize",
               tab === t
-                ? "bg-blue-500/10 border-blue-500/30 text-white"
-                : "border-white/10 text-neutral-400 hover:text-white hover:bg-white/5"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-neutral-500 hover:text-neutral-900"
             )}
           >
             {t}

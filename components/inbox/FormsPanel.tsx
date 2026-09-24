@@ -38,7 +38,7 @@ export default function FormsPanel({ forms, canManage }: { forms: FormDefinition
         {canManage && (
           <button
             onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 bg-white text-black font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors"
+            className="flex items-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-800 transition-colors"
           >
             <Plus className="w-4 h-4" />
             New form
@@ -47,8 +47,8 @@ export default function FormsPanel({ forms, canManage }: { forms: FormDefinition
       </div>
 
       {forms.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/15 bg-[#0A0A0A] flex flex-col items-center justify-center text-center py-20 px-6">
-          <p className="text-white font-medium">No forms yet</p>
+        <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 flex flex-col items-center justify-center text-center py-20 px-6">
+          <p className="text-neutral-900 font-semibold">No forms yet</p>
           <p className="text-sm text-neutral-500 mt-1 max-w-sm">
             Create a form to get a hosted link and embed snippet — submissions land in the Unmatched Inbox.
           </p>
@@ -60,10 +60,10 @@ export default function FormsPanel({ forms, canManage }: { forms: FormDefinition
             const embedSnippet = `<iframe src="${hostedUrl}" width="100%" height="480" style="border:none;"></iframe>`;
             const isBusy = busyId === f.id && isPending;
             return (
-              <div key={f.id} className="rounded-xl border border-white/10 bg-[#0A0A0A] p-4">
+              <div key={f.id} className="rounded-2xl border border-neutral-200 bg-white p-5">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div>
-                    <p className="text-sm text-white">{f.name}</p>
+                    <p className="text-sm font-medium text-neutral-900">{f.name}</p>
                     <p className="text-xs text-neutral-500">
                       {f.submissionCount} submission{f.submissionCount === 1 ? "" : "s"}
                     </p>
@@ -71,10 +71,10 @@ export default function FormsPanel({ forms, canManage }: { forms: FormDefinition
                   <div className="flex items-center gap-2">
                     <span
                       className={cn(
-                        "text-xs border rounded-full px-2.5 py-1",
+                        "text-xs font-medium rounded-full px-2.5 py-1",
                         f.status === "active"
-                          ? "bg-green-500/10 text-green-300 border-green-500/20"
-                          : "bg-yellow-500/10 text-yellow-300 border-yellow-500/20"
+                          ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+                          : "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200"
                       )}
                     >
                       {f.status}
@@ -83,7 +83,7 @@ export default function FormsPanel({ forms, canManage }: { forms: FormDefinition
                       <button
                         onClick={() => toggle(f)}
                         disabled={isBusy}
-                        className="text-neutral-500 hover:text-white transition-colors disabled:opacity-50"
+                        className="text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50"
                         aria-label={f.status === "active" ? "Pause" : "Activate"}
                       >
                         {isBusy ? (
@@ -97,7 +97,7 @@ export default function FormsPanel({ forms, canManage }: { forms: FormDefinition
                     )}
                     <button
                       onClick={() => setExpandedId(expandedId === f.id ? null : f.id)}
-                      className="text-xs text-blue-300 hover:text-blue-200 transition-colors"
+                      className="text-xs text-indigo-600 hover:text-indigo-700 transition-colors"
                     >
                       {expandedId === f.id ? "Hide" : "Share"}
                     </button>
@@ -105,23 +105,23 @@ export default function FormsPanel({ forms, canManage }: { forms: FormDefinition
                 </div>
 
                 {expandedId === f.id && (
-                  <div className="mt-3 pt-3 border-t border-white/5 space-y-3">
+                  <div className="mt-3 pt-3 border-t border-neutral-100 space-y-3">
                     <div>
                       <p className="text-xs text-neutral-500 mb-1 flex items-center gap-1.5">
                         <ExternalLink className="w-3 h-3" />
                         Hosted link
                       </p>
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 text-xs text-neutral-300 bg-white/5 rounded-lg px-3 py-2 truncate">
+                        <code className="flex-1 text-xs text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2 truncate">
                           {hostedUrl}
                         </code>
                         <button
                           onClick={() => copy(hostedUrl, f.id * 2)}
-                          className="text-neutral-500 hover:text-white transition-colors shrink-0"
+                          className="text-neutral-500 hover:text-neutral-900 transition-colors shrink-0"
                         >
                           <Copy className="w-3.5 h-3.5" />
                         </button>
-                        {copiedId === f.id * 2 && <span className="text-xs text-green-400 shrink-0">Copied</span>}
+                        {copiedId === f.id * 2 && <span className="text-xs text-emerald-600 shrink-0">Copied</span>}
                       </div>
                     </div>
                     <div>
@@ -130,16 +130,16 @@ export default function FormsPanel({ forms, canManage }: { forms: FormDefinition
                         Embed snippet
                       </p>
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 text-xs text-neutral-300 bg-white/5 rounded-lg px-3 py-2 truncate">
+                        <code className="flex-1 text-xs text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2 truncate">
                           {embedSnippet}
                         </code>
                         <button
                           onClick={() => copy(embedSnippet, f.id * 2 + 1)}
-                          className="text-neutral-500 hover:text-white transition-colors shrink-0"
+                          className="text-neutral-500 hover:text-neutral-900 transition-colors shrink-0"
                         >
                           <Copy className="w-3.5 h-3.5" />
                         </button>
-                        {copiedId === f.id * 2 + 1 && <span className="text-xs text-green-400 shrink-0">Copied</span>}
+                        {copiedId === f.id * 2 + 1 && <span className="text-xs text-emerald-600 shrink-0">Copied</span>}
                       </div>
                     </div>
                   </div>

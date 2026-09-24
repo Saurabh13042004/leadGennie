@@ -26,11 +26,11 @@ export default async function CampaignsPage({
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-            <Megaphone className="w-5 h-5 text-blue-400" />
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+            <Megaphone className="w-5 h-5 text-indigo-600" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-white">Campaigns</h1>
+            <h1 className="text-xl font-bold tracking-tight text-neutral-900">Campaigns</h1>
             <p className="text-sm text-neutral-500">Personalized multi-channel sequences — powered by AI.</p>
           </div>
         </div>
@@ -39,7 +39,7 @@ export default async function CampaignsPage({
           {canApprove && <SendNowButton />}
           <Link
             href="/dashboard/campaigns/new"
-            className="flex items-center gap-2 bg-white text-black font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors shrink-0"
+            className="flex items-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-neutral-800 transition-colors shrink-0"
           >
             <Plus className="w-4 h-4" />
             New campaign
@@ -48,18 +48,18 @@ export default async function CampaignsPage({
       </div>
 
       {launched && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-3 text-sm text-purple-300">
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           Submitted for approval — an owner or admin needs to review it before any send goes out.
         </div>
       )}
       {blockedCount > 0 && (
-        <div className="mb-6 flex items-start gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-300">
+        <div className="mb-6 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
           <span>
             {blockedCount} lead{blockedCount === 1 ? " was" : "s were"} excluded from this campaign by compliance
             rules (Do Not Contact or recent-contact cooldown). See{" "}
-            <Link href="/dashboard/do-not-contact" className="underline hover:text-yellow-100">
+            <Link href="/dashboard/do-not-contact" className="underline hover:text-amber-900">
               Do Not Contact
             </Link>{" "}
             for details.
@@ -68,11 +68,21 @@ export default async function CampaignsPage({
       )}
 
       {campaigns.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/15 bg-[#0A0A0A] flex flex-col items-center justify-center text-center py-20 px-6">
-          <p className="text-white font-medium">No campaigns yet</p>
+        <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 flex flex-col items-center justify-center text-center py-20 px-6">
+          <div className="w-14 h-14 rounded-xl bg-indigo-50 flex items-center justify-center mb-4">
+            <Megaphone className="w-7 h-7 text-indigo-500" />
+          </div>
+          <p className="text-neutral-900 font-semibold">No campaigns yet</p>
           <p className="text-sm text-neutral-500 mt-1 max-w-sm">
             Launch your first AI-personalized outbound sequence.
           </p>
+          <Link
+            href="/dashboard/campaigns/new"
+            className="flex items-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-neutral-800 transition-colors mt-6"
+          >
+            <Plus className="w-4 h-4" />
+            New campaign
+          </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

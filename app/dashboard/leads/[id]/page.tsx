@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Building2, Link2, Mail, Phone, Briefcase, AlertTriangle, Loader2 } from "lucide-react";
+import { ArrowLeft, Building2, Link2, Mail, Phone, Briefcase, AlertTriangle, Loader2, Search, Users2 } from "lucide-react";
 import { auth } from "@/auth";
 import { getLead } from "@/lib/actions/leads";
 import { getIntelligence } from "@/lib/actions/intelligence";
@@ -25,18 +25,22 @@ export const metadata = {
 
 function Row({ icon: Icon, label, children }: { icon: typeof Mail; label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-white/5 last:border-0">
-      <Icon className="w-4 h-4 text-neutral-500 mt-0.5 shrink-0" />
+    <div className="flex items-start gap-3 py-3 border-b border-neutral-100 last:border-0">
+      <Icon className="w-4 h-4 text-neutral-400 mt-0.5 shrink-0" />
       <div className="min-w-0">
         <p className="text-xs text-neutral-500">{label}</p>
-        <div className="text-sm text-white mt-0.5 break-words">{children}</div>
+        <div className="text-sm text-neutral-900 mt-0.5 break-words">{children}</div>
       </div>
     </div>
   );
 }
 
 function Notice({ tone, icon: Icon, children }: { tone: "info" | "warn" | "error"; icon: typeof Mail; children: React.ReactNode }) {
-  const cls = { info: "border-blue-500/20 bg-blue-500/5 text-blue-100/90", warn: "border-yellow-500/20 bg-yellow-500/5 text-yellow-100/90", error: "border-red-500/25 bg-red-500/5 text-red-100/90" }[tone];
+  const cls = {
+    info: "border-indigo-200 bg-indigo-50 text-indigo-800",
+    warn: "border-amber-200 bg-amber-50 text-amber-800",
+    error: "border-rose-200 bg-rose-50 text-rose-800",
+  }[tone];
   return (
     <div className={`rounded-xl border px-4 py-3 text-sm flex items-start gap-2.5 ${cls}`}>
       <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${tone === "info" ? "animate-spin" : ""}`} />
@@ -61,16 +65,16 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
-      <Link href="/dashboard/leads" className="inline-flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white">
+      <Link href="/dashboard/leads" className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
         <ArrowLeft className="w-4 h-4" /> All leads
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-white">{lead.full_name}</h1>
+          <h1 className="text-xl font-bold tracking-tight text-neutral-900">{lead.full_name}</h1>
           <p className="text-sm text-neutral-500">{[lead.job_title, lead.company_name ?? lead.company].filter(Boolean).join(" · ") || "No title or company yet"}</p>
-          <p className="text-xs text-neutral-600 mt-1">
-            Stage <span className="text-neutral-400">{lead.stage}</span> · Source <span className="text-neutral-400">{lead.source}</span> · Added {new Date(lead.created_at).toLocaleDateString()}
+          <p className="text-xs text-neutral-400 mt-1">
+            Stage <span className="text-neutral-600">{lead.stage}</span> · Source <span className="text-neutral-600">{lead.source}</span> · Added {new Date(lead.created_at).toLocaleDateString()}
           </p>
         </div>
         <ResearchActions leadId={lead.id} researchStatus={status} hasResearch={!!research} canResearch={canResearch} engineConfigured={isIntelligenceConfigured()} />
@@ -84,8 +88,11 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       )}
       {partial && <Notice tone="warn" icon={AlertTriangle}>Partial result — the research hit its time or cost limit, so some information may be missing. You can re-research to try again.</Notice>}
       {!research && !busy && status !== "failed" && (
-        <div className="rounded-xl border border-dashed border-white/15 bg-[#0A0A0A] px-6 py-10 text-center">
-          <p className="text-white font-medium">Not researched yet</p>
+        <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 flex flex-col items-center text-center px-6 py-12">
+          <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center mb-4">
+            <Search className="w-6 h-6 text-indigo-500" />
+          </div>
+          <p className="text-neutral-900 font-semibold">Not researched yet</p>
           <p className="text-sm text-neutral-500 mt-1 max-w-md mx-auto">
             Gennie looks at the company&apos;s public pages, job listings and news, checks every claim against its source, and scores the lead against your ICP.
             {noWebsite && " Adding the company's website first gives much better results."}
@@ -114,44 +121,44 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
           {research && <WhyFit items={research.whyFit} />}
           {intel.company && <CompanyCard company={intel.company} />}
 
-          <div className="rounded-xl border border-white/10 bg-[#0A0A0A] px-4">
+          <div className="rounded-2xl border border-neutral-200 bg-white px-4">
             <Row icon={Mail} label="Email">
               {lead.email ? (
                 <span className="inline-flex flex-wrap items-center gap-2">
                   {lead.email} <EmailStatusBadge status={lead.email_status} blocked={lead.blocked} />
                 </span>
               ) : (
-                <span className="text-neutral-500">No email</span>
+                <span className="text-neutral-400">No email</span>
               )}
-              {reasons.length > 0 && <p className="text-xs text-yellow-200/80 mt-1">{reasons.join(" · ")}</p>}
-              {lead.blocked && <p className="text-xs text-orange-300/90 mt-1">On your Do Not Contact list — this lead can&apos;t be enrolled in campaigns.</p>}
+              {reasons.length > 0 && <p className="text-xs text-amber-600 mt-1">{reasons.join(" · ")}</p>}
+              {lead.blocked && <p className="text-xs text-orange-600 mt-1">On your Do Not Contact list — this lead can&apos;t be enrolled in campaigns.</p>}
             </Row>
             <Row icon={Building2} label="Company">
               {lead.company_id ? (
-                <Link href={`/dashboard/leads${leadListQueryString({ companyId: lead.company_id })}`} className="hover:underline">{lead.company_name}</Link>
+                <Link href={`/dashboard/leads${leadListQueryString({ companyId: lead.company_id })}`} className="text-indigo-600 hover:text-indigo-700">{lead.company_name}</Link>
               ) : (
-                lead.company || <span className="text-neutral-500">—</span>
+                lead.company || <span className="text-neutral-400">—</span>
               )}
-              {lead.company_domain && <span className="text-neutral-500"> · {lead.company_domain}</span>}
+              {lead.company_domain && <span className="text-neutral-400"> · {lead.company_domain}</span>}
             </Row>
-            <Row icon={Briefcase} label="Job title">{lead.job_title || <span className="text-neutral-500">—</span>}</Row>
-            <Row icon={Phone} label="Phone">{lead.phone || <span className="text-neutral-500">—</span>}</Row>
+            <Row icon={Briefcase} label="Job title">{lead.job_title || <span className="text-neutral-400">—</span>}</Row>
+            <Row icon={Phone} label="Phone">{lead.phone || <span className="text-neutral-400">—</span>}</Row>
             <Row icon={Link2} label="LinkedIn">
               {lead.linkedin_url ? (
-                <a href={lead.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{lead.linkedin_url}</a>
+                <a href={lead.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-700">{lead.linkedin_url}</a>
               ) : (
-                <span className="text-neutral-500">—</span>
+                <span className="text-neutral-400">—</span>
               )}
             </Row>
           </div>
 
           {intel.candidates.length > 0 && (
-            <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-5">
-              <h2 className="text-sm font-semibold text-white">Other people at this company</h2>
+            <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+              <h2 className="text-sm font-bold text-neutral-900 flex items-center gap-2"><Users2 className="w-4 h-4 text-neutral-400" /> Other people at this company</h2>
               <p className="text-xs text-neutral-500 mt-1">Found on public pages. Suggestions only — add them as leads yourself.</p>
               <ul className="mt-3 space-y-2 text-sm">
                 {intel.candidates.map((c) => (
-                  <li key={c.id} className="text-neutral-200">{c.name}{c.title && <span className="text-neutral-500"> — {c.title}</span>}</li>
+                  <li key={c.id} className="text-neutral-700">{c.name}{c.title && <span className="text-neutral-400"> — {c.title}</span>}</li>
                 ))}
               </ul>
             </div>

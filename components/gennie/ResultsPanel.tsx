@@ -2,9 +2,9 @@ import Link from "next/link";
 import type { RunResults } from "@/lib/domain/gennie/view";
 
 const Stat = ({ label, value }: { label: string; value: string | number }) => (
-  <div className="rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3">
-    <p className="text-[11px] uppercase tracking-wide text-neutral-500">{label}</p>
-    <p className="text-xl font-semibold text-white tabular-nums mt-0.5">{value}</p>
+  <div className="rounded-xl border border-neutral-200 bg-white px-4 py-3">
+    <p className="text-[11px] uppercase tracking-wide text-neutral-400">{label}</p>
+    <p className="text-xl font-extrabold tracking-tight text-neutral-900 tabular-nums mt-0.5">{value}</p>
   </div>
 );
 
@@ -18,38 +18,38 @@ export default function ResultsPanel({ results, final }: { results: RunResults; 
         <Stat label="Qualified" value={results.qualified} />
         <Stat label="Avg ICP score" value={results.avgIcpScore ?? "—"} />
       </div>
-      {results.researchFailed > 0 && <p className="text-xs text-red-300">{results.researchFailed} lead{results.researchFailed === 1 ? "" : "s"} failed research.</p>}
+      {results.researchFailed > 0 && <p className="text-xs text-rose-600">{results.researchFailed} lead{results.researchFailed === 1 ? "" : "s"} failed research.</p>}
 
       {results.ranked && results.ranked.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-white/10">
+        <div className="overflow-x-auto rounded-xl border border-neutral-200">
           <table className="w-full text-sm">
-            <thead className="text-left text-[11px] uppercase tracking-wide text-neutral-500 bg-white/[0.03]">
+            <thead className="text-left text-[11px] uppercase tracking-wide text-neutral-400 bg-neutral-50">
               <tr>
-                <th className="px-3 py-2 font-medium">#</th>
-                <th className="px-3 py-2 font-medium">Lead</th>
-                <th className="px-3 py-2 font-medium hidden md:table-cell">Company</th>
-                <th className="px-3 py-2 font-medium">ICP</th>
-                <th className="px-3 py-2 font-medium hidden md:table-cell">Signals</th>
+                <th className="px-3 py-2 font-bold">#</th>
+                <th className="px-3 py-2 font-bold">Lead</th>
+                <th className="px-3 py-2 font-bold hidden md:table-cell">Company</th>
+                <th className="px-3 py-2 font-bold">ICP</th>
+                <th className="px-3 py-2 font-bold hidden md:table-cell">Signals</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-neutral-100">
               {results.ranked.map((r, i) => (
                 <tr key={r.leadId}>
-                  <td className="px-3 py-2 text-neutral-500 tabular-nums">{i + 1}</td>
+                  <td className="px-3 py-2 text-neutral-400 tabular-nums">{i + 1}</td>
                   <td className="px-3 py-2">
-                    <Link href={`/dashboard/leads/${r.leadId}`} className="text-white hover:underline">{r.name}</Link>
+                    <Link href={`/dashboard/leads/${r.leadId}`} className="text-neutral-900 hover:underline">{r.name}</Link>
                     {r.title && <p className="text-xs text-neutral-500">{r.title}</p>}
                   </td>
-                  <td className="px-3 py-2 text-neutral-300 hidden md:table-cell">{r.company ?? "—"}</td>
+                  <td className="px-3 py-2 text-neutral-600 hidden md:table-cell">{r.company ?? "—"}</td>
                   <td className="px-3 py-2 tabular-nums">
-                    {r.icpScore === null ? <span className="text-neutral-500 text-xs">Not researched</span> : (
-                      <span className={r.qualified ? "text-green-300" : "text-neutral-200"}>{r.icpScore}{r.qualified ? " · qualified" : ""}</span>
+                    {r.icpScore === null ? <span className="text-neutral-400 text-xs">Not researched</span> : (
+                      <span className={r.qualified ? "text-emerald-600 font-medium" : "text-neutral-700"}>{r.icpScore}{r.qualified ? " · qualified" : ""}</span>
                     )}
                   </td>
                   <td className="px-3 py-2 hidden md:table-cell">
                     <div className="flex flex-wrap gap-1">
-                      {r.signalTypes.length === 0 ? <span className="text-neutral-600 text-xs">—</span> : r.signalTypes.map((t) => (
-                        <span key={t} className="text-[10px] text-neutral-300 border border-white/10 rounded-full px-1.5 py-0.5">{t.replace("_", " ").toLowerCase()}</span>
+                      {r.signalTypes.length === 0 ? <span className="text-neutral-300 text-xs">—</span> : r.signalTypes.map((t) => (
+                        <span key={t} className="text-[10px] text-neutral-600 border border-neutral-200 rounded-full px-1.5 py-0.5">{t.replace("_", " ").toLowerCase()}</span>
                       ))}
                     </div>
                   </td>
@@ -62,18 +62,18 @@ export default function ResultsPanel({ results, final }: { results: RunResults; 
 
       {results.problems.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-neutral-400 mb-1">Skipped or failed</p>
+          <p className="text-xs font-semibold text-neutral-500 mb-1">Skipped or failed</p>
           <ul className="text-xs text-neutral-500 space-y-0.5">
             {results.problems.map((p) => (
-              <li key={`${p.leadId}-${p.reason}`}><Link href={`/dashboard/leads/${p.leadId}`} className="text-neutral-300 hover:underline">{p.name}</Link> — {p.reason}</li>
+              <li key={`${p.leadId}-${p.reason}`}><Link href={`/dashboard/leads/${p.leadId}`} className="text-neutral-700 hover:underline">{p.name}</Link> — {p.reason}</li>
             ))}
           </ul>
         </div>
       )}
 
-      <p className="text-xs text-neutral-600">
+      <p className="text-xs text-neutral-400">
         {final ? "Counted from your leads" : "Counted from your leads so far"} — not written by AI.{" "}
-        <Link href="/dashboard/leads?research=researched&sort=icp&dir=desc" className="text-neutral-400 underline underline-offset-2">Open researched leads</Link>
+        <Link href="/dashboard/leads?research=researched&sort=icp&dir=desc" className="text-neutral-600 underline underline-offset-2">Open researched leads</Link>
       </p>
     </div>
   );

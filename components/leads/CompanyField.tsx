@@ -5,7 +5,7 @@ import { searchCompanies } from "@/lib/actions/companies";
 import type { CompanySummary } from "@/lib/db/companies";
 
 const inputCls =
-  "w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20";
+  "w-full rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300";
 
 /**
  * Company name + domain with autocomplete over this workspace's companies.
@@ -40,7 +40,7 @@ export default function CompanyField({
   return (
     <div className="grid grid-cols-2 gap-3">
       <div>
-        <label className="block text-sm text-neutral-300 mb-1.5" htmlFor={`${listId}-company`}>Company</label>
+        <label className="block text-sm font-medium text-neutral-700 mb-1.5" htmlFor={`${listId}-company`}>Company</label>
         <input
           id={`${listId}-company`}
           list={listId}
@@ -56,7 +56,7 @@ export default function CompanyField({
         </datalist>
       </div>
       <div>
-        <label className="block text-sm text-neutral-300 mb-1.5" htmlFor={`${listId}-domain`}>Company website / domain</label>
+        <label className="block text-sm font-medium text-neutral-700 mb-1.5" htmlFor={`${listId}-domain`}>Company website / domain</label>
         <input
           id={`${listId}-domain`}
           value={domain}

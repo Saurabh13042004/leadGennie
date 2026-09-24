@@ -8,11 +8,11 @@ import type { PromptSummary } from "@/lib/actions/prompts";
 import NewPromptModal from "./NewPromptModal";
 
 const STATUS_STYLES: Record<string, string> = {
-  draft: "bg-white/5 text-neutral-400 border-white/10",
-  pending_approval: "bg-purple-500/10 text-purple-300 border-purple-500/20",
-  published: "bg-green-500/10 text-green-300 border-green-500/20",
-  deprecated: "bg-neutral-500/10 text-neutral-500 border-neutral-500/20",
-  rejected: "bg-red-500/10 text-red-300 border-red-500/20",
+  draft: "bg-neutral-100 text-neutral-500 ring-1 ring-inset ring-neutral-200",
+  pending_approval: "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200",
+  published: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
+  deprecated: "bg-neutral-100 text-neutral-400 ring-1 ring-inset ring-neutral-200",
+  rejected: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -32,7 +32,7 @@ export default function PromptsListView({ prompts, canCreate }: { prompts: Promp
         {canCreate && (
           <button
             onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 bg-white text-black font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors"
+            className="flex items-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-800 transition-colors"
           >
             <Plus className="w-4 h-4" />
             New prompt
@@ -41,8 +41,8 @@ export default function PromptsListView({ prompts, canCreate }: { prompts: Promp
       </div>
 
       {prompts.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/15 bg-[#0A0A0A] flex flex-col items-center justify-center text-center py-20 px-6">
-          <p className="text-white font-medium">No prompts yet</p>
+        <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 flex flex-col items-center justify-center text-center py-20 px-6">
+          <p className="text-neutral-900 font-semibold">No prompts yet</p>
           <p className="text-sm text-neutral-500 mt-1 max-w-sm">
             Build a reusable, versioned prompt — draft it, test it against the model, then submit for approval
             before it can be published.
@@ -54,15 +54,15 @@ export default function PromptsListView({ prompts, canCreate }: { prompts: Promp
             <Link
               key={p.id}
               href={`/dashboard/ai-prompts/${p.id}`}
-              className="rounded-xl border border-white/10 bg-[#0A0A0A] p-5 hover:border-white/20 hover:bg-white/[0.02] transition-colors flex flex-col gap-3"
+              className="rounded-2xl border border-neutral-200 bg-white p-5 hover:border-neutral-300 hover:shadow-sm transition-all flex flex-col gap-3"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-white font-medium truncate">{p.name}</p>
-                  <p className="text-xs text-neutral-500 capitalize">{p.type.replace("_", " ")}</p>
+                  <p className="text-neutral-900 font-semibold truncate">{p.name}</p>
+                  <p className="text-xs text-neutral-500 capitalize mt-0.5">{p.type.replace("_", " ")}</p>
                 </div>
                 {p.publishedVersion && (
-                  <span className="flex items-center gap-1 text-[11px] text-green-400 shrink-0">
+                  <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-700 shrink-0">
                     <BadgeCheck className="w-3.5 h-3.5" />v{p.publishedVersion}
                   </span>
                 )}
@@ -70,7 +70,7 @@ export default function PromptsListView({ prompts, canCreate }: { prompts: Promp
               {p.latestStatus && (
                 <span
                   className={cn(
-                    "self-start text-xs border rounded-full px-2.5 py-1",
+                    "self-start text-xs font-medium rounded-full px-2.5 py-1",
                     STATUS_STYLES[p.latestStatus]
                   )}
                 >

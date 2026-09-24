@@ -21,19 +21,19 @@ export default function DashboardShell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="h-screen w-full flex bg-background text-foreground overflow-hidden">
+    <div className="h-screen w-full flex bg-neutral-50 text-neutral-900 overflow-hidden">
       <div className="hidden md:block w-64 shrink-0">
         <Sidebar />
       </div>
 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
           <div className="absolute left-0 top-0 h-full w-72">
             <div className="relative h-full">
               <button
                 onClick={() => setMobileOpen(false)}
-                className="absolute right-3 top-4 text-neutral-400 hover:text-white z-10"
+                className="absolute right-3 top-4 text-neutral-400 hover:text-neutral-900 z-10"
                 aria-label="Close menu"
               >
                 <X className="w-5 h-5" />
@@ -46,7 +46,7 @@ export default function DashboardShell({
 
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar user={user} onMenuClick={() => setMobileOpen(true)} />
-        <main className="flex-1 overflow-y-auto bg-grid-minor">{children}</main>
+        <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
   );

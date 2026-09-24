@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { SHOW_LEGACY_MODULES } from "@/lib/feature-flags";
 import {
+  Sparkles,
   Gauge,
   Sun,
   Users,
@@ -35,8 +36,9 @@ export type NavGroup = {
   items: NavItem[];
 };
 
-/** The six V1 destinations. Everything else lives under Settings or the legacy flag. */
+/** Ask Gennie plus the six V1 destinations. Everything else lives under Settings or the legacy flag. */
 export const primaryNav: NavItem[] = [
+  { title: "Ask Gennie", href: "/dashboard/gennie", description: "Plan and run work over your leads", icon: Sparkles },
   { title: "Command Center", href: "/dashboard", description: "Your outbound at a glance", icon: Gauge },
   {
     title: "Leads",
@@ -90,7 +92,6 @@ export const navGroups: NavGroup[] = [
 export const allNavItems: NavItem[] = [...primaryNav, ...legacyNav];
 
 export function isNavItemActive(item: NavItem, pathname: string): boolean {
-  // Command Center owns the Gennie run pages; every other /dashboard/* path belongs to its own item.
-  if (item.href === "/dashboard") return pathname === "/dashboard" || pathname.startsWith("/dashboard/gennie/");
+  if (item.href === "/dashboard") return pathname === "/dashboard";
   return [item.href, ...(item.matchPrefixes ?? [])].some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
