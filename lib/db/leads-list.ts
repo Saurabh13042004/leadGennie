@@ -24,6 +24,14 @@ export type LeadListRow = {
   stage: string;
   source: string;
   created_at: string;
+  // Phase 2B: research + score (all null/none until a lead has been researched)
+  icp_score: number | null;
+  intent_score: number | null;
+  qualified: boolean | null;
+  research_status: string;
+  researched_at: string | null;
+  /** Distinct types of the lead's current VERIFIED signals (e.g. HIRING, FUNDING). */
+  signal_types: string[];
   /** On the workspace's Do Not Contact list — derived live, so it can never go stale. */
   blocked: boolean;
 };
@@ -45,6 +53,7 @@ const SORT_SQL: Record<LeadSortKey, string> = {
   company: "lower(coalesce(c.name, l.company, ''))",
   stage: "l.stage",
   email_status: "l.email_status",
+  icp: "l.icp_score",
 };
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, "\\$&");
@@ -66,6 +75,9 @@ function buildWhere(workspaceId: number, q: LeadListQuery) {
   if (q.emailStatus === "none") clauses.push("l.email is null");
   else if (q.emailStatus) clauses.push(`l.email is not null and l.email_status = ${bind(q.emailStatus)}`);
   if (q.companyId) clauses.push(`l.company_id = ${bind(q.companyId)}`);
+  if (q.research === "researched") clauses.push("l.research_status in ('done', 'partial')");
+  else if (q.research) clauses.push(`l.research_status = ${bind(q.research)}`);
+  if (q.minScore > 0) clauses.push(`l.icp_score >= ${bind(q.minScore)}`);
   return { where: clauses.join(" and "), params };
 }
 
@@ -88,12 +100,16 @@ export async function listLeadsPage(workspaceId: number, q: LeadListQuery): Prom
     `select l.id, l.full_name, l.first_name, l.last_name, l.email, l.email_status, l.company, l.company_id,
             c.name as company_name, c.domain as company_domain, l.job_title, l.linkedin_url, l.phone,
             l.stage, l.source, l.created_at,
+            l.icp_score, l.intent_score, l.qualified, l.research_status, l.researched_at,
+            coalesce((select json_agg(t.type order by t.type) from (
+               select distinct s.type from signals s
+               where s.lead_id = l.id and s.workspace_id = l.workspace_id and s.is_current and s.verified) t), '[]'::json) as signal_types,
             (l.email is not null and exists (
                select 1 from do_not_contact d where d.workspace_id = l.workspace_id and lower(d.email) = lower(l.email)
             )) as blocked
      ${FROM}
      where ${where}
-     order by ${SORT_SQL[q.sort]} ${dir}, l.id ${dir}
+     order by ${SORT_SQL[q.sort]} ${dir}${q.sort === "icp" ? " nulls last" : ""}, l.id ${dir}
      limit ${LEAD_PAGE_SIZE} offset ${(page - 1) * LEAD_PAGE_SIZE}`,
     params,
   );
@@ -120,6 +136,7 @@ export async function getLeadDetail(workspaceId: number, id: number): Promise<Le
     `select l.id, l.full_name, l.first_name, l.last_name, l.email, l.email_status, l.company, l.company_id,
             c.name as company_name, c.domain as company_domain, l.job_title, l.linkedin_url, l.phone,
             l.stage, l.source, l.source_url, l.created_at,
+            l.icp_score, l.intent_score, l.qualified, l.research_status, l.researched_at, '[]'::json as signal_types,
             (l.email is not null and exists (
                select 1 from do_not_contact d where d.workspace_id = l.workspace_id and lower(d.email) = lower(l.email)
             )) as blocked

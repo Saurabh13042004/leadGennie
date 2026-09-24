@@ -22,7 +22,7 @@ export default function LeadsFilters({
 
   // Any filter change goes back to page 1.
   const go = (patch: Partial<LeadListQuery>) => router.push(`/dashboard/leads${leadListQueryString({ ...query, ...patch, page: 1 })}`);
-  const active = !!(query.search || query.stage || query.source || query.emailStatus || query.companyId);
+  const active = !!(query.search || query.stage || query.source || query.emailStatus || query.companyId || query.research || query.minScore);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -57,6 +57,20 @@ export default function LeadsFilters({
         <option value="risky">Risky</option>
         <option value="invalid">Invalid</option>
         <option value="none">No email</option>
+      </select>
+
+      <select aria-label="Filter by research status" value={query.research} onChange={(e) => go({ research: e.target.value as LeadListQuery["research"] })} className={selectCls}>
+        <option value="">Any research status</option>
+        <option value="researched">Researched</option>
+        <option value="none">Not researched</option>
+        <option value="running">In progress</option>
+        <option value="failed">Failed</option>
+      </select>
+      <select aria-label="Filter by minimum ICP score" value={query.minScore} onChange={(e) => go({ minScore: Number(e.target.value) })} className={selectCls}>
+        <option value={0}>Any ICP score</option>
+        <option value={80}>ICP ≥ 80</option>
+        <option value={60}>ICP ≥ 60</option>
+        <option value={40}>ICP ≥ 40</option>
       </select>
 
       {query.companyId && (

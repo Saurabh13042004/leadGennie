@@ -136,3 +136,11 @@ Reviewed the live schema against `lib/db/schema.sql` (read-only introspection) a
 - Leads without an email have no dedupe identity (re-import duplicates them) — Phase 1 matching by `linkedin_url` / company domain (`it.todo` in `tests/integration/import.test.ts`).
 
 **Why the full target model (companies, lead_research, signals, evidence, campaign_leads, messages, inbox_threads, agent_runs, usage_records, credit_ledger, jobs) was NOT created in Phase 0:** none has code that reads or writes it; each is shaped by decisions still open (D-01 queue design, D-11 Python service boundary, D-04 mailbox provider); and creating empty speculative tables now means migrating them again later. The shapes above remain the contract, and the migration runner makes adding them cheap and safe. If you want the DDL for all of them landed up-front anyway, that is a small, separable task.
+
+## As built (Phase 2B) — differences from the sketch above
+- **Signals:** no upsert-dedupe key. Each research run inserts its signals and flips the previous run's to `is_current = false` (history kept, current view trivially correct). `signals.conflicts_with` holds signal ids.
+- **Evidence:** one row per *(claim, source, snippet)*; `signal_id`/`research_id` link it to what it supports; `verified` is denormalized from `verification` (the engine's whole verdict) for indexing.
+- **`lead_research`:** also stores `why_fit`, `intent_breakdown`, `scoring_inputs`, `qualified`, `evidence_ids` (narrative) and the engine run/contract version. One `is_current` row per lead (partial unique index).
+- **Leads:** `icp_score`, `intent_score`, `scoring_version`, `qualified` are `NULL` until researched — never a default 0. `research_status ∈ none|queued|running|done|partial|failed`.
+- **Jobs:** `attempts` counts *failures* (a wait-and-poll cycle is not one); an expired lease counts as a failure. Unique `(workspace_id, type, idempotency_key)`.
+- **`agent_runs`:** a `research_batch` parent per user request and one `research_lead`/`research_company` child per job (steps + usage attach to the child).

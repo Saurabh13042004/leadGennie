@@ -50,7 +50,7 @@ Update this table as phases land. A phase is only "Done" when every acceptance c
 | 0 | Codebase stabilization | **Code complete; live DB migrated and smoke-tested over HTTP. Pending: real-browser click-through** (see `CHANGELOG-phases.md`) |
 | 1 | Lead foundation | **Code complete; verified hermetically + over real Next server actions against a local Neon-protocol harness. Live DB backfilled. Pending: real-browser click-through, `npm run verify` blocked by an unrelated `services/` lint error** (see `CHANGELOG-phases.md`) |
 | 2A | Intelligence Engine (Python) | **Code complete; verified locally** — 185 tests + `make verify` + Postgres/Docker/HTTP checks + one live run (see `CHANGELOG-phases.md`). **Pending: staging deploy (D-12 host), live search provider (D-03 key), live adversarial eval** |
-| 2B | Lead intelligence in the app | Not started |
+| 2B | Lead intelligence in the app | **Code complete; verified hermetically + against the real engine over HTTP.** Pending: apply migrations 0008/0009 to Neon, real-browser click-through (see `CHANGELOG-phases.md`) |
 | 3 | AI personalization | Not started |
 | 4 | Campaign builder | Not started |
 | 5 | Email execution engine | Not started |

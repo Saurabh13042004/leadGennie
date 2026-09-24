@@ -33,9 +33,17 @@ export class LlmError extends Error {
   }
 }
 
+/** Tokens a single call consumed, reported by the provider (0/0 when it doesn't say). */
+export type LlmUsage = { tokensIn: number; tokensOut: number; model: string };
+
+export type LlmCallOptions = {
+  /** Called once per provider call with the tokens it used — how callers meter spend (usage_records). */
+  onUsage?: (usage: LlmUsage) => void;
+};
+
 /** Adapter contract every LLM vendor implements (Liskov: same errors, same shapes). */
 export interface LlmProvider {
   readonly model: string;
-  generateJson<T>(prompt: string, schema: LlmSchema): Promise<T>;
-  generateText(prompt: string): Promise<string>;
+  generateJson<T>(prompt: string, schema: LlmSchema, opts?: LlmCallOptions): Promise<T>;
+  generateText(prompt: string, opts?: LlmCallOptions): Promise<string>;
 }

@@ -13,8 +13,12 @@ import {
 } from "@/lib/db/workspace-profile";
 import { EMPTY_ICP, icpSchema, normalizeExcludedDomains, parseStoredIcp, type Icp } from "@/lib/domain/workspace/icp";
 import { buildChecklist, type Checklist } from "@/lib/domain/workspace/onboarding";
+import { isIntelligenceConfigured } from "@/lib/intelligence/client";
+import { icpFingerprint } from "@/lib/intelligence/icp";
+import { enqueueRescoreAll } from "@/lib/intelligence/service";
 
-export type WorkspaceProfileView = { positioning: string; companyName: string; icp: Icp };
+/** `rescoring`: how many researched leads were queued for re-scoring because the ICP changed (0 if unchanged). */
+export type WorkspaceProfileView = { positioning: string; companyName: string; icp: Icp; rescoring?: number };
 
 export async function getProfile(): Promise<WorkspaceProfileView> {
   const { workspaceId } = await requireRole("viewer");
@@ -42,18 +46,24 @@ export async function saveWorkspaceProfile(input: unknown): Promise<ActionResult
     }
     const icp: Icp = { ...parsed.icp, exclusions: { ...parsed.icp.exclusions, domains } };
 
+    const before = parseStoredIcp((await getWorkspaceProfile(workspaceId)).icp) ?? EMPTY_ICP;
     await updateWorkspaceProfile(workspaceId, {
       positioning: parsed.positioning || null,
       companyName: parsed.companyName || null,
       icp,
     });
+    // Editing what "a good lead" means re-scores already-researched leads in the background (no re-research, no LLM).
+    let rescoring = 0;
+    if (isIntelligenceConfigured() && (await icpFingerprint(before)) !== (await icpFingerprint(icp))) {
+      rescoring = (await enqueueRescoreAll({ workspaceId, userId })).enqueued;
+    }
     await logActivity({
       workspaceId, actorUserId: userId, type: "workspace.profile_updated", entityType: "workspace", entityId: workspaceId,
       summary: "Updated positioning and ICP",
     });
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/settings/positioning");
-    return { positioning: parsed.positioning, companyName: parsed.companyName, icp };
+    return { positioning: parsed.positioning, companyName: parsed.companyName, icp, rescoring };
   });
 }
 

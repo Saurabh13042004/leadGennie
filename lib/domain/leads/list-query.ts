@@ -5,11 +5,15 @@
  */
 export const LEAD_PAGE_SIZE = 50;
 
-export const LEAD_SORT_KEYS = ["created", "name", "company", "stage", "email_status"] as const;
+export const LEAD_SORT_KEYS = ["created", "name", "company", "stage", "email_status", "icp"] as const;
 export type LeadSortKey = (typeof LEAD_SORT_KEYS)[number];
 
 export const EMAIL_STATUS_FILTERS = ["unverified", "valid", "invalid", "risky", "none"] as const;
 export type EmailStatusFilter = (typeof EMAIL_STATUS_FILTERS)[number];
+
+/** "researched" = has a completed (or partial) research; "none" = never researched. */
+export const RESEARCH_FILTERS = ["none", "queued", "running", "researched", "failed"] as const;
+export type ResearchFilter = (typeof RESEARCH_FILTERS)[number];
 
 export type LeadListQuery = {
   page: number;
@@ -19,6 +23,9 @@ export type LeadListQuery = {
   /** "none" = leads with no email address. */
   emailStatus: EmailStatusFilter | "";
   companyId: number | null;
+  research: ResearchFilter | "";
+  /** Only leads scored at least this (0 = no filter). Unresearched leads have no score and are excluded when set. */
+  minScore: number;
   sort: LeadSortKey;
   dir: "asc" | "desc";
 };
@@ -32,6 +39,8 @@ export function parseLeadListParams(sp: RawSearchParams): LeadListQuery {
   const companyId = Number.parseInt(first(sp.company), 10);
   const sort = first(sp.sort) as LeadSortKey;
   const emailStatus = first(sp.email_status) as EmailStatusFilter;
+  const research = first(sp.research) as ResearchFilter;
+  const minScore = Number.parseInt(first(sp.min_score), 10);
   return {
     page: Number.isFinite(page) && page > 0 ? Math.min(page, 100_000) : 1,
     search: first(sp.q).trim().slice(0, 100),
@@ -39,6 +48,8 @@ export function parseLeadListParams(sp: RawSearchParams): LeadListQuery {
     source: first(sp.source).trim().slice(0, 50),
     emailStatus: EMAIL_STATUS_FILTERS.includes(emailStatus) ? emailStatus : "",
     companyId: Number.isFinite(companyId) && companyId > 0 ? companyId : null,
+    research: RESEARCH_FILTERS.includes(research) ? research : "",
+    minScore: Number.isFinite(minScore) ? Math.max(0, Math.min(100, minScore)) : 0,
     sort: LEAD_SORT_KEYS.includes(sort) ? sort : "created",
     dir: first(sp.dir) === "asc" ? "asc" : "desc",
   };
@@ -52,6 +63,8 @@ export function leadListQueryString(q: Partial<LeadListQuery>): string {
   if (q.source) p.set("source", q.source);
   if (q.emailStatus) p.set("email_status", q.emailStatus);
   if (q.companyId) p.set("company", String(q.companyId));
+  if (q.research) p.set("research", q.research);
+  if (q.minScore) p.set("min_score", String(q.minScore));
   if (q.sort && q.sort !== "created") p.set("sort", q.sort);
   if (q.dir && q.dir !== "desc") p.set("dir", q.dir);
   if (q.page && q.page > 1) p.set("page", String(q.page));

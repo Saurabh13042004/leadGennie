@@ -13,7 +13,9 @@ describe("Phase 1 migrations on a populated database", () => {
     const driver = pgliteDriver(db);
     const all = loadMigrations(dir);
     const before = all.filter((m: { version: string }) => Number(m.version) < 5);
-    const phase1 = all.filter((m: { version: string }) => Number(m.version) >= 5);
+    const phase1 = all.filter((m: { version: string }) => Number(m.version) >= 5 && Number(m.version) <= 7);
+    // Later phases' migrations (0008+) are additive too; they apply in the same run and must not disturb this data.
+    const later = all.filter((m: { version: string }) => Number(m.version) >= 8);
     expect(phase1.map((m: { file: string }) => m.file)).toEqual([
       "0005_companies_and_lead_fields.sql",
       "0006_import_job_progress.sql",
@@ -35,13 +37,19 @@ describe("Phase 1 migrations on a populated database", () => {
     const snapshotBefore = (await db.query(`select id, full_name, email, company, job_title, source, stage from leads order by id`)).rows;
 
     const applied = await migrate(driver, all);
-    expect(applied.appliedNow).toEqual(phase1.map((m: { file: string }) => m.file));
+    expect(applied.appliedNow).toEqual([...phase1, ...later].map((m: { file: string }) => m.file));
 
     // Existing rows are untouched and get safe defaults for the new columns.
     const snapshotAfter = (await db.query(`select id, full_name, email, company, job_title, source, stage from leads order by id`)).rows;
     expect(snapshotAfter).toEqual(snapshotBefore);
     const defaults = (await db.query<{ company_id: unknown; first_name: unknown; email_status: string }>(`select company_id, first_name, email_status from leads`)).rows;
     expect(defaults.every((r) => r.company_id === null && r.first_name === null && r.email_status === "unverified")).toBe(true);
+
+    // Phase 2B (0009): existing leads are unresearched and unscored — never a fabricated 0.
+    const intel = (await db.query<{ icp_score: unknown; intent_score: unknown; qualified: unknown; research_status: string }>(
+      `select icp_score, intent_score, qualified, research_status from leads`)).rows;
+    expect(intel.every((r) => r.icp_score === null && r.intent_score === null && r.qualified === null && r.research_status === "none")).toBe(true);
+    expect((await db.query(`select count(*)::int as n from jobs`)).rows[0]).toEqual({ n: 0 });
 
     // Old import job keeps its data; new progress columns default sanely.
     const job = (await db.query<{ status: string; processed_rows: number; chunk_results: unknown }>(`select status, processed_rows, chunk_results from import_jobs`)).rows[0];

@@ -2,6 +2,59 @@
 
 Evidence log for each phase. Newest first.
 
+## Phase 2B — Lead intelligence in the app (code complete 2026-09-25; verified hermetically + against the real engine process; browser click-through and Neon migration pending)
+
+Spec: `phases/phase-02-lead-intelligence.md` → 2B. Engine side: see Phase 2A below.
+
+### What changed
+
+| WP | Result |
+|---|---|
+| 2B.1 Foundations | `0008` `jobs`, `usage_records`, `agent_runs`, `agent_run_steps`. **Job runtime** (`lib/jobs/`): Postgres queue, one-statement `FOR UPDATE SKIP LOCKED` claim, time-boxed leases (a crashed worker's job is re-claimed and counts as a failure), exponential backoff + jitter, dead-letter, cancel, idempotent enqueue, **wait-and-poll outcome** so a handler can wait on the engine across ticks without spending retries; `POST /api/jobs/tick` (secret-protected) + `scripts/scheduler.mjs` ticks every minute + best-effort `after()` kick. **LLM client** (`lib/ai/client.ts`): `generateObject` (zod-validated, retry-once with the error appended), token accounting via `onUsage`, `setLlmProvider` seam + `FakeLlm`. **Engine client** (`lib/intelligence/`): HMAC-signed `HttpIntelligenceClient` (byte-compatible with the Python verifier — proven by cross-language test vectors), engine errors mapped to `AppError` codes with a retryable flag, `FakeIntelligenceClient` (idempotent runs, restart/outage/quota faults) |
+| 2B.2 Persistence | `0009` `lead_research`, `signals`, `evidence`, `field_provenance`, `prospect_candidates` + lead score columns. `persistResearch` is the **single writer**: re-checks the contract invariants (mirror of the engine's) and **quarantines** violators (nothing written), pre-allocates real ids for every cross-reference, writes everything in **one transaction**, never edits history (previous research/signals flip `is_current=false`), fills only BLANK company/lead fields **and only when the engine backed the value with evidence**, records provenance, imports the engine `trace[]` → `agent_run_steps` and `usage[]` → `usage_records` |
+| 2B.3 Jobs | `lead_research`, `company_research`, `lead_scoring` handlers: submit under an opaque idempotency key → poll by rescheduling; engine restart (run forgotten) → resubmit same key; retryable vs permanent failures classified (quota / bad credentials / invalid result dead-letter immediately with an actionable message); batch run closes itself via a job-settled hook; bulk cap 50 |
+| 2B.4 ICP editor | Existing lists-based ICP kept as the editable model + optional `scoring` block (weights, keywords, threshold; additive — old ICPs still parse). `toEngineIcp` maps it to the engine schema (free text stays free text — **the engine normalizes it**, no taxonomy duplicated in TS). "Test against a sample lead" scores an unsaved ICP through `/v1/score`. Saving a changed ICP queues background re-scoring of researched leads (idempotent per ICP fingerprint) |
+| 2B.5 UI | Lead detail page: ICP score + confidence, **Why this lead?** checklist (each criterion → its source), verified buying signals with source links, outreach narrative (why now / why person / *hypothesis* labelled / angle), evidence with quoted snippets + verification %, collapsed **Unverified — not used** group with reasons, company card, people suggestions, honest states (not researched / researching (auto-refresh) / failed with reason / partial / engine not configured / insufficient evidence). Leads table: ICP + research + signal-badge columns, sort by score (unresearched **last** in both directions), filters (min score, research state), **Research selected** with live progress + cancel |
+| Routes | `POST /api/leads/:id/research`, `POST /api/leads/research`, `POST /api/leads/:id/score`, `GET /api/leads/:id/intelligence`, `GET /api/research/:runId`, `POST /api/jobs/tick` |
+
+### Engine changes required by 2B (Python, all tested; contract + golden fixtures regenerated)
+Title criteria accept free-text `keywords` (whole-word match: "cto" never matches "director"); geographies accept names/cities/ISO/regions; `ResearchResult.scoring_inputs` (the normalized, verified attributes scored) so re-scoring after an ICP edit is a pure function of stored data; `POST /v1/score` now returns `why_fit` (templated, moved to the pure `scoring/explain.py`); fake pipeline emits a description field with evidence; `scripts/export_fixtures.py` writes the golden results the Next tests validate (`make contract` drift-checks them).
+
+### Bugs / design flaws found by the tests (fixed, regression-tested)
+1. **Ungrounded enrichment:** the first persistence wrote a company `description` that had no evidence behind it → enrichment now requires an evidence-backed field (rule 6).
+2. **Engine saw workspace/record ids:** the idempotency key embedded them → now an opaque hash.
+3. **Contract drift caught by the drift test:** the zod mirror omitted `task_costs`.
+4. **Live test exposed id reuse:** after a DB reset ids restart, so deterministic keys replayed an old engine run (test-only; production ids never repeat) — the live test now randomizes sequences.
+5. **Lint/gates:** a ref written during render, `any` in fixtures, and `0007`-hard-coded migration test — all fixed; the Phase 1 migration test now also proves 0008/0009 leave existing leads untouched (`research_status='none'`, scores `null`, never a fabricated 0).
+
+### Acceptance criteria (2B subset) — evidence
+| Criterion | Status | Evidence / caveat |
+|---|---|---|
+| Research from the UI; detail page shows why-contact/now/person/hypothesis/angle | ✅ components + queue + persistence tested; ⚠️ not clicked in a browser | 25 end-to-end integration tests; render tests for every component |
+| Score 0–100 + breakdown + confidence; deterministic; unverified has zero influence | ✅ | engine property tests + `unverified` fixture persisted flagged, `intent = 0` |
+| Signals with type, dated source link, confidence, verified badge | ✅ | read-model + render tests |
+| Every displayed claim links to evidence the engine actually fetched; unverified separated & excluded | ✅ | invariants (8 violation classes quarantined, nothing written), http(s)-only URLs, unverified panel |
+| 50-lead research as background jobs; survives worker **and** engine restart; progress; never blocks a request | ✅ | lease-recovery test, engine-restart resubmit test, 2-worker no-double-processing test, progress derived from jobs; ⚠️ 50-lead run measured only with the fake engine |
+| Engine private/HMAC; no credentials to product tables; cannot send email | ✅ | cross-language signature vectors; **real engine over HTTP rejects a wrong secret**; boundary tests (2A) |
+| Engine down ⇒ clear state + retries; no guessed fallback | ✅ | outage retry/backoff → recovery test, dead-letter after max attempts, "not configured" message |
+| Invalid LLM/engine output ⇒ failure visible, nothing partial persisted | ✅ | contract-violation and quarantine tests assert zero rows in every research table |
+| `usage_records` + `agent_run_steps` from engine `usage[]`/`trace[]` | ✅ | asserted in the end-to-end test |
+| No findable info ⇒ "no evidence found", not invented text | ✅ | `none.example` result: insufficient evidence surfaced, no signals |
+| Prompt-injection page cannot change behavior | ✅ (2A) | engine tests |
+| Workspace isolation for all new tables/routes | ✅ | isolation test (research, read model, progress, cancel, scoring, list) + `check:tenancy` extended to the 10 new tables |
+| `verify:all` green | ✅ | see numbers below |
+| **Real engine end to end** | ✅ | `tests/live/intelligence-engine.live.test.ts`: real Python process, signed HTTP, real contract output → zod → invariants → DB → read model; quota failure surfaces as a permanent, actionable error |
+
+Verification: `npm run verify` — typecheck ✅, lint ✅ (0 errors), `check:fake-metrics` ✅, `check:tenancy` ✅, tests ✅ (**391 passed**, 8 opt-in live/skipped; 30 files), build ✅ (all new routes/pages compile). `make -C services/intelligence verify` ✅ (189 tests, mypy strict, import contracts, OpenAPI + fixture drift).
+
+### Not done / deferred (on purpose)
+- **Migrations 0008/0009 are not applied to the real Neon database** (run `npm run db:migrate` — additive only). **No browser click-through** of the new pages (they compile and render in tests; authenticated pages need a session against the real DB).
+- Real-model end-to-end through the Next queue (only the fake engine + one real-model engine smoke in 2A).
+- Company-level result **reuse** across leads: each lead is its own run; the engine's source cache (`freshness_days`) removes repeat fetches but not repeat LLM calls. `company_research` handler exists (tested) but nothing in the UI triggers it (Phase 8 tool).
+- The Next-side `onUsage` hook exists but existing callers (AI filter, message drafts) don't record usage yet — engine spend is fully metered; app-side LLM spend metering lands with credits (Phase 10).
+- Generated TS types from OpenAPI: replaced by hand-written zod mirrors **plus drift tests** (openapi keys + golden fixtures) — same safety, one fewer toolchain.
+- Signals use **supersession** (`is_current`) rather than the upsert-dedupe key sketched in `03-data-model.md`; evidence is one row per (claim, source).
+
 ## Phase 2A — Intelligence Engine (code complete 2026-09-24; local + one live run; staging deploy pending)
 
 `services/intelligence/` — Python 3.12, FastAPI, pydantic v2, uv. Spec: `phases/phase-02-lead-intelligence.md` → 2A; design: `intelligence-engine/`.

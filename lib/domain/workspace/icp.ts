@@ -28,6 +28,22 @@ export const icpSchema = z
     exclusions: z
       .object({ industries: list.default([]), domains: z.array(z.string().max(253)).max(50).default([]), titles: list.default([]) })
       .default({ industries: [], domains: [], titles: [] }),
+    // Phase 2B: how the engine scores against the lists above. Optional, with sensible defaults, so ICPs saved
+    // before this existed stay valid (additive).
+    scoring: z
+      .object({
+        min_score_to_qualify: z.number().int().min(0).max(100).default(70),
+        weights: z
+          .object({
+            industry: z.number().min(0).max(100).default(25),
+            employee_range: z.number().min(0).max(100).default(20),
+            geography: z.number().min(0).max(100).default(15),
+            title: z.number().min(0).max(100).default(25),
+          })
+          .default({ industry: 25, employee_range: 20, geography: 15, title: 25 }),
+        keywords: z.array(z.object({ keyword: item, weight: z.number().min(0).max(100).default(10) })).max(20).default([]),
+      })
+      .default({ min_score_to_qualify: 70, weights: { industry: 25, employee_range: 20, geography: 15, title: 25 }, keywords: [] }),
   })
   .strict();
 

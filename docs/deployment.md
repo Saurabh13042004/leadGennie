@@ -96,3 +96,10 @@ Private HTTP service in `services/intelligence/` (image built from its `Dockerfi
 | `FETCH_USER_AGENT`, `FETCH_HOST_RPS`, `FETCH_MAX_BYTES` | engine | politeness; the UA must link to a real bot-info page before production |
 
 Checklist before production: ≥ 2 replicas; TLS + private networking only; **egress restricted to the public internet** (block RFC1918/link-local/metadata — the SSRF guard is application-level); secrets in the platform secret manager; alerts on error rate, p95 run duration, LLM/search quota errors, fetch-block rate, budget-exhaustion rate; `intel` schema retention (30 days for runs). Local: `docker compose up engine-fake` (no keys) or `docker compose --profile real up`.
+
+## Phase 2B rollout (lead intelligence)
+
+1. `npm run db:migrate` — applies `0008` (jobs, usage, agent runs) and `0009` (research, signals, evidence, provenance, candidates, lead score columns). Additive; existing leads keep `research_status = 'none'` and `NULL` scores.
+2. Env: `INTELLIGENCE_URL`, `INTELLIGENCE_SERVICE_TOKEN`, `INTELLIGENCE_SIGNING_SECRET` (same values as the engine's). Without them the UI says the engine isn't configured and research is refused up front (no job is created).
+3. **Something must call the worker.** `scripts/scheduler.mjs` now also `POST`s `/api/jobs/tick` every minute (`JOBS_TICK_CRON` to change) with `Bearer $CRON_SECRET`; any pinger can do the same. Clicking *Research* also triggers a best-effort tick after the response (`after()`), so a running scheduler only guarantees the worst case.
+4. Verify with the real engine: `docker compose up engine-fake`, then `RUN_LIVE_ENGINE=1 INTELLIGENCE_URL=http://localhost:8000 npx vitest run tests/live/intelligence-engine.live.test.ts` (uses the in-process test database, not Neon).

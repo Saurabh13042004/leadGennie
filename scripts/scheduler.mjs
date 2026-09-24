@@ -10,6 +10,7 @@ import cron from "node-cron";
 const APP_URL = process.env.APP_URL ?? "http://localhost:3000";
 const CRON_SECRET = process.env.CRON_SECRET;
 const SCHEDULE = process.env.SCHEDULER_CRON ?? "*/10 * * * *";
+const JOBS_SCHEDULE = process.env.JOBS_TICK_CRON ?? "* * * * *";
 
 if (!CRON_SECRET) {
   console.error("CRON_SECRET is not set — required to call /api/cron/send-campaigns");
@@ -29,8 +30,22 @@ async function runDispatch() {
   }
 }
 
+// Background jobs (research, re-scoring): drain due jobs. Idempotent and safe to overlap with the in-app `after()` kick.
+async function runJobsTick() {
+  const startedAt = new Date().toISOString();
+  try {
+    const res = await fetch(`${APP_URL}/api/jobs/tick`, { method: "POST", headers: { Authorization: `Bearer ${CRON_SECRET}` } });
+    const body = await res.json();
+    if (body.claimed > 0 || !res.ok) console.log(`[${startedAt}] jobs tick (${res.status}):`, JSON.stringify(body));
+  } catch (err) {
+    console.error(`[${startedAt}] jobs tick failed:`, err instanceof Error ? err.message : err);
+  }
+}
+
 console.log(`Scheduler started — hitting ${APP_URL}/api/cron/send-campaigns on "${SCHEDULE}"`);
 cron.schedule(SCHEDULE, runDispatch);
+cron.schedule(JOBS_SCHEDULE, runJobsTick);
 
 // Fire once immediately on startup rather than waiting for the first tick.
 runDispatch();
+runJobsTick();

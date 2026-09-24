@@ -16,6 +16,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
   const role = session?.user?.role;
   const canEdit = role !== "viewer";
   const canDelete = role === "owner" || role === "admin";
+  const canResearch = role !== "viewer";
   const hasAnyLeads = page.facets.stages.some((s) => s.count > 0);
   const companyName = query.companyId ? (page.rows.find((r) => r.company_id === query.companyId)?.company_name ?? null) : null;
 
@@ -26,7 +27,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
 
       <div className="space-y-4">
         {hasAnyLeads && <LeadsFilters query={query} stages={page.facets.stages} sources={page.facets.sources} companyName={companyName} />}
-        <LeadsTable rows={page.rows} query={query} canEdit={canEdit} canDelete={canDelete} hasAnyLeads={hasAnyLeads} />
+        <LeadsTable rows={page.rows} query={query} canEdit={canEdit} canDelete={canDelete} canResearch={canResearch} hasAnyLeads={hasAnyLeads} />
         {page.total > 0 && (
           <LeadsPager query={query} page={page.page} pageCount={page.pageCount} total={page.total} pageSize={page.pageSize} />
         )}

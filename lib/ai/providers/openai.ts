@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { LlmError, type LlmProvider, type LlmSchema } from "@/lib/ai/llm-types";
+import { LlmError, type LlmCallOptions, type LlmProvider, type LlmSchema } from "@/lib/ai/llm-types";
 
 export const DEFAULT_OPENAI_MODEL = "gpt-4o";
 
@@ -77,7 +77,7 @@ export function createOpenAiProvider(): LlmProvider {
     return client;
   }
 
-  async function complete(prompt: string, schema?: LlmSchema): Promise<string> {
+  async function complete(prompt: string, schema?: LlmSchema, opts?: LlmCallOptions): Promise<string> {
     try {
       const response = await getClient().chat.completions.create({
         model,
@@ -88,6 +88,11 @@ export function createOpenAiProvider(): LlmProvider {
             json_schema: { name: "response", strict: true, schema: toStrictJsonSchema(schema) },
           },
         }),
+      });
+      opts?.onUsage?.({
+        tokensIn: response.usage?.prompt_tokens ?? 0,
+        tokensOut: response.usage?.completion_tokens ?? 0,
+        model,
       });
       const message = response.choices[0]?.message;
       if (message?.refusal) throw new LlmError(`OpenAI declined the request: ${message.refusal}`);
@@ -102,16 +107,16 @@ export function createOpenAiProvider(): LlmProvider {
 
   return {
     model,
-    async generateJson<T>(prompt: string, schema: LlmSchema): Promise<T> {
-      const text = await complete(prompt, schema);
+    async generateJson<T>(prompt: string, schema: LlmSchema, opts?: LlmCallOptions): Promise<T> {
+      const text = await complete(prompt, schema, opts);
       try {
         return JSON.parse(text) as T;
       } catch (error) {
         throw new LlmError("OpenAI returned invalid JSON", error);
       }
     },
-    async generateText(prompt: string): Promise<string> {
-      return (await complete(prompt)).trim();
+    async generateText(prompt: string, opts?: LlmCallOptions): Promise<string> {
+      return (await complete(prompt, undefined, opts)).trim();
     },
   };
 }

@@ -11,6 +11,8 @@ import type { LeadListRow } from "@/lib/db/leads-list";
 import LeadFormModal from "./LeadFormModal";
 import EmailStatusBadge from "./EmailStatusBadge";
 import LeadsBulkBar from "./LeadsBulkBar";
+import ScoreChip from "./ScoreChip";
+import ResearchStatusBadge from "./ResearchStatusBadge";
 
 const STAGE_STYLES: Record<string, string> = {
   new: "bg-white/5 text-neutral-300 border-white/10",
@@ -33,12 +35,13 @@ function SortHeader({ label, sortKey, query }: { label: string; sortKey: LeadSor
 }
 
 export default function LeadsTable({
-  rows, query, canEdit, canDelete, hasAnyLeads,
+  rows, query, canEdit, canDelete, canResearch = false, hasAnyLeads,
 }: {
   rows: LeadListRow[];
   query: LeadListQuery;
   canEdit: boolean;
   canDelete: boolean;
+  canResearch?: boolean;
   hasAnyLeads: boolean;
 }) {
   const router = useRouter();
@@ -57,7 +60,7 @@ export default function LeadsTable({
 
   const allSelected = rows.length > 0 && selected.size === rows.length;
   const selectedIds = useMemo(() => [...selected], [selected]);
-  const selectable = canEdit || canDelete;
+  const selectable = canEdit || canDelete || canResearch;
 
   function handleDelete(id: number) {
     setBusyId(id);
@@ -88,7 +91,7 @@ export default function LeadsTable({
   return (
     <div className="space-y-3">
       {error && <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
-      {selectable && <LeadsBulkBar selectedIds={selectedIds} canEdit={canEdit} canDelete={canDelete} onClear={() => setSelected(new Set())} />}
+      {selectable && <LeadsBulkBar selectedIds={selectedIds} canEdit={canEdit} canDelete={canDelete} canResearch={canResearch} onClear={() => setSelected(new Set())} />}
 
       <div className="rounded-xl border border-white/10 bg-[#0A0A0A] overflow-hidden">
         <div className="overflow-x-auto">
@@ -107,6 +110,8 @@ export default function LeadsTable({
                 )}
                 <th className="px-4 py-3 font-medium"><SortHeader label="Lead" sortKey="name" query={query} /></th>
                 <th className="px-4 py-3 font-medium"><SortHeader label="Company" sortKey="company" query={query} /></th>
+                <th className="px-4 py-3 font-medium"><SortHeader label="ICP" sortKey="icp" query={query} /></th>
+                <th className="px-4 py-3 font-medium">Research</th>
                 <th className="px-4 py-3 font-medium"><SortHeader label="Stage" sortKey="stage" query={query} /></th>
                 <th className="px-4 py-3 font-medium">Job title</th>
                 <th className="px-4 py-3 font-medium"><SortHeader label="Email" sortKey="email_status" query={query} /></th>
@@ -151,6 +156,17 @@ export default function LeadsTable({
                       lead.company || "—"
                     )}
                     {lead.company_domain && <p className="text-xs text-neutral-600">{lead.company_domain}</p>}
+                  </td>
+                  <td className="px-4 py-3"><ScoreChip score={lead.icp_score} qualified={lead.qualified} /></td>
+                  <td className="px-4 py-3">
+                    <ResearchStatusBadge status={lead.research_status} />
+                    {lead.signal_types.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {lead.signal_types.slice(0, 3).map((t) => (
+                          <span key={t} className="text-[10px] uppercase tracking-wide rounded border border-orange-500/20 bg-orange-500/10 text-orange-200 px-1.5 py-0.5">{t.replace("_", " ").toLowerCase()}</span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`text-xs border rounded-full px-2.5 py-1 ${STAGE_STYLES[lead.stage] ?? STAGE_STYLES.new}`}>{lead.stage}</span>

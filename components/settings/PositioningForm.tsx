@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { saveWorkspaceProfile, type WorkspaceProfileView } from "@/lib/actions/workspace-profile";
 import { parseList, type Icp } from "@/lib/domain/workspace/icp";
+import IcpScoringSection, { type ScoringDraft } from "./IcpScoringSection";
+import IcpTestPanel from "./IcpTestPanel";
 
 const inputCls =
   "w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20 disabled:opacity-60";
@@ -30,30 +32,59 @@ export default function PositioningForm({ initial, canEdit }: { initial: Workspa
   const [exInd, setExInd] = useState(join(initial.icp.exclusions.industries));
   const [exDom, setExDom] = useState(join(initial.icp.exclusions.domains));
   const [exTitles, setExTitles] = useState(join(initial.icp.exclusions.titles));
+  const s = initial.icp.scoring;
+  const [scoring, setScoring] = useState<ScoringDraft>({
+    minScore: String(s.min_score_to_qualify),
+    weights: {
+      industry: String(s.weights.industry), employee_range: String(s.weights.employee_range),
+      geography: String(s.weights.geography), title: String(s.weights.title),
+    },
+    keywords: s.keywords.map((k) => k.keyword).join(", "),
+  });
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setMessage(null);
-    const num = (s: string) => (s.trim() === "" ? null : Number(s));
+  /** The ICP as currently edited (saved or not), or a message explaining what's wrong with it. */
+  function buildIcp(): Icp | string {
+    const num = (v: string) => (v.trim() === "" ? null : Number(v));
     const min = num(minEmp);
     const max = num(maxEmp);
-    if ((min !== null && !Number.isInteger(min)) || (max !== null && !Number.isInteger(max))) {
-      setMessage({ ok: false, text: "Employee range must be whole numbers." });
-      return;
-    }
-    const icp: Icp = {
+    if ((min !== null && !Number.isInteger(min)) || (max !== null && !Number.isInteger(max))) return "Employee range must be whole numbers.";
+    const w = Object.fromEntries(Object.entries(scoring.weights).map(([k, v]) => [k, Number(v)])) as Icp["scoring"]["weights"];
+    const threshold = Number(scoring.minScore);
+    if (Object.values(w).some((n) => !Number.isFinite(n) || n < 0 || n > 100)) return "Weights must be numbers between 0 and 100.";
+    if (!Number.isInteger(threshold) || threshold < 0 || threshold > 100) return "The qualification threshold must be a whole number from 0 to 100.";
+    const previous = new Map(initial.icp.scoring.keywords.map((k) => [k.keyword.toLowerCase(), k.weight]));
+    return {
       version: 1,
       industries: parseList(industries),
       geographies: parseList(geographies),
       titles: parseList(titles),
       employee_range: min === null && max === null ? null : { min, max },
       exclusions: { industries: parseList(exInd), domains: parseList(exDom), titles: parseList(exTitles) },
+      scoring: {
+        min_score_to_qualify: threshold,
+        weights: w,
+        keywords: parseList(scoring.keywords).map((keyword) => ({ keyword, weight: previous.get(keyword.toLowerCase()) ?? 10 })),
+      },
     };
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setMessage(null);
+    const icp = buildIcp();
+    if (typeof icp === "string") {
+      setMessage({ ok: false, text: icp });
+      return;
+    }
     start(async () => {
       const res = await saveWorkspaceProfile({ positioning, companyName, icp });
-      setMessage(res.ok ? { ok: true, text: "Saved." } : { ok: false, text: res.error.message });
+      setMessage(
+        res.ok
+          ? { ok: true, text: res.data.rescoring ? `Saved. Re-scoring ${res.data.rescoring} researched lead${res.data.rescoring === 1 ? "" : "s"} in the background.` : "Saved." }
+          : { ok: false, text: res.error.message },
+      );
     });
   }
 
@@ -92,6 +123,9 @@ export default function PositioningForm({ initial, canEdit }: { initial: Workspa
           <Field label="Titles"><input value={exTitles} onChange={(e) => setExTitles(e.target.value)} disabled={!canEdit} placeholder="Intern, Student" className={inputCls} /></Field>
         </div>
       </section>
+
+      <IcpScoringSection value={scoring} onChange={setScoring} canEdit={canEdit} />
+      <IcpTestPanel getIcp={buildIcp} />
 
       {canEdit ? (
         <div className="flex items-center gap-3">

@@ -124,3 +124,11 @@ Codes: `VALIDATION`, `UNAUTHENTICATED`, `NOT_FOUND`, `RATE_LIMITED`, `QUOTA_EXCE
 - Additive changes within `/v1` (new optional fields); breaking changes → `/v2` served in parallel until Next migrates.
 - CI job `contract`: (a) regenerate OpenAPI, fail on un-committed drift; (b) run Next's zod schemas against the engine's golden fixtures; (c) run the engine against Next's example requests.
 - `FakeIntelligenceClient` (TS) and a `--fake` mode of the engine (deterministic canned results, no network/LLM) let each side develop and test independently.
+
+## As built (Phase 2B additions)
+
+- **ICP inputs are tolerant.** `titles[].keywords` (free-text, whole-word, case-insensitive) is accepted alongside `seniority`/`function`; `geographies[].value` may be a region (`APAC`), an ISO code, a country name or a city. The engine normalizes — clients never need the taxonomy.
+- **`ResearchResult.scoring_inputs`** `{industry, country, employee_count, keywords_found, person_title}` — the normalized, *verified* attributes the score was computed from. Persist it: re-scoring after an ICP edit is `POST /v1/score` with these + the current verified signals (no research).
+- **`POST /v1/score` returns `why_fit`** (the same templated checklist a full run returns).
+- Golden results for consumers: `tests/fixtures/intelligence/*.json` (from `scripts/export_fixtures.py`, drift-checked by `make contract`). The Next.js suite validates its zod mirrors against them and against `openapi.json`.
+- Idempotency keys should be **opaque** (the app sends a hash of workspace/entity/version) — the engine has no notion of workspace identity.
