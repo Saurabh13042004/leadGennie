@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Sparkles } from "lucide-react";
+import { ArrowUp, Loader2 } from "lucide-react";
 import { planGennieRun } from "@/lib/actions/gennie";
 
-/** The Command Center prompt bar. It only PLANS — nothing runs until the user approves on the next screen. */
+/** The Ask Gennie composer. It only PLANS — nothing runs until the user approves on the next screen. */
 export default function AskGennie({
   suggestions,
   leadCount,
@@ -38,52 +38,15 @@ export default function AskGennie({
   }
 
   return (
-    <section className="rounded-xl border border-white/10 bg-[#0A0A0A] p-5 md:p-6" aria-labelledby="ask-gennie-title">
-      <div className="flex items-center gap-2 mb-1">
-        <Sparkles className="w-4 h-4 text-blue-400" />
-        <h2 id="ask-gennie-title" className="text-sm font-semibold text-white">Ask Gennie</h2>
-      </div>
-      <p className="text-sm text-neutral-500 mb-4">
-        Say what you want done with your leads. Gennie shows a plan first — nothing runs until you approve it, and it never sends email.
-      </p>
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void submit(prompt);
-        }}
-        className="flex flex-col sm:flex-row gap-2"
-      >
-        <label htmlFor="gennie-prompt" className="sr-only">What should Gennie do?</label>
-        <input
-          id="gennie-prompt"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          maxLength={500}
-          disabled={!canPlan || busy}
-          placeholder={canPlan ? "e.g. Research my 10 newest unresearched leads" : "You need member access to ask Gennie"}
-          className="flex-1 rounded-lg bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20 disabled:opacity-60"
-        />
-        <button
-          type="submit"
-          disabled={!canPlan || busy || prompt.trim().length < 3}
-          className="flex items-center justify-center gap-2 bg-white text-black font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50"
-        >
-          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-          {busy ? "Planning…" : "Plan it"}
-        </button>
-      </form>
-
-      {error && <p role="alert" className="text-sm text-red-400 mt-3">{error}</p>}
-
+    <div>
       {leadCount === 0 ? (
-        <p className="text-xs text-neutral-500 mt-3">
-          You have no leads yet — <Link href="/dashboard/leads" className="text-white underline underline-offset-2">add or import some</Link> and Gennie can work on them.
+        <p className="text-xs text-neutral-500 mb-2.5">
+          You have no leads yet — <Link href="/dashboard/leads" className="text-indigo-600 hover:underline">add or import some</Link> and Gennie can work on them.
         </p>
       ) : (
         suggestions.length > 0 &&
         canPlan && (
-          <div className="flex flex-wrap gap-2 mt-3">
+          <div className="flex flex-wrap gap-1.5 mb-2.5">
             {suggestions.map((s) => (
               <button
                 key={s}
@@ -93,7 +56,7 @@ export default function AskGennie({
                   setPrompt(s);
                   void submit(s);
                 }}
-                className="text-xs text-neutral-300 border border-white/10 rounded-full px-3 py-1.5 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-50"
+                className="text-xs text-neutral-600 border border-neutral-200 bg-white rounded-full px-3 py-1.5 hover:border-neutral-300 hover:bg-neutral-50 transition-colors disabled:opacity-50"
               >
                 {s}
               </button>
@@ -101,9 +64,42 @@ export default function AskGennie({
           </div>
         )
       )}
+
       {!engineAvailable && leadCount > 0 && (
-        <p className="text-xs text-amber-300/80 mt-3">The research engine isn&apos;t configured, so Gennie can select and rank leads but not research them.</p>
+        <p className="text-xs text-amber-600 mb-2">The research engine isn&apos;t configured, so Gennie can select and rank leads but not research them.</p>
       )}
-    </section>
+
+      {error && <p role="alert" className="text-sm text-rose-600 mb-2">{error}</p>}
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit(prompt);
+        }}
+        className="flex items-end gap-2 rounded-2xl border border-neutral-200 bg-white p-2 shadow-[0_8px_24px_rgba(20,25,30,0.06)] focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-100"
+      >
+        <label htmlFor="gennie-prompt" className="sr-only">What should Gennie do?</label>
+        <input
+          id="gennie-prompt"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          maxLength={500}
+          disabled={!canPlan || busy}
+          placeholder={canPlan ? "Ask Gennie to find, research or rank your leads…" : "You need member access to ask Gennie"}
+          className="flex-1 bg-transparent px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none disabled:opacity-60"
+        />
+        <button
+          type="submit"
+          disabled={!canPlan || busy || prompt.trim().length < 3}
+          aria-label="Plan it"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-white transition-colors hover:bg-neutral-800 disabled:opacity-40"
+        >
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" />}
+        </button>
+      </form>
+      <p className="mt-2 text-[11px] text-neutral-400">
+        Gennie shows a plan first — nothing runs until you approve it, and it never sends email.
+      </p>
+    </div>
   );
 }
