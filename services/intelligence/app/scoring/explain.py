@@ -45,6 +45,16 @@ def why_fit(icp: Icp, result: IcpResult) -> list[WhyFitItem]:
             "unknown": "unknown",
         }[item.status]
         found = f" — {item.value_found}" if item.value_found else ""
+        if item.criterion.startswith("keyword:") and item.status == "unknown":
+            out.append(
+                WhyFitItem(
+                    criterion=item.criterion,
+                    status="unknown",
+                    text=f"“{item.criterion.removeprefix('keyword:')}” not found in the pages we read",
+                    evidence_ids=[],
+                )
+            )
+            continue
         tgt = (
             f" ({target[item.criterion]})"
             if item.criterion in target and target[item.criterion] and item.status != "unknown"

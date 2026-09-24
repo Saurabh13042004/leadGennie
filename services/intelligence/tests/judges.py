@@ -19,7 +19,9 @@ def sycophant(_system: str, user: str) -> dict[str, Any]:
 def honest(_system: str, user: str) -> dict[str, Any]:
     out = []
     for block in re.findall(
-        r'<claim id="([^"]+)">\n(?:COMPANY: .*?\n)?CLAIM: (.*?)\n(.*?)</claim>', user, flags=re.S
+        r'<claim id="([^"]+)">\n(?:TYPE: .*?\n)?(?:COMPANY: .*?\n)?CLAIM: (.*?)\n(.*?)</claim>',
+        user,
+        flags=re.S,
     ):
         cid, claim, body = block
         snippets = " ".join(re.findall(r"<snippet>(.*?)</snippet>", body, flags=re.S)).lower()

@@ -26,6 +26,7 @@ class Attributes:
     title_text: str | None = None
     has_person: bool = False
     keywords_found: frozenset[str] = frozenset()
+    industry_inferred: bool = False
     evidence: dict[str, list[str]] = field(default_factory=dict)
 
 
@@ -63,7 +64,12 @@ def _industry(icp: Icp, attrs: Attributes) -> _Criterion | None:
             entry.weight / weight
         ):
             best, status = 0.5 * (entry.weight / weight), "partial"
-    return _Criterion("industry", weight, status, best, attrs.industry, "industry")
+    shown = (
+        f"{attrs.industry} (inferred from the company description)"
+        if attrs.industry_inferred
+        else attrs.industry
+    )
+    return _Criterion("industry", weight, status, best, shown, "industry")
 
 
 def _employees(icp: Icp, attrs: Attributes) -> _Criterion | None:
@@ -139,7 +145,7 @@ def _keywords(icp: Icp, attrs: Attributes) -> list[_Criterion]:
             _Criterion(
                 f"keyword:{kw.keyword.strip().lower()}",
                 kw.weight,
-                "met" if found else "not_met",
+                "met" if found else "unknown",  # absence in what we read is not evidence of absence
                 1.0 if found else 0.0,
                 kw.keyword if found else None,
                 "keywords",

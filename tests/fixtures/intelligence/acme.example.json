@@ -203,12 +203,12 @@
         "criterion": "keyword:outbound",
         "evidence_ids": [],
         "points": 0.0,
-        "status": "not_met",
+        "status": "unknown",
         "value_found": null,
         "weight": 15.0
       }
     ],
-    "confidence": 1.0,
+    "confidence": 0.91,
     "score": 85
   },
   "intent": {
@@ -334,7 +334,7 @@
     {
       "criterion": "keyword:outbound",
       "evidence_ids": [],
-      "status": "not_met",
+      "status": "unknown",
       "text": "keyword:outbound: unknown"
     }
   ]

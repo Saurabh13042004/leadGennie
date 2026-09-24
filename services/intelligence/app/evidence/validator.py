@@ -199,7 +199,7 @@ class EvidenceValidator:
         for start in range(0, len(pending), ENTAILMENT_BATCH):
             batch = pending[start : start + ENTAILMENT_BATCH]
             blocks = "\n\n".join(
-                f'<claim id="{v.claim.id}">\nCOMPANY: {v.claim.company_name}'
+                f'<claim id="{v.claim.id}">\nTYPE: {"narrative" if v.claim.type == "outreach" else "fact"}\nCOMPANY: {v.claim.company_name}'
                 + (f" ({v.claim.company_domain})" if v.claim.company_domain else "")
                 + (f", based in {v.claim.company_location}" if v.claim.company_location else "")
                 + f"\nCLAIM: {v.claim.text}\n"

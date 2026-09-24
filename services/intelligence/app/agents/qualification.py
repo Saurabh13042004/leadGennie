@@ -39,6 +39,8 @@ class VerifiedProfile:
     has_person: bool
     evidence_texts: list[str]  # verified claim texts + snippets, for keyword matching
     evidence: dict[str, list[str]]
+    # The VERIFIED description, used (only) to classify an industry the site never states outright.
+    description_text: str | None = None
 
 
 @dataclass
@@ -62,8 +64,19 @@ class QualificationAgent:
         async with ctx.step("scoring", agent="qualification", tool="score") as step:
             industry = taxonomy.normalize_industry(profile.industry_text)
             country = taxonomy.normalize_country(profile.location_text)
-            if (industry is None and profile.industry_text) or (country is None and profile.location_text):
-                industry, country = await self._llm_fallback(ctx, profile, industry, country)
+            industry_text = profile.industry_text
+            inferred = False
+            if industry is None and not industry_text and profile.description_text:
+                # Sites rarely say "we are in <industry>", but a VERIFIED description usually makes it obvious.
+                # Classification is limited to the closed taxonomy and the breakdown says it was inferred.
+                industry_text, inferred = profile.description_text, True
+            if (industry is None and industry_text) or (country is None and profile.location_text):
+                industry, country = await self._llm_fallback(ctx, profile, industry, country, industry_text)
+            evidence = dict(profile.evidence)
+            if inferred and industry is not None:
+                evidence["industry"] = profile.evidence.get("description", [])
+            else:
+                inferred = False
             seniority, function = taxonomy.normalize_title(profile.person_title)
             haystack = " ".join(profile.evidence_texts).lower()
             keywords = frozenset(
@@ -81,7 +94,8 @@ class QualificationAgent:
                 title_text=profile.person_title,
                 has_person=profile.has_person,
                 keywords_found=keywords,
-                evidence=profile.evidence,
+                evidence=evidence,
+                industry_inferred=inferred,
             )
             icp_result = score_icp(icp, attrs)
             intent = score_intent(signals)
@@ -93,7 +107,12 @@ class QualificationAgent:
         )
 
     async def _llm_fallback(
-        self, ctx: PipelineContext, profile: VerifiedProfile, industry: str | None, country: str | None
+        self,
+        ctx: PipelineContext,
+        profile: VerifiedProfile,
+        industry: str | None,
+        country: str | None,
+        industry_text: str | None,
     ) -> tuple[str | None, str | None]:
         try:
             out = await self._llm.generate(
@@ -102,7 +121,7 @@ class QualificationAgent:
                 system=prompt.SYSTEM,
                 schema=NormalizeOut,
                 user=prompt.user_prompt(
-                    profile.industry_text if industry is None else None,
+                    industry_text if industry is None else None,
                     profile.location_text if country is None else None,
                     sorted(taxonomy.INDUSTRY_KEYS),
                 ),

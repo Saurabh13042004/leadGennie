@@ -151,10 +151,12 @@ class ResearchPipeline:
             person_title=person_title,
             has_person=bool(lead),
             evidence_texts=verified_texts,
+            description_text=company.description,
             evidence={
                 "industry": _ids(verdicts, book, "field:industry"),
                 "employee_count": _ids(verdicts, book, "field:employee_count"),
                 "country": _ids(verdicts, book, "field:location"),
+                "description": _ids(verdicts, book, "field:description"),
                 "title": [],
             },
         )

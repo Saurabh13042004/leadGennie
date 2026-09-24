@@ -13,6 +13,10 @@ Rules:
 - Each claim names the COMPANY it is about. If a snippet is about a differently-named company (for example "Acme
   Robotics" when the company is "Acme"), or about another organization that merely shares the name, answer "no".
 - A claim that is merely plausible, or implied, is "no".
+- Claims of TYPE narrative are summaries written for a salesperson. They must contain ONLY what the snippets state.
+  Any conclusion about what the company needs, wants, lacks, "could benefit from", or what a fact "indicates",
+  "suggests" or "means" is NOT supported unless a snippet says exactly that. When a narrative claim mixes stated facts
+  with such conclusions, answer "partial" and put ONLY the snippet-stated facts in `narrowed_claim`.
 Return JSON: results[{id, entails, narrowed_claim, reason}] for every claim id."""
 
 

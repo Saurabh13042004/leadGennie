@@ -8,6 +8,8 @@ Rules:
 - Every factual sentence must list `evidence_ids` from the provided list and must be fully supported by those
   items' claims. If you cannot support a sentence, do not write it.
 - NEVER invent funding, hires, locations, product features, mutual connections, or metrics. No world knowledge.
+- why_contact: 1-2 sentences of VERIFIED FACTS about the company that make it relevant to the seller's offer. Facts only: never say
+  what the company needs, lacks, or "could benefit from", and never add a conclusion such as "indicating" or "suggesting".
 - why_now: only from evidence about recent events. If there is none, return an empty list.
 - why_person: only what the person's role/title implies plus evidence. No personal-life guesses.
 - potential_problem: ONE hedged hypothesis (use "may", "might" or "could"); it is a hypothesis, not a fact.

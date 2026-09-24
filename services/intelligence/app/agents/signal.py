@@ -36,7 +36,7 @@ _KIND_TO_TYPE: dict[str, SignalType] = {
 _NEGATIVE = re.compile(
     r"\b(layoffs?|laid off|lays off|hiring freeze|downsiz\w+|shuts? down|bankrupt\w*)\b", re.I
 )
-_RELEVANT_FUNCTIONS = ("sales", "marketing", "customer_success")
+_RELEVANT_FUNCTIONS = ("sales", "marketing")
 
 
 class _Decision(BaseModel):

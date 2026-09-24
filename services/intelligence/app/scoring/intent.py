@@ -12,7 +12,7 @@ from app.contracts.result import IntentBreakdownItem, IntentResult
 TYPE_WEIGHT: dict[SignalType, float] = {
     SignalType.FUNDING: 25,
     SignalType.HIRING: 20,
-    SignalType.JOB_POSTING: 20,
+    SignalType.JOB_POSTING: 8,  # generic hiring (engineering, product, CS…) says the company is growing, not that it is buying
     SignalType.EXPANSION: 20,
     SignalType.LEADERSHIP_CHANGE: 15,
     SignalType.PRODUCT_LAUNCH: 10,
