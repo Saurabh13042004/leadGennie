@@ -12,7 +12,7 @@ export default function DismissButton() {
     <button
       onClick={() => start(async () => { await dismissOnboarding(); router.refresh(); })}
       disabled={pending}
-      className="text-neutral-500 hover:text-white disabled:opacity-50"
+      className="text-neutral-400 hover:text-neutral-900 disabled:opacity-50"
       aria-label="Dismiss setup checklist"
       title="Dismiss"
     >

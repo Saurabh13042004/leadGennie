@@ -24,16 +24,16 @@ export default function PlaceholderPage({
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
       <div className="flex items-start gap-3 mb-8">
-        <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-          <Icon className="w-5 h-5 text-blue-400" />
+        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+          <Icon className="w-5 h-5 text-indigo-600" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold text-white">{title}</h1>
+          <h1 className="text-xl font-bold tracking-tight text-neutral-900">{title}</h1>
           <p className="text-sm text-neutral-500">{description}</p>
         </div>
       </div>
-      <div className="rounded-xl border border-dashed border-white/15 bg-[#0A0A0A] flex flex-col items-center text-center py-20 px-6">
-        <p className="text-white font-medium">{heading}</p>
+      <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 flex flex-col items-center text-center py-20 px-6">
+        <p className="text-neutral-900 font-semibold">{heading}</p>
         <p className="text-sm text-neutral-500 mt-1 max-w-md">{body}</p>
         {links && links.length > 0 && (
           <div className="flex flex-wrap justify-center gap-2 mt-6">
@@ -41,7 +41,7 @@ export default function PlaceholderPage({
               <Link
                 key={l.href}
                 href={l.href}
-                className="text-sm text-neutral-300 hover:text-white border border-white/10 rounded-lg px-3 py-2 transition-colors"
+                className="text-sm text-neutral-700 hover:text-neutral-900 bg-white border border-neutral-200 rounded-lg px-3 py-2 transition-colors hover:border-neutral-300"
               >
                 {l.label}
               </Link>
