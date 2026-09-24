@@ -1,25 +1,27 @@
 # 00 — Current State (audited implementation map)
 
-Audit date: 2026-09-24, against `main` @ `89c93dd`. Typecheck (`tsc --noEmit`) passes clean. `next build`, lint and app runtime were **not** run in this audit — Phase 0 must establish that baseline first.
+Audit date: 2026-09-24, against `main` @ `89c93dd`. Typecheck (`tsc --noEmit`) passed clean; `next build` passed; ESLint had 38 errors (baseline recorded in `CHANGELOG-phases.md`).
+
+> **Updated during Phase 0 (2026-09-24):** rows below marked ✅ describe the repo *after* Phase 0 work; the audit text they replace is in `CHANGELOG-phases.md`.
 
 ## Stack
 
 | Concern | What's in the repo |
 |---|---|
-| Framework | Next.js 16.2.6 (App Router), React 19.2, Tailwind 4, framer-motion, three.js (landing) |
+| Framework | Next.js 16.2.6 (App Router), React 19.2, Tailwind 4, framer-motion (landing) |
 | Auth | NextAuth v5 beta, Credentials provider, JWT session carrying `workspaceId`, `role` (`auth.ts`); route protection in `proxy.ts` (Next 16 replacement for middleware) |
 | DB | Neon Postgres via `@neondatabase/serverless` HTTP driver (`lib/db/client.ts`, tagged-template `sql`). No ORM |
-| Migrations | Single idempotent `lib/db/schema.sql` executed by `scripts/migrate.mjs`, which splits on `;`. No version table, no ordering, can't hold functions/`DO` blocks |
+| Migrations | ✅ Versioned forward-only SQL in `db/migrations/NNNN_name.sql` + `schema_migrations` (checksummed, one transaction per file, statement splitter safe for `DO $$`), run by `scripts/migrate.mjs` (`--status`). `lib/db/schema.sql` and `migrate-workspaces.mjs` are gone — folded into `0001`/`0002` |
 | AI | **OpenAI `gpt-4o`** (migrated from Gemini on 2026-09-24) behind `lib/ai/client.ts` (`generateJson` with strict JSON-schema structured outputs, `LlmProvider` adapter in `lib/ai/providers/openai.ts`, `OPENAI_API_KEY`/`OPENAI_MODEL`). Errors mapped to `QUOTA_EXCEEDED`/`RATE_LIMITED`/`NOT_CONFIGURED` |
 | Email | Resend (`lib/email/resend.ts`, domains via `resend-domains.ts`). Bounce/complaint webhook only |
 | Scheduling | `GET /api/cron/send-campaigns` (Bearer `CRON_SECRET`), hit by `scripts/scheduler.mjs` (node-cron, always-on process) or an external pinger. Batch of 25, in-request |
-| Validation | Hand-rolled per action. No zod/valibot |
-| Tests | None. One ad-hoc script `scripts/test-campaign-compliance.mjs` that writes into **workspace 1 of whatever `DATABASE_URL` points at** |
-| Logging | `console.*` only |
+| Validation | ✅ zod at every JSON API route via `lib/api` (`withApi`, `parseJson`, `AppError`, envelope `{ok,…}` / `{ok:false,error,code,request_id}`). Server actions still hand-rolled (converted opportunistically) |
+| Tests | ✅ Vitest; integration tests run on an in-process Postgres (PGlite) migrated from empty; the Neon driver is blocked in tests. Two-workspace isolation suite, compliance/dispatch, approvals, import, webhook, unsubscribe, crypto, migrations. The dangerous script is deleted. `npm run verify` = typecheck + lint + 2 static gates + tests + build |
+| Logging | ✅ `lib/log.ts` structured JSON (secret-redacting) + `instrumentation.ts` `onRequestError`; `no-console` lint rule outside the logger. (There was no logging at all before — errors were simply thrown) |
 | Extension | Manifest V3 Chrome extension in `chrome-extension/` |
 | Python | **None yet.** Decision D-11: research/scoring moves into a separate Python service (`services/intelligence/`, "Intelligence Engine") starting Phase 2A. No web scraping, search, or research code exists anywhere today (the extension's page-text extraction is user-initiated capture only) |
 
-## Data model that exists today (`lib/db/schema.sql`)
+## Data model that exists today (`db/migrations/0001…0004`)
 
 Workspace-scoped and healthy: `workspaces`, `workspace_members` (roles), `do_not_contact`, `import_jobs`, `activities` (append-only), `approvals` (generic gate), `pipelines`/`pipeline_stages`/`deals`, `tasks`, `message_generations` (prompt audit), `prompts`/`prompt_versions`, `domains`, `mailboxes`, `forms`/`form_submissions`, `workflows`/`workflow_steps`.
 

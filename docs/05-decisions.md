@@ -55,7 +55,7 @@ Open questions that change what gets built. Each has a **recommendation** so wor
 
 ## D-08 — Test database strategy
 **Recommendation:** Vitest; integration tests run against a dedicated Neon **branch** (`DATABASE_URL_TEST`) that the suite migrates from empty and truncates per file. Refuse to run if `DATABASE_URL_TEST` equals `DATABASE_URL`. No test may touch a real workspace (replaces `scripts/test-campaign-compliance.mjs`).
-**Decision:** _pending_
+**Decision:** _decided 2026-09-24 (Phase 0) — deviation from the recommendation:_ tests run against an **in-process Postgres (PGlite)** migrated from empty with the real migration files, with the Neon driver blocked (`tests/setup.ts`). It is hermetic, needs no credentials, and cannot reach real data. A Neon branch (`DATABASE_URL_TEST`) can be added later for driver-specific checks; it must never equal `DATABASE_URL`.
 
 ## D-09 — Credits currency & pricing shape
 **Not blocking until Phase 10.** Recommendation: credits are an internal unit priced per operation (research lead 2, enrich 3, personalize 1 — from PLAN §37); real cost per unit is derived from `usage_records` (tokens + provider fees) during beta before any public pricing. Billing (Phase 11) starts only after real usage data exists.
@@ -81,4 +81,4 @@ Open questions that change what gets built. Each has a **recommendation** so wor
 ## D-10 — Deployment target
 **Context:** git history shows a `vercel.json` was added then removed and a cron fix; `scripts/scheduler.mjs` assumes an always-on process (pm2/Railway/Fly). Actual production topology isn't documented in the repo.
 **Recommendation:** Document it in `docs/deployment.md` during Phase 0: web app host, worker host, env vars, cron/worker trigger, webhook URLs — and add the **engine host** (D-12) when Phase 2A starts. The queue design (D-01 A) works on any topology as long as *something* calls `/api/jobs/tick` every minute.
-**Decision:** _pending_
+**Decision:** _partly decided 2026-09-24:_ topology documented in `docs/deployment.md` (what the code requires). The **actual hosts are still unknown** — fill in the table there.

@@ -108,3 +108,27 @@ Every workspace table: index on `(workspace_id, …)` for its main list query. H
 ## Retention & deletion
 
 Deleting a lead cascades to `lead_research`, `signals` (lead-scoped), `evidence`, `campaign_leads`; `messages` are retained/anonymised only if legally required — default cascade. DNC/unsubscribe entries are **never** deleted with the lead (they must outlive it). Provide workspace export + delete before beta (Phase 11).
+
+## Phase 0 database review (2026-09-24)
+
+Reviewed the live schema against `lib/db/schema.sql` (read-only introspection) and against the target model above.
+
+**Defects found and fixed (migrations `0001`–`0004`):**
+
+| # | Finding | Fix |
+|---|---|---|
+| 1 | **Live DB had drifted from `schema.sql`**: `workspace_id NOT NULL` on 5 tables, unique `api_tokens(workspace_id)`, `api_tokens.owner_email` unique dropped, `crm_connections(workspace_id, provider, portal_id)` unique — all applied by hand via a one-off script and never recorded. A fresh DB would not have matched production | `0001` = old schema verbatim; `0002` codifies the drift (with backfill; fails loudly + rolls back on orphans). Verified by diffing an empty-DB migration against live introspection: identical except `crm_connections.workspace_id`, which live had nullable (0 rows) and `0002` now makes `NOT NULL` |
+| 2 | No version table / ordering; runner split SQL on `;` | `schema_migrations` + checksummed, transactional runner |
+| 3 | `owner_email` was a second identity, `NOT NULL` | `0003` nullable; no code writes it any more (contract step — drop later) |
+| 4 | API tokens stored in plaintext | `0004`: `token_hash` (SHA-256) + `token_prefix`; legacy rows hashed in place and plaintext erased |
+| 5 | 14 `UPDATE`s and 3 reads keyed on `id` alone (safe only because an earlier query checked ownership) | Scoped by `workspace_id`; enforced by `scripts/checks/workspace-scoped-sql.mjs` |
+| 6 | `segments.criteria` defaults to `'{}'` but `normalize()` assumed keys existed → Audience page crash | `normalize()` defaults every key |
+| 7 | Neon returns `bigint` as **string**; cooldown compared `Set<string>` to a number | Ids normalised with `Number()` (test harness emulates Neon's string ids) |
+
+**Known, deliberately deferred (not "forgotten"):**
+- `campaign_steps` / `workflow_steps` have no `workspace_id` (scoped via their parent). Both are reshaped in Phase 4 — add it then.
+- Status columns are free `text` with no `CHECK`. Constraints are added per table when each status enum is redefined in its phase (adding them now would freeze legacy values).
+- No `updated_at` on `leads`/`campaigns` — arrives with the Phase 1 `leads` extension.
+- Leads without an email have no dedupe identity (re-import duplicates them) — Phase 1 matching by `linkedin_url` / company domain (`it.todo` in `tests/integration/import.test.ts`).
+
+**Why the full target model (companies, lead_research, signals, evidence, campaign_leads, messages, inbox_threads, agent_runs, usage_records, credit_ledger, jobs) was NOT created in Phase 0:** none has code that reads or writes it; each is shaped by decisions still open (D-01 queue design, D-11 Python service boundary, D-04 mailbox provider); and creating empty speculative tables now means migrating them again later. The shapes above remain the contract, and the migration runner makes adding them cheap and safe. If you want the DDL for all of them landed up-front anyway, that is a small, separable task.

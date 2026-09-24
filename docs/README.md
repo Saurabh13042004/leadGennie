@@ -47,7 +47,7 @@ Update this table as phases land. A phase is only "Done" when every acceptance c
 
 | Phase | Name | Status |
 |---|---|---|
-| 0 | Codebase stabilization | Not started |
+| 0 | Codebase stabilization | **Code complete; live DB migrated and smoke-tested over HTTP. Pending: real-browser click-through** (see `CHANGELOG-phases.md`) |
 | 1 | Lead foundation | Not started |
 | 2A | Intelligence Engine (Python) | Not started |
 | 2B | Lead intelligence in the app | Not started |
