@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { LinkBreak, PlugsConnected, Trash } from "@phosphor-icons/react/ssr";
 import { revokeExtensionSession, type ExtensionSessionsView } from "@/lib/actions/extension";
-import { SCOPE_LABEL, isExtensionScope } from "@/lib/extension/scopes";
+import { SCOPE_SHORT, isExtensionScope } from "@/lib/extension/scopes";
 import Badge from "@/components/ui/Badge";
 import Card, { CardHeader, Section } from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
@@ -90,7 +90,7 @@ export default function ExtensionPanel({ view, automation }: { view: ExtensionSe
                       <td className={TD}>
                         <div className="flex flex-wrap gap-1">
                           {s.scopes.filter(isExtensionScope).map((sc) => (
-                            <Badge key={sc} tone="neutral" className="font-normal" >{SCOPE_LABEL[sc].split(" ").slice(0, 3).join(" ")}</Badge>
+                            <Badge key={sc} tone="neutral" className="font-normal">{SCOPE_SHORT[sc]}</Badge>
                           ))}
                         </div>
                       </td>

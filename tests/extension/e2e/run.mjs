@@ -19,6 +19,8 @@ import { Shadow } from "./cdp.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "../../..");
 const CHROME = process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+// E2E_APP_DIR lets the run use a separately built copy of the app (e.g. when the working tree does not currently build).
+const APP_DIR = process.env.E2E_APP_DIR || ROOT;
 const OUT = process.env.E2E_OUT || mkdtempSync(join(tmpdir(), "lg-ext-e2e-"));
 const APP_PORT = 3457, SHIM_PORT = 4555, FIX_PORT = 4600;
 const APP = `http://localhost:${APP_PORT}`;
@@ -58,7 +60,7 @@ function startApp() {
     OPENAI_API_KEY: "invalid-e2e-key", RESEND_API_KEY: "", INTELLIGENCE_URL: "", FEATURE_LINKEDIN_AUTOMATION: "",
     NODE_OPTIONS: `--require ${join(HERE, "preload.cjs")}`,
   };
-  const p = spawn("npx", ["next", "start", "-p", String(APP_PORT)], { cwd: ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
+  const p = spawn("npx", ["next", "start", "-p", String(APP_PORT)], { cwd: APP_DIR, env, stdio: ["ignore", "pipe", "pipe"] });
   let log = "";
   p.stdout.on("data", (d) => (log += d));
   p.stderr.on("data", (d) => (log += d));
@@ -84,11 +86,11 @@ try {
   app = startApp();
   await waitHttp(`${APP}/login`);
 
-  // The test manifest differs from the shipped one ONLY by one extra host permission for the fixture company site.
+  // The test manifest differs from the shipped one ONLY by two extra host permissions: the fixture company site and this run's app port.
   const extDir = join(OUT, "extension");
   cpSync(join(ROOT, "chrome-extension"), extDir, { recursive: true });
   const m = JSON.parse(readFileSync(join(extDir, "manifest.json"), "utf8"));
-  m.host_permissions.push("http://www.globex.example/*");
+  m.host_permissions.push("http://www.globex.example/*", `${APP}/*`); // the fixture company site + this run's app port
   writeFileSync(join(extDir, "manifest.json"), JSON.stringify(m, null, 2));
 
   browser = await puppeteer.launch({
@@ -112,6 +114,9 @@ try {
     expect(!mf.host_permissions.some((h) => h === "<all_urls>" || h === "*://*/*" || h.includes("vercel.app") || h.includes("googleapis")), `host permissions: ${mf.host_permissions}`);
     expect(!mf.oauth2, "no Google OAuth block in the shipped manifest");
   });
+
+  // Point the extension at this run's app (a user does the same in Options → Server).
+  await sw.evaluate(async (apiBase) => chrome.storage.local.set({ settings: { apiBase } }), APP);
 
   console.log("\nSigned-out popup");
   const popupUrl = (q = "") => `chrome-extension://${EXT_ID}/ui/popup.html${q}`;
@@ -137,7 +142,7 @@ try {
     const loginUrl = new URL(auth.url());
     const cb = loginUrl.searchParams.get("callbackUrl") || "";
     expect(cb.startsWith("/extension/connect?") && cb.includes("code_challenge=") && cb.includes("redirect_uri="), `callbackUrl lost the query: ${cb}`);
-    await auth.click("#auth-email", { clickCount: 3 });
+    await auth.$eval("#auth-email", (el) => { el.value = ""; });
     await auth.type("#auth-email", "owner@example.com");
     await auth.type("#auth-password", PASSWORD);
     await shot(auth, "02-login");
@@ -178,7 +183,7 @@ try {
     expect(pageSees.hasHost && pageSees.shadowVisible === false, `page can see into the widget: ${JSON.stringify(pageSees)}`);
   });
   await step("nothing is read from the page or sent to the server until the person clicks", async () => {
-    const leads = (await shim.db.query("select count(*)::int as n from leads")).rows[0].n;
+    const leads = Number((await shim.db.query("select count(*)::int as n from leads")).rows[0].n);
     expect(leads === 2, `leads changed before any click: ${leads}`);
   });
   await step("the pill offers 'Add to LeadGennie' for someone not yet a lead", async () => {
@@ -227,7 +232,7 @@ try {
     await wd.click(await wd.find({ cls: "w-pill" }));
     await wd.waitFor({ cls: "lg-panel" });
     expect(/Already in LeadGennie/.test(await wd.widgetText()), "duplicate state");
-    expect((await shim.db.query("select count(*)::int as n from leads where full_name = 'Sarah Chen'")).rows[0].n === 1, "duplicate created");
+    expect(Number((await shim.db.query("select count(*)::int as n from leads where full_name = 'Sarah Chen'")).rows[0].n) === 1, "duplicate created");
     await shot(li, "08-linkedin-existing");
   });
   await step("the widget worked under the page's strict CSP with no Trusted Types / CSP violations", async () => {
@@ -291,8 +296,19 @@ try {
   });
 
   console.log("\nRevocation and roles");
-  await step("revoking the browser server-side signs the extension out on its next request, with an explanation", async () => {
-    await shim.db.query("update extension_sessions set revoked_at = now()");
+  await step("Settings → Browser extension lists this browser; Disconnect there signs the extension out on its next request, with an explanation", async () => {
+    const dash = await browser.newPage();
+    await dash.setViewport({ width: 1280, height: 800 });
+    dash.on("dialog", (d) => d.accept());
+    await dash.goto(`${APP}/dashboard/settings/extension`);
+    await dash.waitForFunction(() => document.body.innerText.includes("Connected browsers"), { timeout: 30000 });
+    const page = await dash.evaluate(() => document.body.innerText);
+    expect(/Chrome on/.test(page) && /Olivia Owner/.test(page) && /Add leads/.test(page), `settings page: ${page.slice(0, 400)}`);
+    await shot(dash, "17-settings-extension");
+    await dash.click('button[aria-label^="Disconnect Chrome on"]');
+    await dash.waitForFunction(() => document.body.innerText.includes("No browsers connected yet"), { timeout: 20000 });
+    await shot(dash, "18-settings-extension-empty");
+    expect(Number((await shim.db.query("select count(*)::int as n from extension_sessions where revoked_at is not null")).rows[0].n) === 1, "session not revoked in the database");
     const p = await browser.newPage();
     await p.setViewport({ width: 380, height: 640 });
     await p.goto(popupUrl());
@@ -305,13 +321,12 @@ try {
   });
   await step("a viewer can connect but is only ever granted read scope; capture is refused with a role message", async () => {
     const v = await browser.newPage();
+    // Sign the owner out of this browser profile (drop the app's cookies), then sign in as the viewer.
     await v.goto(`${APP}/login`);
-    await v.waitForSelector("#auth-email");
-    // Sign the owner out of this browser profile's app session, then sign in as the viewer.
-    await v.evaluate(async () => { await fetch("/api/auth/signout", { method: "POST" }).catch(() => {}); });
+    await v.deleteCookie(...(await v.cookies()));
     await v.goto(`${APP}/login`);
     await v.waitForSelector("#auth-email", { timeout: 10000 });
-    await v.click("#auth-email", { clickCount: 3 });
+    await v.$eval("#auth-email", (el) => { el.value = ""; });
     await v.type("#auth-email", "viewer@example.com");
     await v.type("#auth-password", PASSWORD);
     await v.keyboard.press("Enter");

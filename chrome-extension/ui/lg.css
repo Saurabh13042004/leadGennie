@@ -28,11 +28,15 @@
   -webkit-font-smoothing: antialiased;
   text-align: left;
 }
-.lg-root *, .lg-root *::before, .lg-root *::after { box-sizing: border-box; }
-.lg-root button, .lg-root input, .lg-root select, .lg-root textarea { font-family: inherit; font-size: inherit; color: inherit; }
-.lg-root h1, .lg-root h2, .lg-root h3, .lg-root p, .lg-root ul, .lg-root ol { margin: 0; padding: 0; }
-.lg-root ul, .lg-root ol { list-style: none; }
-.lg-root a { color: inherit; text-decoration: none; }
+/*
+ * Base reset. Wrapped in :where() so it has ZERO added specificity: a plain `.lg-root button { color: inherit }` would
+ * out-rank `.lg-btn-primary { color: #fff }` and turn every dark button's label dark-on-dark (it did, once).
+ */
+:where(.lg-root) *, :where(.lg-root) *::before, :where(.lg-root) *::after { box-sizing: border-box; }
+:where(.lg-root) :is(button, input, select, textarea) { font-family: inherit; font-size: inherit; color: inherit; }
+:where(.lg-root) :is(h1, h2, h3, p, ul, ol) { margin: 0; padding: 0; }
+:where(.lg-root) :is(ul, ol) { list-style: none; }
+:where(.lg-root) a { color: inherit; text-decoration: none; }
 .lg-hidden { display: none !important; }
 
 /* ---- Surfaces ------------------------------------------------------------------------------------------------ */

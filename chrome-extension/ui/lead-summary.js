@@ -27,7 +27,7 @@ export function createLeadSummary({ lead, apiBase, session, headline, openUrl, o
     const res = await send(MSG.GET_LEAD, { id: current.id });
     if (res.ok) {
       current = { ...current, ...res.data.lead };
-      onChange && onChange(current);
+      if (onChange) onChange(current);
       if (RESEARCH_FINISHED.has(current.researchStatus)) {
         research = { phase: 'done', error: null };
         render();

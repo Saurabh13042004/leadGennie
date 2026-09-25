@@ -2,7 +2,7 @@ import { normalizeApiBase } from '../lib/auth.js';
 import { MSG, send } from '../lib/messages.js';
 import { requestOriginAccess } from '../lib/permissions.js';
 import { SCOPE_LABEL } from '../lib/scope-labels.js';
-import { badge, button, callout, h, icon, logo, mount, spinner } from './dom.js';
+import { badge, button, callout, h, logo, mount, spinner } from './dom.js';
 
 const app = document.getElementById('app');
 let state = { session: null, settings: null, logs: [], note: null, busy: null };

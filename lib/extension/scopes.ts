@@ -1,4 +1,4 @@
-import { ROLE_RANK, type Role } from "@/lib/workspace";
+import { ROLE_RANK, type Role } from "@/lib/workspace-roles";
 
 /**
  * What a connected extension may do. Scopes are granted at connect time from the
@@ -40,4 +40,12 @@ export const SCOPE_LABEL: Record<ExtensionScope, string> = {
   "leads:create": "Add leads you capture from web pages",
   "research:trigger": "Start research on a lead",
   automation: "LinkedIn message automation (advanced)",
+};
+
+/** Short names for badges in the sessions list. */
+export const SCOPE_SHORT: Record<ExtensionScope, string> = {
+  "leads:read": "See leads",
+  "leads:create": "Add leads",
+  "research:trigger": "Start research",
+  automation: "LinkedIn automation",
 };

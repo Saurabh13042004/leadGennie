@@ -89,6 +89,9 @@ See `02-architecture.md`.
 ### Engine-owned `intel` schema (Phase 2A — separate plain-SQL migrations in `services/intelligence/migrations/`, not in `db/migrations`)
 `intel.runs (run_id, idempotency_key unique, task, status, progress, input_hash, result jsonb, trace jsonb, usage jsonb, error, created_at, finished_at, expires_at)`, `intel.source_cache (url_hash, url, fetched_at, etag, html_hash, text, source_type, expires_at)` — **public content only, no workspace identifiers**, `intel.host_limits` (shared per-host rate limiter). The engine's DB role cannot access the product schema; Next's role cannot rely on `intel` (it talks to the engine over HTTP).
 
+### Extension auth (Phase 7, migration `0013`)
+`extension_auth_codes` (one-time PKCE codes: `code_hash`, `code_challenge`, `redirect_uri`, `scopes`, `expires_at`, `used_at`), `extension_sessions` (`workspace_id`, `user_id`, `token_hash`, `token_prefix`, `scopes`, `device_label`, `last_used_at`, sliding `expires_at`, `revoked_at`; **role is not stored** — read live from `workspace_members`), and `api_rate_limits` (`bucket`, `window_start`, `count`; not tenant data). Both auth tables are in the tenancy gate's list.
+
 ### `schema_migrations` (Phase 0)
 `version text primary key, name, applied_at, checksum`.
 

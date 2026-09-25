@@ -29,7 +29,7 @@ export function send(type, payload) {
           resolve({ ok: false, error: { code: 'WORKER', message: (chrome.runtime.lastError && chrome.runtime.lastError.message) || 'The extension did not respond. Reload the page and try again.' } });
         } else resolve(res);
       });
-    } catch (e) {
+    } catch {
       // "Extension context invalidated": the extension was reloaded while this page stayed open.
       resolve({ ok: false, error: { code: 'WORKER', message: 'The extension was updated. Reload this page to keep using it.' } });
     }

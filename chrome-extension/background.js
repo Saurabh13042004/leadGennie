@@ -18,8 +18,7 @@ const legacy = {};
 /** What the UI may know about the session — never the token. */
 function publicSession(session) {
   if (!session) return null;
-  const { accessToken, ...rest } = session; // eslint-disable-line no-unused-vars
-  return rest;
+  return { ...session, accessToken: undefined };
 }
 
 const enc = encodeURIComponent;
@@ -118,7 +117,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     .then((data) => sendResponse({ ok: true, data }))
     .catch((e) => {
       const error = e instanceof ApiError ? e.toJSON() : { code: 'ERROR', message: (e && e.message) || 'Something went wrong.' };
-      if (!(e instanceof ApiError)) console.error('[LeadGennie]', e); // eslint-disable-line no-console
+      if (!(e instanceof ApiError)) console.error('[LeadGennie]', e);
       sendResponse({ ok: false, error });
     });
   return true; // async response

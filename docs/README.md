@@ -55,7 +55,7 @@ Update this table as phases land. A phase is only "Done" when every acceptance c
 | 4 | Campaign builder | **Code complete; verified hermetically (state machine, audience/exclusions, schedule, approval gate, launch, edit locks, pause/resume/cancel, isolation, routes) and in the built app over HTTP against a throwaway DB** (build → submit → approve via the real server action → launch → preview = stored sends → edit running copy → pause/resume/cancel). Pending: apply migration 0011 to Neon, real-browser click-through, send from a real mailbox (see `CHANGELOG-phases.md`) |
 | 5 | Email execution engine | **Code complete; verified hermetically (PGlite, fake provider, 1,000-recipient drain) and in the built app against a throwaway DB.** Pending: apply migrations 0011/0012 to Neon, a real send through Resend to your own inbox, real-browser click-through, `npm run verify` blocked by *other sessions'* files (see `CHANGELOG-phases.md`) |
 | 6 | Inbox & reply intelligence | Not started |
-| 7 | Chrome extension (capture) | Not started |
+| 7 | Chrome extension (capture) | **Code complete; verified in real Chrome (20-step e2e: real connect flow, widget under strict CSP, capture, duplicates, leads sync, revocation) + 886 tests.** Migration 0013 is on Neon. Pending: a manual pass on real LinkedIn, `verify` blocked by another session's in-progress Phase 5 type errors (see `CHANGELOG-phases.md`) |
 | 8 | Gennie agent | **Basic slice ("Ask Gennie") shipped early** — plan → approve → run over the tools that exist today (find / research / rank leads); no send, no campaigns, no discovery. Full phase (campaign tools, planner evals, runs debug page, SSE) not started (see `CHANGELOG-phases.md`) |
 | 9 | Analytics | Not started |
 | 10 | Usage & credits | Not started |

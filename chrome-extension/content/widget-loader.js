@@ -7,6 +7,6 @@
     mod.start();
   } catch (e) {
     // Never break the host page. (Common cause: the extension was reloaded while this tab stayed open.)
-    console.debug('[LeadGennie] widget not started:', e && e.message); // eslint-disable-line no-console
+    console.debug('[LeadGennie] widget not started:', e && e.message);
   }
 })();

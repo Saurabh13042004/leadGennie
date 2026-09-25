@@ -8,7 +8,7 @@ import { PAGE_TEXT_LIMIT } from '../lib/config.js';
 import { collectPageFacts } from '../lib/page-facts.js';
 import { MSG, send } from '../lib/messages.js';
 import { createCaptureCard } from '../ui/capture-card.js';
-import { badge, button, callout, h, icon, logo, mount, spinner, stageBadge } from '../ui/dom.js';
+import { button, callout, h, icon, logo, mount, spinner, stageBadge } from '../ui/dom.js';
 import { createLeadSummary } from '../ui/lead-summary.js';
 
 const HOST_ID = 'leadgennie-root';

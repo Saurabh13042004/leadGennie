@@ -2,6 +2,44 @@
 
 Evidence log for each phase. Newest first.
 
+## Phase 7 — Chrome extension: capture, real authentication, dashboard-consistent UI (code complete 2026-09-26; verified in real Chrome against a throwaway DB; migration 0013 applied on Neon)
+
+**What exists**
+- **Real authentication** (replaces "paste the workspace token"): the extension opens LeadGennie's own consent page (`/extension/connect`) with `chrome.identity.launchWebAuthFlow`, the signed-in person approves, and the extension exchanges a one-time code (**PKCE**, single-use, 2-minute) for **its own per-user, per-browser token** (`lgx_…`, SHA-256 at rest, 90-day sliding expiry). The role is re-read from `workspace_members` on every request (demote/remove someone and their extension changes/stops at once). Codes are only ever delivered to `https://<pinned-extension-id>.chromiumapp.org/…` — the ID is fixed by the manifest `key`, allow-listed in `lib/extension/config.ts` (`EXTENSION_ALLOWED_IDS` adds a Web Store ID). Older `lg_` workspace tokens keep working (capture/lookup only) and are migrated out of `chrome.storage.sync`.
+- **Same backend, synced data**: `/api/extension/*` (all `withApi` + envelope + zod): `auth/token`, `auth/revoke`, `me`, `capture/extract`, `leads` (create/list), `leads/lookup`, `leads/:id`, `leads/:id/research` (the same `enqueueLeadResearch` job as the dashboard). A capture creates a real lead through the Phase 1 core (company + domain linked, `source='extension'`, `source_url` with query/hash stripped, `field_provenance` user-vs-extension, activity attributed to the person). The popup's **Leads** tab and the on-page "In LeadGennie" state read the same rows the dashboard shows.
+- **Capture** = extension collects page *facts*; the server decides what they mean (`lib/domain/capture`): deterministic extractors first (selection → JSON-LD → LinkedIn title → site → mailto), the LLM only for gaps and only accepted if the value **literally appears on the page**. No fabricated "Unknown" leads. Duplicates (email → LinkedIn profile → name+company) are detected, not created.
+- **Per-token rate limits** (Postgres fixed window; tighter budget for LLM-backed endpoints; `Retry-After`), scoped tokens (`leads:read|leads:create|research:trigger|automation`), Settings → **Browser extension** (admins see all connected browsers, members their own; revoke).
+- **D-05 done**: `FEATURE_LINKEDIN_AUTOMATION` off ⇒ `/queue` is always empty, queue-report / `personalize` / `pick-element` are 403, the `automation` scope is never issued, the extension's automation code is dead-ended (needs server flag + scope + the *optional* `debugger` permission) and its content script is not even injected. **Code retained, not deleted**; `DRY_RUN` default `true`.
+- **Least privilege**: install-time permissions `storage, activeTab, scripting, identity`; `debugger`/`alarms` optional; host access = `localhost:3000`, `leadgennie.com`, `*.linkedin.com`; any other server is a one-off user-approved origin. Removed: `*.vercel.app`, Sheets host + OAuth block, `debugger`/`alarms` from the install prompt; dead `scripts/`, `schema.json`, `services/`.
+- **UI = the dashboard's design system** (`chrome-extension/ui/lg.css` is a 1:1 translation of `components/ui/*`: neutral palette, hairline rings, indigo accent, Geist, the same Phosphor icons generated from the same package). Popup (Capture / Leads), options page, and a Shadow-DOM on-page card for LinkedIn profiles built with DOM/CSSOM only (Trusted Types / strict-CSP safe).
+
+**Bugs found by testing (not in the spec)**
+1. The consent page crashed in the browser: a client component reached `lib/db/client.ts` via `lib/workspace.ts` (reported from the dev server). Fixed by moving `Role`/`ROLE_RANK` to a DB-free `lib/workspace-roles.ts`, and added a **static gate** (`client-bundle-boundary.test.ts`) that fails if any `"use client"` file can reach the DB client (it reproduces this exact chain when the fix is reverted).
+2. Popup blank: a bad named import (`RESEARCH_POLL_MS`) — no build step to catch it. Added `module-graph.test.ts` (every named import resolves; widget imports are all `web_accessible`).
+3. Primary buttons rendered dark-on-dark: my CSS reset out-ranked `.lg-btn-primary` (caught by a screenshot). Reset now uses `:where()`.
+4. A page's *host* was treated as strong evidence of the person's employer (a personal blog would set the company domain). Now the weakest signal, only on company-looking pages, overridden by corporate email or an existing workspace company.
+5. `LinkedIn` (the signed-out wall title) parsed as a person's name; `Name <email>` selections lost the name.
+6. `chrome.scripting.executeScript` args are JSON-serialised: `undefined` placeholders would have arrived as `null` and bypassed defaults.
+7. Chrome 137+ ignores `--load-extension`; the e2e harness uses puppeteer's `enableExtensions`.
+
+**Acceptance criteria — evidence**
+
+| Criterion | Status | Evidence / caveat |
+|---|---|---|
+| From a prospect page, Add Lead in ≤2 clicks, lead appears with company + domain | ✅ real Chrome | e2e: click pill → card prefilled from the profile → (optional edit) → Add lead; row in the DB with company `Acme`, domain, `source='extension'`. **Domain**: on a LinkedIn *profile* the domain is not on the page — it comes from an existing workspace company or the person's corporate email, else the field is left blank for the user (no provider for lookup yet, D-03) |
+| Duplicates detected, not created | ✅ | e2e (reload → "In LeadGennie", still 1 row) + API tests (by email / LinkedIn / name+company; different company = different person) |
+| Research with Gennie triggers Phase 2 research and links to the lead | ✅ API + UI; ⚠️ not run live | API test queues the same job, idempotent, cross-workspace = `not_found`; in e2e the engine is unconfigured, so the button correctly shows disabled with the reason. Not exercised against a live engine (it costs real LLM spend) |
+| No secrets or LLM keys in the extension; all AI server-side | ✅ | Bundle has no key/provider host; token is in `storage.local` only (asserted not in `storage.sync`) |
+| Flag off ⇒ cannot send any LinkedIn message | ✅ | Queue empty even with queued sends, reports/personalize/pick-element 403, no `automation` scope, automation gate + on-demand script injection; `DRY_RUN` true |
+| Token can be rotated/revoked; revoked → 401 | ✅ real Chrome | Disconnect on the Settings page → next popup open shows "expired or was disconnected"; also revoke from the extension, expiry, member removal, role change all tested |
+| Manifest permissions minimal | ✅ | Asserted in the e2e |
+| `npm run verify` | ⚠️ | My code: typecheck ✅, lint ✅ (0 errors), **886 tests ✅** (54 files), both static gates ✅, e2e **20/20**. **`next build` and `tsc` currently fail on another session's in-progress Phase 5 files** (`lib/domain/sending/handler.ts`, `lib/email/system-mail.ts`, `lib/actions/campaigns.ts`) — I built and ran the app from a throwaway copy with those lines patched (my code identical) |
+| Isolation tests extended | ✅ | extension sessions/list/revoke/lookup/create/research across two workspaces |
+
+**Tests added**: `extension-api.test.ts` (38: connect flow incl. PKCE/replay/expiry/redirect allow-list, live role, rate limits, capture, duplicates, isolation, research, D-05), unit (`extension-auth-primitives`, `capture-extractors`, `client-bundle-boundary`), `tests/extension/{lib,module-graph}.test.ts`, and `npm run test:extension:e2e` (real Chrome, on demand — not part of `verify`). The tenancy suite's LinkedIn-queue tests now run with the flag on (they test isolation of that path).
+
+**Not done / deferred**: Chrome Web Store publication (Phase 11); the **private signing key** for the manifest `key` is NOT in the repo (only the public key, which fixes the ID) — keep it if you ever self-package; a real-LinkedIn manual pass (the fixture reproduces LinkedIn's CSP/Trusted Types, not its DOM); server-side company-domain *lookup* for LinkedIn profiles (needs a provider, D-03); the popup's custom-server permission prompt is a browser UI and was not automated.
+
 ## Phase 5 — Email execution engine (code complete 2026-09-25; verified hermetically + in the built app against a throwaway DB; migrations 0011/0012 not yet on Neon; no real provider send yet)
 
 Decision taken: **D-01** Postgres queue, workers stay in the Next.js app (owner, 2026-09-25).

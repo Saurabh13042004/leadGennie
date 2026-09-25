@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "../helpers/test-db";
 import { setSession } from "../helpers/session";
 import { seedWorkspace, snapshotWorkspace, type SeededWorkspace } from "../helpers/seed-workspace";
@@ -167,6 +167,11 @@ describe("API tokens", () => {
 });
 
 describe("extension API is workspace-scoped by token", () => {
+  // The LinkedIn queue is switched off by default (D-05, Phase 7: with the flag off it is always empty — covered in
+  // extension-api.test.ts). These tests are about TENANT ISOLATION of that code path, so they run with the flag on.
+  beforeAll(() => { process.env.FEATURE_LINKEDIN_AUTOMATION = "true"; });
+  afterAll(() => { delete process.env.FEATURE_LINKEDIN_AUTOMATION; });
+
   const call = (token: string | null, method: "GET" | "POST", body?: unknown) => {
     const req = new Request("http://localhost/api/extension/queue", {
       method,

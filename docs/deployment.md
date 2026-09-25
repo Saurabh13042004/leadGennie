@@ -127,3 +127,12 @@ Checklist before production: ≥ 2 replicas; TLS + private networking only; **eg
 5. **Behaviour change:** legacy campaigns' pending follow-ups (blocked before by the cooldown bug, see Phase 4) and any backlog now send through the new path — with spacing, so a large backlog drains over time rather than in one burst. Unsubscribing, hard-bouncing or complaining now cancels that address's pending emails in every campaign immediately.
 6. Resend: keep the webhook (`/api/webhooks/resend`, signing secret set) — it now also records delivered/opened/clicked. Open/click *tracking* stays whatever the Resend domain setting is (off by default); nothing shows opens as a rate.
 7. No provider key ⇒ the first due email pauses the campaign with "Email sending isn't configured on this server" — nothing is lost; add `RESEND_API_KEY`, then Resume.
+
+
+## Phase 7 rollout (browser extension)
+
+1. `npm run db:migrate` — applies `0013` (extension auth codes/sessions, rate-limit counters). Additive.
+2. **Extension ID is pinned** by the `key` in `chrome-extension/manifest.json` (`hfhoiegnochpbnljpnkkcmdeafbdpaoh`), and the connect flow only hands codes to that ID (`lib/extension/config.ts`). A Chrome Web Store build gets a different ID: set `EXTENSION_ALLOWED_IDS=<store-id>` (comma-separated) on the server. Only the *public* key is in the repo — keep the private key if you self-package.
+3. Load it: `chrome://extensions` → Developer mode → **Load unpacked** → the `chrome-extension/` folder → click the icon → **Connect**. Production users need the app's origin in the manifest `host_permissions` (`https://leadgennie.com/*` today) or grant it once when connecting to another address.
+4. `FEATURE_LINKEDIN_AUTOMATION` stays **unset** in production (D-05). Setting it to `true` turns the LinkedIn queue/automation back on for new connections.
+5. End-to-end check (real Chrome, throwaway in-memory DB — never a real one): `npm run build && npm run test:extension:e2e` (screenshots go to a temp folder). Chrome ≥ 137 needs puppeteer's `enableExtensions` (already used).

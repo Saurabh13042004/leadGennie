@@ -94,3 +94,9 @@ Changes to what is true above (the audit tables describe the pre-rebuild repo):
 - **Positioning + ICP live on the workspace** (`/dashboard/settings/positioning`); `updateSenderPitch` dual-writes; the Command Center shows a checklist derived from real state.
 - `requireWorkspace`/`requireRole` now throw `AppError` (`UNAUTHENTICATED`/`FORBIDDEN`, same messages) and guard a non-numeric `user.id`. Server actions that need to show a reason return `ActionResult` (`lib/api/action.ts`).
 - Still true: no research/enrichment, no scoring, no CRM sync. Lead **stage** remains the only status column.
+
+## Update — Phase 7 (2026-09-26)
+
+- **The Chrome extension is a capture tool with real authentication.** It connects through LeadGennie's consent page (PKCE, per-user revocable tokens, Settings → Browser extension), captures leads into the same database (Phase 1 core: company/domain, provenance, activity), shows the workspace's real leads, and can start research. UI follows the dashboard design system. Code: `chrome-extension/` (no build step: ES modules), server: `app/api/extension/*`, `lib/domain/{extension,capture}`, `lib/extension/*`, `app/extension/connect`.
+- **LinkedIn automation is off by default** (D-05): the send code (`chrome-extension/automation/`, `content/linkedin-automation.js`) is retained but inert unless `FEATURE_LINKEDIN_AUTOMATION=true` + scope + optional permission.
+- `requireRole`'s ranking now lives in `lib/workspace-roles.ts` (DB-free; re-exported from `lib/workspace.ts`) so client components can use it. A static gate forbids any `"use client"` file from reaching `lib/db/client.ts`.

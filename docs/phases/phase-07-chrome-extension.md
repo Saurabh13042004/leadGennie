@@ -54,5 +54,14 @@ Extension API: token auth/scope/rate-limit · zod validation of extracted payloa
 ## Risks
 LinkedIn DOM/ToS changes break scraping → raw-text approach already resilient; capture is user-initiated, single-page. Extraction misparses → editable card before saving.
 
+## Delivered as (deviations from this spec — 2026-09-26)
+- **Authentication is an OAuth-style connect flow, not a shared token:** per-user, per-browser, revocable tokens (`lgx_`), PKCE, live role checks, extension ID pinned. The old workspace token still works for capture/lookup (it has no person, so it cannot start research) and is migrated out of synced storage. Scopes: `leads:read`, `leads:create`, `research:trigger`, `automation` (flag-gated) — the spec's `leads:read-status` is `leads:read`.
+- **Data changes:** migration `0013` (`extension_auth_codes`, `extension_sessions`, `api_rate_limits`); `leads.source` is `'extension'` (older captures keep `'linkedin_extension'`).
+- **Company domain** is proposed only from evidence we have (JSON-LD, corporate email, an existing workspace company, or the company's own site pages) — never invented; blank and editable otherwise. The spec's "server-side lookup" needs a provider (D-03) and is not built.
+- **Capture logic lives on the server** (`lib/domain/capture`): the extension only reads page facts. LLM output is accepted only if it literally appears on the page.
+- **Generic capture** works on any http(s) page through `activeTab` (no broad host permission); the on-page card exists for LinkedIn profiles only.
+- **Google Sheets / Standalone Mode** is retained but dead-ended and its manifest pieces (OAuth block, Sheets host) removed — restoring them is required to re-enable it.
+- Extension **UI shares the dashboard's tokens** (`ui/lg.css`), icons generated from the dashboard's Phosphor package.
+
 ## Exit
 Tag `phase-7-complete`. Mission: [`missions/phase-07-chrome-extension.md`](../missions/phase-07-chrome-extension.md).

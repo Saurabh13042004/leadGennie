@@ -1,13 +1,9 @@
 import { sql } from "@/lib/db/client";
 
-export type Role = "owner" | "admin" | "member" | "viewer";
+import type { Role } from "@/lib/workspace-roles";
 
-export const ROLE_RANK: Record<Role, number> = {
-  viewer: 0,
-  member: 1,
-  admin: 2,
-  owner: 3,
-};
+// Re-exported so existing server-side imports keep working; the definitions live in a DB-free module (see workspace-roles.ts).
+export { ROLE_RANK, type Role } from "@/lib/workspace-roles";
 
 export type PrimaryWorkspace = {
   id: number;

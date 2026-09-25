@@ -32,7 +32,7 @@ export function createCaptureCard({ getFacts, session, apiBase, openUrl, onConne
     let facts;
     try {
       facts = await getFacts();
-    } catch (e) {
+    } catch {
       return setState({ phase: 'error', error: { code: 'PAGE', message: "LeadGennie can't read this page (browser pages and some protected pages are off limits)." }, manual: null });
     }
     const res = await send(MSG.EXTRACT, { facts });
@@ -50,7 +50,7 @@ export function createCaptureCard({ getFacts, session, apiBase, openUrl, onConne
     setState({ ...state, phase: 'saving', errors: {}, saveError: null });
     const res = await send(MSG.CREATE, { lead: toLeadDraft(state.form, { sourceUrl: state.sourceUrl, original: state.original }) });
     if (!res.ok) return setState({ ...state, phase: 'review', saveError: res.error });
-    onSaved && onSaved(res.data);
+    if (onSaved) onSaved(res.data);
     setState({ phase: res.data.created ? 'saved' : 'existing', lead: res.data.lead });
   }
 
