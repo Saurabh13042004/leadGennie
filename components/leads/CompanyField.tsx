@@ -2,10 +2,8 @@
 
 import { useEffect, useId, useState } from "react";
 import { searchCompanies } from "@/lib/actions/companies";
+import { Input, Label } from "@/components/ui/Field";
 import type { CompanySummary } from "@/lib/db/companies";
-
-const inputCls =
-  "w-full rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300";
 
 /**
  * Company name + domain with autocomplete over this workspace's companies.
@@ -38,16 +36,16 @@ export default function CompanyField({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid gap-3 sm:grid-cols-2">
       <div>
-        <label className="block text-sm font-medium text-neutral-700 mb-1.5" htmlFor={`${listId}-company`}>Company</label>
-        <input
+        <Label htmlFor={`${listId}-company`}>Company</Label>
+        <Input
           id={`${listId}-company`}
           list={listId}
           value={company}
           onChange={(e) => handleCompany(e.target.value)}
           autoComplete="off"
-          className={inputCls}
+          placeholder="Acme Inc."
         />
         <datalist id={listId}>
           {suggestions.map((s) => (
@@ -56,13 +54,12 @@ export default function CompanyField({
         </datalist>
       </div>
       <div>
-        <label className="block text-sm font-medium text-neutral-700 mb-1.5" htmlFor={`${listId}-domain`}>Company website / domain</label>
-        <input
+        <Label htmlFor={`${listId}-domain`}>Website / domain</Label>
+        <Input
           id={`${listId}-domain`}
           value={domain}
           onChange={(e) => onChange({ company, domain: e.target.value })}
           placeholder="acme.com"
-          className={inputCls}
         />
       </div>
     </div>

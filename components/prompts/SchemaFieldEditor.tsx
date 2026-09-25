@@ -1,7 +1,11 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { CaretDown, Plus, Trash } from "@phosphor-icons/react/ssr";
 import type { SchemaField } from "@/lib/actions/prompts";
+import Checkbox from "@/components/ui/Checkbox";
+import { inputClasses } from "@/components/ui/Field";
+import { IconButton } from "@/components/settings/bits";
+import { cn } from "@/lib/utils";
 
 export default function SchemaFieldEditor({
   fields,
@@ -27,56 +31,46 @@ export default function SchemaFieldEditor({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {fields.map((f, idx) => (
-        <div key={idx} className="flex items-center gap-2">
+        <div key={idx} className="flex items-center gap-1.5">
           <input
+            aria-label="Field key"
             value={f.key}
             onChange={(e) => update(idx, { key: e.target.value })}
             disabled={disabled}
             placeholder="field_key"
-            className="flex-1 rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-1.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 disabled:opacity-60"
+            className={cn(inputClasses, "h-8 min-w-0 flex-1 font-mono text-xs")}
           />
           {showType && (
-            <select
-              value={f.type}
-              onChange={(e) => update(idx, { type: e.target.value as SchemaField["type"] })}
-              disabled={disabled}
-              className="bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-900 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 disabled:opacity-60"
-            >
-              <option value="string">string</option>
-              <option value="number">number</option>
-            </select>
+            <div className="relative shrink-0">
+              <select
+                aria-label="Field type"
+                value={f.type}
+                onChange={(e) => update(idx, { type: e.target.value as SchemaField["type"] })}
+                disabled={disabled}
+                className={cn(inputClasses, "h-8 w-[84px] cursor-pointer appearance-none pr-6 font-mono text-xs")}
+              >
+                <option value="string">string</option>
+                <option value="number">number</option>
+              </select>
+              <CaretDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-neutral-400" weight="bold" />
+            </div>
           )}
-          <label className="flex items-center gap-1.5 text-xs text-neutral-500 shrink-0">
-            <input
-              type="checkbox"
-              checked={f.required}
-              onChange={(e) => update(idx, { required: e.target.checked })}
-              disabled={disabled}
-              className="w-3.5 h-3.5 accent-indigo-600"
-            />
+          <label className="flex shrink-0 cursor-pointer items-center gap-1.5 px-1 text-xs text-neutral-500">
+            <Checkbox checked={f.required} onChange={(e) => update(idx, { required: e.target.checked })} disabled={disabled} />
             required
           </label>
-          {!disabled && (
-            <button
-              onClick={() => remove(idx)}
-              className="text-neutral-400 hover:text-rose-600 transition-colors shrink-0"
-              aria-label="Remove field"
-              type="button"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
+          {!disabled && <IconButton icon={Trash} label="Remove field" tone="danger" onClick={() => remove(idx)} />}
         </div>
       ))}
       {!disabled && (
         <button
           onClick={add}
           type="button"
-          className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+          className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-neutral-200 text-xs font-medium text-neutral-500 transition-colors hover:border-indigo-300 hover:bg-indigo-50/40 hover:text-indigo-600"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="h-3.5 w-3.5" weight="bold" />
           Add field
         </button>
       )}

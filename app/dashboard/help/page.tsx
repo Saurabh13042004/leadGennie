@@ -1,4 +1,4 @@
-import { LifeBuoy } from "lucide-react";
+import { Lifebuoy } from "@phosphor-icons/react/ssr";
 import ComingSoon from "@/components/dashboard/ComingSoon";
 
 export const metadata = {
@@ -10,7 +10,7 @@ export default function Page() {
     <ComingSoon
       title="Help & Support"
       description="Get assistance"
-      icon={LifeBuoy}
+      icon={Lifebuoy}
     />
   );
 }

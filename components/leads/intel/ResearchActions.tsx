@@ -2,8 +2,11 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowClockwise, CircleNotch, Sparkle, Warning } from "@phosphor-icons/react/ssr";
 import { rescoreLead, researchLeads } from "@/lib/actions/intelligence";
+import Button, { buttonClasses } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
+import { AI_BUTTON } from "../ai-styles";
 
 const BUSY = new Set(["queued", "running"]);
 
@@ -53,29 +56,39 @@ export default function ResearchActions({
   };
 
   return (
-    <div className="flex flex-col items-end gap-1.5">
+    <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5">
+      {!engineConfigured && (
+        <p className="inline-flex max-w-xs items-start gap-1.5 text-xs leading-snug text-amber-700">
+          <Warning className="mt-px h-3.5 w-3.5 shrink-0" weight="fill" />
+          The research engine isn&apos;t configured yet — ask an admin to set it up.
+        </p>
+      )}
+      {message && (
+        <p role="status" className={cn("max-w-xs text-xs leading-snug", message.ok ? "text-emerald-600" : "text-rose-600")}>
+          {message.text}
+        </p>
+      )}
       <div className="flex items-center gap-2">
-        <button
-          onClick={research}
-          disabled={pending || busy || !engineConfigured}
-          className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 text-white font-semibold text-sm px-4 py-2 hover:bg-neutral-800 transition-colors disabled:opacity-50"
-        >
-          {pending || busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-          {busy ? "Researching…" : hasResearch ? "Re-research" : "Research with Gennie"}
-        </button>
         {hasResearch && (
-          <button
+          <Button
+            variant="secondary"
             onClick={rescore}
             disabled={pending || busy || !engineConfigured}
             title="Re-score against your current ICP using the stored, verified data (no new research)"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white text-sm text-neutral-700 px-3 py-2 hover:bg-neutral-50 hover:border-neutral-300 disabled:opacity-50 transition-colors"
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Re-score
-          </button>
+            <ArrowClockwise className="h-4 w-4" weight="bold" /> Re-score
+          </Button>
         )}
+        <button
+          type="button"
+          onClick={research}
+          disabled={pending || busy || !engineConfigured}
+          className={buttonClasses({ variant: "primary", className: AI_BUTTON })}
+        >
+          {pending || busy ? <CircleNotch className="h-4 w-4 animate-spin" weight="bold" /> : <Sparkle className="h-4 w-4" weight="fill" />}
+          {busy ? "Researching…" : hasResearch ? "Re-research" : "Research with Gennie"}
+        </button>
       </div>
-      {!engineConfigured && <p className="text-xs text-amber-600">The research engine isn&apos;t configured yet — ask an admin to set it up.</p>}
-      {message && <p role="status" className={message.ok ? "text-xs text-emerald-600" : "text-xs text-rose-600"}>{message.text}</p>}
     </div>
   );
 }

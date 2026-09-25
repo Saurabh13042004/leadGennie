@@ -1,8 +1,8 @@
-import Link from "next/link";
-import { ArrowLeft, MessageSquare } from "lucide-react";
 import { auth } from "@/auth";
 import { getPromptDetail } from "@/lib/actions/prompts";
 import PromptDetailView from "@/components/prompts/PromptDetailView";
+import SettingsFrame from "@/components/settings/SettingsFrame";
+import { typeLabel } from "@/components/prompts/meta";
 
 export const metadata = {
   title: "Prompt | LeadGennie",
@@ -15,29 +15,13 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
   const canApprove = session?.user?.role === "owner" || session?.user?.role === "admin";
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto">
-      <Link
-        href="/dashboard/ai-prompts"
-        className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back
-      </Link>
-
-      <div className="flex items-start gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-          <MessageSquare className="w-5 h-5 text-indigo-600" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-neutral-900">{detail.prompt.name}</h1>
-          <p className="text-sm text-neutral-500 capitalize">
-            {detail.prompt.type.replace("_", " ")}
-            {detail.prompt.channel ? ` · ${detail.prompt.channel}` : ""}
-          </p>
-        </div>
-      </div>
-
+    <SettingsFrame
+      wide
+      title={detail.prompt.name}
+      crumbs={[{ label: "AI prompts", href: "/dashboard/ai-prompts" }]}
+      description={`${typeLabel(detail.prompt.type)}${detail.prompt.channel ? ` · ${detail.prompt.channel}` : ""} · ${detail.versions.length} version${detail.versions.length === 1 ? "" : "s"}`}
+    >
       <PromptDetailView versions={detail.versions} canManage={canManage} canApprove={canApprove} />
-    </div>
+    </SettingsFrame>
   );
 }

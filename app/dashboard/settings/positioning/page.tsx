@@ -1,10 +1,9 @@
-import Link from "next/link";
-import { ArrowLeft, Target } from "lucide-react";
 import { auth } from "@/auth";
 import { getProfile } from "@/lib/actions/workspace-profile";
 import { getTone } from "@/lib/actions/personalization";
 import ToneSetting from "@/components/settings/ToneSetting";
 import PositioningForm from "@/components/settings/PositioningForm";
+import SettingsFrame from "@/components/settings/SettingsFrame";
 
 export const metadata = {
   title: "Positioning & ICP | LeadGennie",
@@ -16,23 +15,11 @@ export default async function PositioningPage() {
   const canEdit = role === "owner" || role === "admin";
 
   return (
-    <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
-      <Link href="/dashboard/settings" className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Settings
-      </Link>
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-          <Target className="w-5 h-5 text-indigo-600" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-neutral-900">Positioning &amp; ICP</h1>
-          <p className="text-sm text-neutral-500">What you sell and who you sell to — shared by everyone in this workspace.</p>
-        </div>
-      </div>
-      <PositioningForm initial={profile} canEdit={canEdit} />
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+    <SettingsFrame title="Positioning & ICP" description="What you sell and who you sell to — shared by everyone in this workspace.">
+      <div className="space-y-5">
+        <PositioningForm initial={profile} canEdit={canEdit} />
         <ToneSetting initial={tone} canEdit={canEdit} />
       </div>
-    </div>
+    </SettingsFrame>
   );
 }

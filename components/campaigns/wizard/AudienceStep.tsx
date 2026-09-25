@@ -1,8 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Loader2, Workflow as WorkflowIcon } from "lucide-react";
+import { ArrowRight, CircleNotch, FlowArrow, UsersThree, Warning } from "@phosphor-icons/react/ssr";
 import { cn } from "@/lib/utils";
+import Card, { CardHeader } from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import { Help, Input, Label, Textarea } from "@/components/ui/Field";
+import StepBody from "./StepBody";
+import WizardFooter from "./WizardFooter";
 import type { CampaignDraft } from "./useCampaignDraft";
 
 export default function AudienceStep({ draft }: { draft: CampaignDraft }) {
@@ -25,129 +30,155 @@ export default function AudienceStep({ draft }: { draft: CampaignDraft }) {
   } = draft;
 
   return (
-    <div className="space-y-5">
-      {workflows.length > 0 && (
-        <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <WorkflowIcon className="w-4 h-4 text-indigo-600" />
-            <h3 className="text-sm font-semibold text-neutral-900">Start from a saved workflow</h3>
+    <>
+      <StepBody title="Who are you reaching?" description="Name the campaign, ground the AI in your pitch, and pick a segment to send to.">
+        {workflows.length > 0 && (
+          <Card>
+            <CardHeader
+              title={
+                <span className="flex items-center gap-1.5">
+                  <FlowArrow className="h-4 w-4 text-indigo-600" weight="duotone" />
+                  Start from a saved workflow
+                </span>
+              }
+              description="Pre-fills the audience and sequence below from a workflow built in Agentic Flows — still fully editable after."
+              action={
+                workflowId !== null && (
+                  <Button variant="ghost" size="xs" onClick={clearWorkflow} disabled={workflowLoading}>
+                    Clear
+                  </Button>
+                )
+              }
+            />
+            <div className="flex flex-wrap gap-2 p-4">
+              {workflows.map((w) => {
+                const on = workflowId === w.id;
+                return (
+                  <button
+                    key={w.id}
+                    type="button"
+                    onClick={() => applyWorkflow(w.id)}
+                    disabled={workflowLoading}
+                    className={cn(
+                      "inline-flex h-8 items-center gap-2 rounded-lg px-3 text-[13px] ring-1 ring-inset transition-colors disabled:opacity-50",
+                      on ? "bg-indigo-50 text-indigo-800 ring-indigo-300" : "bg-white text-neutral-700 ring-neutral-200 hover:bg-neutral-50 hover:ring-neutral-300",
+                    )}
+                  >
+                    {w.name}
+                    <span className={cn("text-xs tabular-nums", on ? "text-indigo-500" : "text-neutral-400")}>
+                      {w.stepCount} step{w.stepCount === 1 ? "" : "s"}
+                    </span>
+                  </button>
+                );
+              })}
+              {workflowLoading && <CircleNotch className="h-4 w-4 self-center animate-spin text-neutral-400" weight="bold" />}
+            </div>
+          </Card>
+        )}
+
+        <Card className="space-y-5 p-5">
+          <div>
+            <Label htmlFor="campaign-name" hint="Optional — defaults to the audience name">
+              Campaign name
+            </Label>
+            <Input
+              id="campaign-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={audience?.name ?? "e.g. Q3 outreach to SaaS founders"}
+            />
           </div>
-          <p className="text-xs text-neutral-500 mb-3">
-            Pre-fills the audience and sequence below from a workflow built in Agentic Flows — still fully editable
-            after.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {workflows.map((w) => (
-              <button
-                key={w.id}
-                onClick={() => applyWorkflow(w.id)}
-                disabled={workflowLoading}
-                className={cn(
-                  "text-xs rounded-full px-3 py-1.5 border transition-colors disabled:opacity-50",
-                  workflowId === w.id
-                    ? "border-indigo-300 bg-indigo-100 text-indigo-800"
-                    : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
-                )}
-              >
-                {w.name} · {w.stepCount} step{w.stepCount === 1 ? "" : "s"}
-              </button>
-            ))}
-            {workflowId !== null && (
-              <button
-                onClick={clearWorkflow}
-                disabled={workflowLoading}
-                className="text-xs text-neutral-500 hover:text-neutral-900 px-2"
-              >
-                Clear
-              </button>
+          <div>
+            <Label htmlFor="campaign-pitch" hint="Saved to your profile">
+              What do you sell, and why should this audience care?
+            </Label>
+            <Textarea
+              id="campaign-pitch"
+              value={pitch}
+              onChange={(e) => setPitch(e.target.value)}
+              rows={3}
+              placeholder="e.g. We build an AI code-review tool for engineering teams. Cuts PR review time in half and catches bugs before they hit prod. Best for eng teams 20-200 people shipping fast."
+              className="resize-none"
+            />
+            <Help>
+              This grounds every AI-written message in your actual pitch instead of generic filler. Saved to your profile and reused
+              across campaigns.
+            </Help>
+            {!pitch.trim() && (
+              <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-700">
+                <Warning className="mt-px h-3.5 w-3.5 shrink-0" weight="fill" />
+                Leave this empty and the AI will avoid inventing fake product claims — but the copy will be generic.
+              </p>
             )}
           </div>
-        </div>
-      )}
+        </Card>
 
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1.5">Campaign name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={audience?.name ?? "e.g. Q3 outreach to SaaS founders"}
-            className="w-full rounded-lg bg-neutral-50 border border-neutral-200 px-4 py-2.5 text-neutral-900 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-            What do you sell, and why should this audience care?
-          </label>
-          <p className="text-xs text-neutral-500 mb-2">
-            This grounds every AI-written message in your actual pitch instead of generic filler. Saved to your
-            profile and reused across campaigns.
-          </p>
-          <textarea
-            value={pitch}
-            onChange={(e) => setPitch(e.target.value)}
-            rows={3}
-            placeholder="e.g. We build an AI code-review tool for engineering teams. Cuts PR review time in half and catches bugs before they hit prod. Best for eng teams 20-200 people shipping fast."
-            className="w-full rounded-lg bg-neutral-50 border border-neutral-200 px-4 py-2.5 text-neutral-900 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 resize-none"
-          />
-          {!pitch.trim() && (
-            <p className="text-xs text-amber-700 mt-1.5">
-              Leave this empty and the AI will avoid inventing fake product claims — but the copy will be generic.
+        <Card>
+          <CardHeader title="Choose your audience" description="Pick a saved segment or build a new one with AI." />
+          {audiences.length === 0 ? (
+            <p className="px-4 py-8 text-center text-[13px] text-neutral-500">
+              No segments yet.{" "}
+              <Link href="/dashboard/leads" className="font-medium text-indigo-600 hover:text-indigo-700">
+                Build one from the Leads page
+              </Link>
+              .
             </p>
+          ) : (
+            <div role="radiogroup" aria-label="Audience" className="grid gap-2 p-4 sm:grid-cols-2">
+              {audiences.map((a, i) => {
+                const on = audienceIdx === i;
+                return (
+                  <button
+                    key={`${a.id}-${a.name}`}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => setAudienceIdx(i)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-3.5 py-3 text-left ring-1 ring-inset transition-all",
+                      on
+                        ? "bg-indigo-50/60 ring-2 ring-indigo-500/70"
+                        : "bg-white ring-neutral-200 hover:bg-neutral-50 hover:ring-neutral-300",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset",
+                        on ? "bg-white text-indigo-600 ring-indigo-200" : "bg-neutral-50 text-neutral-500 ring-neutral-200/80",
+                      )}
+                    >
+                      <UsersThree className="h-4 w-4" weight="duotone" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-medium text-neutral-900">{a.name}</span>
+                      <span className="block truncate text-xs text-neutral-500">
+                        <span className="tabular-nums">{a.leadCount.toLocaleString()}</span> leads · {a.updatedLabel}
+                      </span>
+                    </span>
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "flex h-4 w-4 shrink-0 items-center justify-center rounded-full ring-1 ring-inset",
+                        on ? "bg-indigo-600 ring-indigo-600" : "bg-white ring-neutral-300",
+                      )}
+                    >
+                      {on && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           )}
-        </div>
-      </div>
+        </Card>
+      </StepBody>
 
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-        <h3 className="text-sm font-semibold text-neutral-900 mb-1">Choose your audience</h3>
-        <p className="text-xs text-neutral-500 mb-3">Pick a saved segment or build a new one with AI.</p>
-
-        {audiences.length === 0 ? (
-          <p className="text-sm text-neutral-500 rounded-xl border border-dashed border-neutral-300 bg-neutral-50/60 px-4 py-6 text-center">
-            No segments yet.{" "}
-            <Link href="/dashboard/leads" className="text-indigo-600 hover:text-indigo-700 hover:underline">
-              Build one from the Leads page
-            </Link>
-            .
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {audiences.map((a, i) => (
-              <button
-                key={`${a.id}-${a.name}`}
-                onClick={() => setAudienceIdx(i)}
-                className={cn(
-                  "w-full flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors",
-                  audienceIdx === i
-                    ? "border-indigo-300 bg-indigo-50"
-                    : "border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300"
-                )}
-              >
-                <div>
-                  <p className="text-sm font-medium text-neutral-900">{a.name}</p>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    {a.leadCount.toLocaleString()} leads · {a.updatedLabel}
-                  </p>
-                </div>
-                {audienceIdx === i && <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 shrink-0" />}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="flex justify-end">
-        <button
-          onClick={continueFromAudience}
-          disabled={!audience || savingPitch}
-          className="flex items-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
-        >
-          {savingPitch && <Loader2 className="w-4 h-4 animate-spin" />}
+      <WizardFooter step={1} hint={audience ? `${audience.name} · ${audience.leadCount.toLocaleString()} leads` : "No audience selected"}>
+        <Button variant="primary" onClick={continueFromAudience} disabled={!audience || savingPitch}>
+          {savingPitch && <CircleNotch className="h-4 w-4 animate-spin" weight="bold" />}
           Continue
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
+          <ArrowRight className="h-4 w-4" weight="bold" />
+        </Button>
+      </WizardFooter>
+    </>
   );
 }

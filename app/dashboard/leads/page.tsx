@@ -2,8 +2,8 @@ import { auth } from "@/auth";
 import { getLeadsPage } from "@/lib/actions/leads";
 import type { RawSearchParams } from "@/lib/domain/leads/list-query";
 import LeadsHeader from "@/components/leads/LeadsHeader";
+import LeadsPageHeader from "@/components/leads/LeadsPageHeader";
 import LeadsTable from "@/components/leads/LeadsTable";
-import LeadsSubNav from "@/components/leads/LeadsSubNav";
 import LeadsFilters from "@/components/leads/LeadsFilters";
 import LeadsPager from "@/components/leads/LeadsPager";
 
@@ -21,17 +21,15 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
   const companyName = query.companyId ? (page.rows.find((r) => r.company_id === query.companyId)?.company_name ?? null) : null;
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <LeadsSubNav />
-      <LeadsHeader canEdit={canEdit} />
-
-      <div className="space-y-4">
-        {hasAnyLeads && <LeadsFilters query={query} stages={page.facets.stages} sources={page.facets.sources} companyName={companyName} />}
-        <LeadsTable rows={page.rows} query={query} canEdit={canEdit} canDelete={canDelete} canResearch={canResearch} hasAnyLeads={hasAnyLeads} />
-        {page.total > 0 && (
+    <>
+      <LeadsPageHeader count={page.total} description="Import, research and segment your lead universe" actions={<LeadsHeader canEdit={canEdit} />} />
+      {hasAnyLeads && <LeadsFilters query={query} stages={page.facets.stages} sources={page.facets.sources} companyName={companyName} />}
+      <LeadsTable rows={page.rows} query={query} canEdit={canEdit} canDelete={canDelete} canResearch={canResearch} hasAnyLeads={hasAnyLeads} />
+      {page.total > 0 && (
+        <div className="border-t border-neutral-100">
           <LeadsPager query={query} page={page.page} pageCount={page.pageCount} total={page.total} pageSize={page.pageSize} />
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }

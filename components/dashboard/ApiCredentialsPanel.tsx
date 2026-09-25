@@ -1,8 +1,27 @@
 "use client";
 
-import { useState } from "react";
-import { Copy, Check, RotateCw, KeyRound } from "lucide-react";
+import { useState, useSyncExternalStore } from "react";
+import { ArrowsClockwise, Check, Copy, Key } from "@phosphor-icons/react/ssr";
 import { regenerateApiToken, type ApiTokenInfo } from "@/lib/actions/api-tokens";
+import { Section } from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import { Callout, shortDate } from "@/components/settings/bits";
+
+const noopSubscribe = () => () => {};
+
+function Endpoint({ method, label, code, note }: { method: "GET" | "POST"; label: string; code: string; note?: React.ReactNode }) {
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-2">
+        <Badge tone={method === "GET" ? "sky" : "violet"} className="font-mono">{method}</Badge>
+        <span className="text-[13px] font-medium text-neutral-800">{label}</span>
+      </div>
+      <pre className="overflow-x-auto rounded-lg bg-neutral-50 px-3.5 py-3 font-mono text-xs leading-relaxed text-neutral-700 ring-1 ring-inset ring-neutral-200/80">{code}</pre>
+      {note && <p className="mt-1.5 text-xs text-neutral-500">{note}</p>}
+    </div>
+  );
+}
 
 export default function ApiCredentialsPanel({ initialInfo }: { initialInfo: ApiTokenInfo }) {
   const [info, setInfo] = useState(initialInfo);
@@ -37,88 +56,82 @@ export default function ApiCredentialsPanel({ initialInfo }: { initialInfo: ApiT
     }
   }
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://your-app.example.com";
+  // Server render uses a placeholder; the client swaps in its real origin after hydration (no mismatch).
+  const origin = useSyncExternalStore(noopSubscribe, () => window.location.origin, () => "https://your-app.example.com");
   const shownToken = freshToken ?? "<your-api-token>";
 
   return (
-    <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-          <KeyRound className="w-5 h-5 text-indigo-600" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-neutral-900">API Credentials</h1>
-          <p className="text-sm text-neutral-500">
-            Use this token to authenticate the LeadGennie LinkedIn Chrome extension.
-          </p>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 space-y-3">
-        <p className="text-sm font-semibold text-neutral-900">Workspace API token</p>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <code className="flex-1 rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 text-sm text-neutral-900 font-mono truncate">
-            {freshToken ?? (info.exists ? `${info.prefix ?? "lg_"}…  (hidden)` : "No token yet")}
-          </code>
-          <div className="flex items-center gap-2 shrink-0">
-            {freshToken && (
-              <button
-                onClick={copy}
-                className="flex items-center gap-1.5 text-sm font-medium text-neutral-700 hover:text-neutral-900 border border-neutral-200 bg-white rounded-lg px-3 py-2.5 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
-              >
-                {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                {copied ? "Copied" : "Copy"}
-              </button>
-            )}
-            <button
-              onClick={generate}
-              disabled={working}
-              className="flex items-center gap-1.5 text-sm font-medium text-neutral-700 hover:text-neutral-900 border border-neutral-200 bg-white rounded-lg px-3 py-2.5 hover:bg-neutral-50 hover:border-neutral-300 transition-colors disabled:opacity-50"
-            >
-              <RotateCw className={`w-4 h-4 ${working ? "animate-spin" : ""}`} />
-              {info.exists ? "Regenerate" : "Generate"}
-            </button>
+    <div className="space-y-5">
+      <Section
+        title="Workspace token"
+        description="One shared token per workspace. It's stored hashed, so it can only be shown right after it's generated."
+      >
+        <div className="space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg bg-neutral-50 px-3 ring-1 ring-inset ring-neutral-200">
+              <Key className="h-4 w-4 shrink-0 text-neutral-400" weight="duotone" />
+              <code className="truncate font-mono text-[13px] text-neutral-900">
+                {freshToken ?? (info.exists ? `${info.prefix ?? "lg_"}••••••••••••••••` : "No token yet")}
+              </code>
+              {info.exists && !freshToken && <Badge className="ml-auto">Hidden</Badge>}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {freshToken && (
+                <Button size="md" onClick={copy}>
+                  {copied ? <Check className="h-4 w-4 text-emerald-600" weight="bold" /> : <Copy className="h-4 w-4" weight="bold" />}
+                  {copied ? "Copied" : "Copy"}
+                </Button>
+              )}
+              <Button size="md" variant={info.exists ? "secondary" : "primary"} onClick={generate} disabled={working}>
+                <ArrowsClockwise className={`h-4 w-4 ${working ? "animate-spin" : ""}`} weight="bold" />
+                {info.exists ? "Regenerate" : "Generate"}
+              </Button>
+            </div>
           </div>
+
+          {freshToken ? (
+            <Callout tone="warning" role="status">Copy this token now — it is stored hashed and will not be shown again.</Callout>
+          ) : (
+            <p className="text-xs leading-relaxed text-neutral-500">
+              Lost it? Regenerate — the old one stops working immediately.
+            </p>
+          )}
+
+          {info.exists && (
+            <dl className="grid grid-cols-2 gap-3 border-t border-neutral-100 pt-3 text-xs">
+              <div>
+                <dt className="text-neutral-400">Created</dt>
+                <dd className="mt-0.5 text-neutral-700">{info.createdAt ? shortDate(info.createdAt) : "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-neutral-400">Last used</dt>
+                <dd className="mt-0.5 text-neutral-700">{info.lastUsedAt ? new Date(info.lastUsedAt).toLocaleString() : "Never"}</dd>
+              </div>
+            </dl>
+          )}
+          {error && <Callout>{error}</Callout>}
         </div>
-        {freshToken ? (
-          <p className="text-xs text-amber-600 font-medium">
-            Copy this token now — it is stored hashed and will not be shown again.
-          </p>
-        ) : (
-          <p className="text-xs text-neutral-500">
-            For security the token is stored hashed and can&apos;t be displayed again. Lost it? Regenerate — the old one
-            stops working immediately.
-            {info.lastUsedAt ? ` Last used ${new Date(info.lastUsedAt).toLocaleString()}.` : ""}
-          </p>
-        )}
-        {error && <p className="text-xs text-rose-600">{error}</p>}
-      </div>
+      </Section>
 
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 space-y-4">
-        <p className="text-sm font-semibold text-neutral-900">Extension API reference</p>
-
-        <div>
-          <p className="text-xs text-neutral-500 mb-1.5">Fetch queued LinkedIn messages</p>
-          <pre className="rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 text-xs text-neutral-700 font-mono overflow-x-auto">
-{`GET ${origin}/api/extension/queue
-Authorization: Bearer ${shownToken}`}
-          </pre>
-          <p className="text-xs text-neutral-500 mt-1.5">
-            Returns queued items: <code className="text-neutral-600">id, body, lead_name, linkedin_url, company, job_title, campaign_name</code>.
-          </p>
+      <Section title="Extension API" description="The two endpoints the LinkedIn Chrome extension calls with this token.">
+        <div className="space-y-5">
+          <Endpoint
+            method="GET"
+            label="Fetch queued LinkedIn messages"
+            code={`GET ${origin}/api/extension/queue\nAuthorization: Bearer ${shownToken}`}
+            note={
+              <>
+                Returns queued items: <code className="font-mono text-neutral-600">id, body, lead_name, linkedin_url, company, job_title, campaign_name</code>.
+              </>
+            }
+          />
+          <Endpoint
+            method="POST"
+            label="Report a message as sent or failed"
+            code={`POST ${origin}/api/extension/queue\nAuthorization: Bearer ${shownToken}\nContent-Type: application/json\n\n{ "id": 123, "status": "sent" }`}
+          />
         </div>
-
-        <div>
-          <p className="text-xs text-neutral-500 mb-1.5">Report a message as sent or failed</p>
-          <pre className="rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 text-xs text-neutral-700 font-mono overflow-x-auto">
-{`POST ${origin}/api/extension/queue
-Authorization: Bearer ${shownToken}
-Content-Type: application/json
-
-{ "id": 123, "status": "sent" }`}
-          </pre>
-        </div>
-      </div>
+      </Section>
     </div>
   );
 }

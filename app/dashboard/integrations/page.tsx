@@ -1,7 +1,13 @@
-import { Plug, CheckCircle2, AlertCircle } from "lucide-react";
+import { LockKey, Plus } from "@phosphor-icons/react/ssr";
 import { auth } from "@/auth";
 import { listConnections } from "@/lib/actions/integrations";
 import DisconnectButton from "@/components/dashboard/integrations/DisconnectButton";
+import SettingsFrame from "@/components/settings/SettingsFrame";
+import { Callout, shortDate } from "@/components/settings/bits";
+import Card from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
+import { buttonClasses } from "@/components/ui/Button";
+import { CompanyMark } from "@/components/ui/Avatar";
 
 export const metadata = {
   title: "Integrations | LeadGennie",
@@ -20,96 +26,73 @@ export default async function Page({
   const canManage = session?.user?.role === "owner" || session?.user?.role === "admin";
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <div className="flex items-start gap-3 mb-8">
-        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-          <Plug className="w-5 h-5 text-indigo-600" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-neutral-900">Integrations</h1>
-          <p className="text-sm text-neutral-500">Connect your tools</p>
-        </div>
-      </div>
+    <SettingsFrame title="Integrations" description="Connect HubSpot and other tools to LeadGennie.">
+      <div className="space-y-6">
+        {connected && <Callout tone="success" role="status">Connected to HubSpot successfully.</Callout>}
+        {error && <Callout>Couldn&apos;t connect HubSpot: {error}</Callout>}
 
-      {connected && (
-        <div className="mb-6 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          Connected to HubSpot successfully.
-        </div>
-      )}
-      {error && (
-        <div className="mb-6 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          Couldn&apos;t connect HubSpot: {error}
-        </div>
-      )}
-
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 mb-6">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-xl bg-[#FF7A59]/10 flex items-center justify-center shrink-0 ring-1 ring-inset ring-[#FF7A59]/20">
-              <span className="text-[#FF7A59] font-bold text-sm">HS</span>
+        <section>
+          <h3 className="mb-2 px-1 text-[11px] font-medium uppercase tracking-wider text-neutral-400">CRM</h3>
+          <Card className="overflow-hidden">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3 p-4 md:p-5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FF7A59]/10 text-sm font-bold text-[#FF7A59] ring-1 ring-inset ring-[#FF7A59]/20">
+                HS
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-2 text-[13px] font-semibold text-neutral-900">
+                  HubSpot
+                  {hubspotConnections.length > 0 && (
+                    <Badge tone="emerald" dot>
+                      {hubspotConnections.length} connected
+                    </Badge>
+                  )}
+                </p>
+                <p className="mt-0.5 text-xs text-neutral-500">Sync contacts, companies, and deals via OAuth 2.0</p>
+              </div>
+              {canManage ? (
+                <a href="/api/integrations/hubspot/connect" className={buttonClasses({ variant: hubspotConnections.length ? "secondary" : "primary" })}>
+                  <Plus className="h-3.5 w-3.5" weight="bold" />
+                  {hubspotConnections.length ? "Add account" : "Connect HubSpot"}
+                </a>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-xs text-neutral-500">
+                  <LockKey className="h-3.5 w-3.5 text-neutral-400" weight="duotone" /> Admin or owner role required
+                </span>
+              )}
             </div>
-            <div>
-              <p className="text-neutral-900 font-semibold">HubSpot</p>
-              <p className="text-sm text-neutral-500">
-                Sync contacts, companies, and deals via OAuth 2.0
-              </p>
-            </div>
-          </div>
-          {canManage ? (
-            <a
-              href="/api/integrations/hubspot/connect"
-              className="bg-neutral-900 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-neutral-800 transition-colors"
-            >
-              + Add HubSpot account
-            </a>
-          ) : (
-            <span className="text-xs text-neutral-500 border border-neutral-200 rounded-lg px-3 py-2 bg-neutral-50">
-              Admin or owner role required
-            </span>
-          )}
-        </div>
 
-        {hubspotConnections.length > 0 && (
-          <div className="mt-6 space-y-2 border-t border-neutral-100 pt-6">
-            {hubspotConnections.map((conn) => (
-              <div
-                key={conn.id}
-                className="flex items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-neutral-50/60 px-4 py-3"
-              >
-                <div>
-                  <p className="text-sm text-neutral-900 font-medium">
-                    {conn.label ?? `Portal ${conn.portal_id ?? conn.id}`}
-                  </p>
-                  <p className="text-xs text-neutral-500">
-                    Connected {new Date(conn.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-xs font-medium text-emerald-700 bg-emerald-50 ring-1 ring-inset ring-emerald-200 px-2.5 py-1 rounded-full">
-                    {conn.status}
-                  </span>
-                  {canManage && <DisconnectButton id={conn.id} />}
-                </div>
+            {hubspotConnections.length > 0 && (
+              <ul className="divide-y divide-neutral-100 border-t border-neutral-100 bg-neutral-50/40">
+                {hubspotConnections.map((conn) => (
+                  <li key={conn.id} className="flex items-center gap-3 px-4 py-2.5 md:px-5">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-medium text-neutral-900">{conn.label ?? `Portal ${conn.portal_id ?? conn.id}`}</p>
+                      <p className="text-[11px] text-neutral-500">
+                        {conn.portal_id ? `Portal ${conn.portal_id} · ` : ""}Connected {shortDate(conn.created_at)}
+                      </p>
+                    </div>
+                    <Badge tone={conn.status === "connected" ? "emerald" : "amber"}>{conn.status}</Badge>
+                    {canManage && <DisconnectButton id={conn.id} />}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </section>
+
+        <section>
+          <h3 className="mb-2 px-1 text-[11px] font-medium uppercase tracking-wider text-neutral-400">More integrations</h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {OTHER_PROVIDERS.map((name) => (
+              <div key={name} className="flex items-center gap-3 rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50 px-4 py-3">
+                <CompanyMark name={name} size="md" className="opacity-70 grayscale" />
+                <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-neutral-500">{name}</p>
+                <Badge>Coming soon</Badge>
               </div>
             ))}
           </div>
-        )}
+        </section>
       </div>
-
-      <p className="text-xs font-bold uppercase tracking-wide text-neutral-400 mb-3">More integrations</p>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {OTHER_PROVIDERS.map((name) => (
-          <div
-            key={name}
-            className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 p-5 flex items-center justify-between"
-          >
-            <p className="text-neutral-500 font-medium">{name}</p>
-            <span className="text-xs text-neutral-400">Coming soon</span>
-          </div>
-        ))}
-      </div>
-    </div>
+    </SettingsFrame>
   );
 }

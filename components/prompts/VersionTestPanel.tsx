@@ -1,9 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, FlaskConical } from "lucide-react";
+import { CheckCircle, Flask, XCircle } from "@phosphor-icons/react/ssr";
 import { cn } from "@/lib/utils";
 import { testVersion, type SchemaField } from "@/lib/actions/prompts";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import { Input } from "@/components/ui/Field";
+import { Callout, Spinner } from "@/components/settings/bits";
 
 /**
  * The "test this version" card on the prompt version editor: sample input
@@ -50,64 +54,60 @@ export default function VersionTestPanel({
   }
 
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <FlaskConical className="w-4 h-4 text-indigo-600" />
-        <p className="text-sm font-semibold text-neutral-900">Test this version</p>
+    <Card>
+      <div className="flex items-center gap-2 border-b border-neutral-100 px-4 py-3">
+        <Flask className="h-4 w-4 text-indigo-600" weight="duotone" />
+        <h3 className="text-[13px] font-semibold text-neutral-900">Test this version</h3>
       </div>
+      <div className="space-y-3 p-4">
+        {inputSchema.length > 0 && (
+          <div className="space-y-2">
+            {inputSchema.map((f) => (
+              <div key={f.key}>
+                <label className="mb-1 block font-mono text-[11px] text-neutral-500">{f.key || "(unnamed field)"}</label>
+                <Input
+                  value={sampleInput[f.key] ?? ""}
+                  onChange={(e) => setSampleInput((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                  className="h-8 text-xs"
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
-      {inputSchema.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {inputSchema.map((f) => (
-            <div key={f.key}>
-              <label className="block text-xs text-neutral-500 mb-1">{f.key || "(unnamed field)"}</label>
-              <input
-                value={sampleInput[f.key] ?? ""}
-                onChange={(e) => setSampleInput((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                className="w-full rounded-lg bg-white border border-neutral-200 px-3 py-1.5 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
-              />
-            </div>
-          ))}
-        </div>
-      )}
+        {error && <Callout className="text-xs">{error}</Callout>}
 
-      {error && (
-        <p className="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{error}</p>
-      )}
+        <Button variant="accent" onClick={handleTest} disabled={testing || !isEditable} className="w-full">
+          {testing ? <Spinner className="h-3.5 w-3.5" /> : <Flask className="h-3.5 w-3.5" weight="bold" />}
+          Run test
+        </Button>
 
-      <button
-        onClick={handleTest}
-        disabled={testing || !isEditable}
-        className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
-      >
-        {testing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FlaskConical className="w-3.5 h-3.5" />}
-        Run test
-      </button>
+        {testResult && (
+          <div
+            className={cn(
+              "space-y-1 rounded-lg px-3 py-2 text-xs ring-1 ring-inset",
+              testResult.passed ? "bg-emerald-50 text-emerald-700 ring-emerald-200/70" : "bg-rose-50 text-rose-700 ring-rose-200/70"
+            )}
+          >
+            <p className="flex items-center gap-1.5 font-semibold">
+              {testResult.passed ? <CheckCircle className="h-3.5 w-3.5" weight="fill" /> : <XCircle className="h-3.5 w-3.5" weight="fill" />}
+              {testResult.passed ? "Passed schema validation" : "Failed validation"}
+            </p>
+            {testResult.errors.map((e, i) => (
+              <p key={i}>{e}</p>
+            ))}
+            {testResult.output ? (
+              <pre className="mt-1.5 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md bg-white/70 p-2 font-mono text-[11px] text-neutral-700 ring-1 ring-inset ring-black/5">
+                {JSON.stringify(testResult.output, null, 2)}
+              </pre>
+            ) : null}
+          </div>
+        )}
 
-      {testResult && (
-        <div
-          className={cn(
-            "rounded-lg border px-3 py-2 text-xs space-y-1",
-            testResult.passed
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-rose-200 bg-rose-50 text-rose-700"
-          )}
-        >
-          <p className="font-semibold">{testResult.passed ? "Passed schema validation" : "Failed validation"}</p>
-          {testResult.errors.map((e, i) => (
-            <p key={i}>{e}</p>
-          ))}
-          {testResult.output ? (
-            <pre className="text-neutral-600 whitespace-pre-wrap break-words mt-1">
-              {JSON.stringify(testResult.output, null, 2)}
-            </pre>
-          ) : null}
-        </div>
-      )}
-
-      {!lastTestPassed && isDraft && (
-        <p className="text-xs text-neutral-500">Run a passing test before this version can be submitted.</p>
-      )}
-    </div>
+        {!lastTestPassed && isDraft && (
+          <p className="text-xs text-neutral-500">Run a passing test before this version can be submitted.</p>
+        )}
+      </div>
+    </Card>
   );
 }

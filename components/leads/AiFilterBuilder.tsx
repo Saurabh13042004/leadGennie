@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Loader2 } from "lucide-react";
+import { ArrowUp, CircleNotch, Sparkle, UsersThree, WarningOctagon } from "@phosphor-icons/react/ssr";
 import { generateAiFilter, type AiFilterResult } from "@/lib/actions/leads";
+import { Kbd } from "@/components/ui/Field";
+import { cn } from "@/lib/utils";
+import { AI_TILE } from "./ai-styles";
+import { criteriaChips } from "./audience-chips";
 
 const EXAMPLES = [
   "MNC tech companies in India with more than 500 employees and a VP of Engineering",
@@ -34,93 +38,93 @@ export default function AiFilterBuilder() {
     }
   }
 
-  const criteriaChips = result
-    ? [
-        ...(result.criteria.companies ?? []),
-        ...(result.criteria.regions ?? []),
-        ...(result.criteria.industries ?? []),
-        ...(result.criteria.titles ?? []),
-        result.criteria.fundingStage,
-        result.criteria.minEmployees
-          ? `${result.criteria.minEmployees}${result.criteria.maxEmployees ? `-${result.criteria.maxEmployees}` : "+"} employees`
-          : null,
-        result.criteria.minRevenueM ? `>$${result.criteria.minRevenueM}M revenue` : null,
-      ].filter(Boolean)
-    : [];
+  const chips = result ? criteriaChips(result.criteria) : [];
+  const canSubmit = !loading && !!prompt.trim();
 
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-      <div className="flex items-center gap-2.5 mb-1">
-        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
-          <Sparkles className="w-4 h-4 text-indigo-600" />
-        </div>
-        <h3 className="text-sm font-bold text-neutral-900">AI Filter Builder</h3>
-      </div>
-      <p className="text-xs text-neutral-500 mb-4 ml-[42px]">
-        Describe your ideal customer in plain English. AI builds the filter.
-      </p>
-
-      <div className="flex flex-col sm:flex-row gap-2">
-        <input
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
-          placeholder="MNC tech companies in India with more than 500 employees and a VP of Engineering"
-          className="flex-1 rounded-lg bg-neutral-50 border border-neutral-200 px-4 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
-        />
-        <button
-          onClick={handleGenerate}
-          disabled={loading || !prompt.trim()}
-          className="flex items-center justify-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50 shrink-0"
-        >
-          {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-          Generate
-        </button>
-      </div>
-
-      <div className="mt-4">
-        <p className="text-xs font-medium text-neutral-400 mb-2">Try:</p>
-        <div className="flex flex-col gap-1.5">
-          {EXAMPLES.map((ex) => (
-            <button
-              key={ex}
-              onClick={() => setPrompt(ex)}
-              className="text-left text-xs text-neutral-500 hover:text-indigo-600 truncate transition-colors"
-              title={ex}
-            >
-              {ex}
-            </button>
-          ))}
+    <div>
+      <div className="mb-4 flex items-center gap-3">
+        <span className={cn(AI_TILE, "h-8 w-8")}>
+          <Sparkle className="h-4 w-4" weight="fill" />
+        </span>
+        <div>
+          <h2 className="text-[15px] font-semibold tracking-tight text-neutral-900">Build an audience</h2>
+          <p className="text-[13px] text-neutral-500">Describe your ideal customer in plain English. AI builds the filter.</p>
         </div>
       </div>
 
-      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mt-4">{error}</p>}
+      <div className="rounded-xl bg-gradient-to-r from-indigo-400/70 via-violet-400/70 to-fuchsia-400/70 p-px shadow-[0_4px_16px_-4px_rgba(124,58,237,0.25)] transition-shadow focus-within:shadow-[0_6px_24px_-4px_rgba(124,58,237,0.4)]">
+        <div className="flex items-center gap-2 rounded-[11px] bg-white py-1.5 pl-3.5 pr-1.5">
+          <Sparkle className="h-4 w-4 shrink-0 text-violet-500" weight="duotone" />
+          <input
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+            placeholder="MNC tech companies in India with more than 500 employees and a VP of Engineering"
+            aria-label="Describe your audience"
+            className="h-9 min-w-0 flex-1 bg-transparent text-[13px] text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+          />
+          <Kbd className="hidden sm:inline-flex">↵</Kbd>
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={!canSubmit}
+            className={cn(
+              "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium transition-all",
+              canSubmit
+                ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-[0_1px_2px_rgba(124,58,237,0.35)] hover:from-violet-500 hover:to-fuchsia-500"
+                : "bg-neutral-100 text-neutral-400",
+            )}
+          >
+            {loading ? <CircleNotch className="h-4 w-4 animate-spin" weight="bold" /> : <ArrowUp className="h-4 w-4" weight="bold" />}
+            Generate
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 text-xs text-neutral-400">Try</span>
+        {EXAMPLES.map((ex) => (
+          <button
+            key={ex}
+            type="button"
+            onClick={() => setPrompt(ex)}
+            title={ex}
+            className="max-w-[260px] truncate rounded-full bg-white px-2.5 py-1 text-xs text-neutral-600 ring-1 ring-inset ring-neutral-200 transition-colors hover:bg-violet-50 hover:text-violet-700 hover:ring-violet-200"
+          >
+            {ex}
+          </button>
+        ))}
+      </div>
+
+      {error && (
+        <p className="mt-4 flex items-start gap-2 rounded-lg bg-rose-50 px-3 py-2 text-[13px] text-rose-700 ring-1 ring-inset ring-rose-200">
+          <WarningOctagon className="mt-0.5 h-4 w-4 shrink-0" weight="fill" />
+          {error}
+        </p>
+      )}
 
       {result && (
-        <div className="mt-5 rounded-xl border border-indigo-200 bg-indigo-50/60 p-4">
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
-            <p className="text-sm text-neutral-900 font-semibold">Segment created</p>
-            <span className="text-sm text-indigo-700 tabular-nums font-medium">
-              {result.estimateMethod === "unmeasurable"
-                ? "Not measurable"
-                : `${result.estimatedCount.toLocaleString()} matching leads`}
+        <div className="mt-5 rounded-xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-2 text-[13px] font-semibold text-neutral-900">
+              <UsersThree className="h-4 w-4 text-violet-500" weight="duotone" />
+              Segment created
+            </p>
+            <span className={cn("text-[13px] font-medium tabular-nums", result.estimateMethod === "measured" ? "text-indigo-700" : "text-neutral-500")}>
+              {result.estimateMethod === "unmeasurable" ? "Not measurable" : `${result.estimatedCount.toLocaleString()} matching leads`}
             </span>
           </div>
-          <p className="text-xs text-neutral-500 mb-3">
-            {result.estimateMethod === "measured" &&
-              "Measured — counted against your actual leads in this workspace."}
-            {result.estimateMethod === "no_matches" &&
-              "Measured — no leads in your workspace currently match this criteria."}
+          <p className="mt-1 text-xs text-neutral-500">
+            {result.estimateMethod === "measured" && "Measured — counted against your actual leads in this workspace."}
+            {result.estimateMethod === "no_matches" && "Measured — no leads in your workspace currently match this criteria."}
             {result.estimateMethod === "unmeasurable" &&
               "The AI couldn't extract a structured filter from this prompt, so there is nothing to count against your leads. Try naming a title, industry, company or location."}
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {criteriaChips.length > 0 ? (
-              criteriaChips.map((chip) => (
-                <span
-                  key={chip}
-                  className="text-xs text-neutral-700 bg-white border border-neutral-200 rounded-full px-2.5 py-1"
-                >
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {chips.length > 0 ? (
+              chips.map((chip) => (
+                <span key={chip} className="rounded-md bg-violet-50 px-2 py-0.5 text-xs text-violet-700 ring-1 ring-inset ring-violet-200/70">
                   {chip}
                 </span>
               ))

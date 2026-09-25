@@ -1,39 +1,44 @@
-import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "@phosphor-icons/react/ssr";
 import { SHOW_LEGACY_MODULES } from "@/lib/feature-flags";
+import type { NavIcon } from "@/lib/nav-config";
+import PageHeader from "@/components/ui/PageHeader";
+import EmptyState from "@/components/ui/EmptyState";
+import { buttonClasses } from "@/components/ui/Button";
 
+/** Stub for a legacy (non-V1) module. Honest "not built" state — no sample content. */
 export default function ComingSoon({
   title,
   description,
-  icon: Icon,
+  icon,
 }: {
   title: string;
   description: string;
-  icon: LucideIcon;
+  icon: NavIcon;
 }) {
   // Stub pages are not part of V1: 404 unless legacy modules are switched on.
   if (!SHOW_LEGACY_MODULES) notFound();
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <div className="flex items-start gap-3 mb-8">
-        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-          <Icon className="w-5 h-5 text-indigo-600" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-neutral-900">{title}</h1>
-          <p className="text-sm text-neutral-500">{description}</p>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 flex flex-col items-center justify-center text-center py-24 px-6">
-        <div className="w-14 h-14 rounded-xl bg-indigo-50 flex items-center justify-center mb-4">
-          <Icon className="w-7 h-7 text-indigo-500" />
-        </div>
-        <p className="text-neutral-900 font-semibold">This module is coming soon</p>
-        <p className="text-sm text-neutral-500 mt-1 max-w-sm">
-          {title} is on the roadmap. Check back soon or reach out to the team for early access.
-        </p>
+    <div className="flex min-h-full flex-col">
+      <PageHeader title={title} icon={icon} description={description} />
+      <div className="flex flex-1 items-center justify-center px-4">
+        <EmptyState
+          icon={icon}
+          title="This module is coming soon"
+          description={`${title} is on the roadmap. Check back soon or reach out to the team for early access.`}
+          actions={
+            <Link href="/dashboard" className={buttonClasses({ variant: "secondary" })}>
+              <ArrowLeft className="h-3.5 w-3.5" weight="bold" />
+              Back to Command Center
+            </Link>
+          }
+        >
+          <span className="mt-5 inline-flex h-5 items-center rounded-md bg-neutral-100 px-1.5 text-[11px] font-medium text-neutral-500 ring-1 ring-inset ring-neutral-200/80">
+            Legacy module
+          </span>
+        </EmptyState>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { X } from "lucide-react";
+import { X } from "@phosphor-icons/react/ssr";
 import { useRouter } from "next/navigation";
 import { dismissOnboarding } from "@/lib/actions/workspace-profile";
 
@@ -12,11 +12,11 @@ export default function DismissButton() {
     <button
       onClick={() => start(async () => { await dismissOnboarding(); router.refresh(); })}
       disabled={pending}
-      className="text-neutral-400 hover:text-neutral-900 disabled:opacity-50"
+      className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-50"
       aria-label="Dismiss setup checklist"
       title="Dismiss"
     >
-      <X className="w-4 h-4" />
+      <X className="h-4 w-4" weight="bold" />
     </button>
   );
 }

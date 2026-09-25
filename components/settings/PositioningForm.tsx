@@ -1,23 +1,25 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { CheckCircle, LockKey, WarningCircle } from "@phosphor-icons/react/ssr";
 import { saveWorkspaceProfile, type WorkspaceProfileView } from "@/lib/actions/workspace-profile";
 import { parseList, type Icp } from "@/lib/domain/workspace/icp";
+import { Section } from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import { Help, Input, Label, Textarea } from "@/components/ui/Field";
+import { Spinner } from "./bits";
 import IcpScoringSection, { type ScoringDraft } from "./IcpScoringSection";
 import IcpTestPanel from "./IcpTestPanel";
 
-const inputCls =
-  "w-full rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 disabled:opacity-60";
 const join = (l: string[]) => l.join(", ");
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({ id, label, hint, help, children }: { id: string; label: string; hint?: string; help?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <label className="block">
-      <span className="block text-sm font-medium text-neutral-700 mb-1.5">{label}</span>
+    <div>
+      <Label htmlFor={id} hint={hint}>{label}</Label>
       {children}
-      {hint && <span className="block text-xs text-neutral-500 mt-1">{hint}</span>}
-    </label>
+      {help && <Help>{help}</Help>}
+    </div>
   );
 }
 
@@ -89,61 +91,86 @@ export default function PositioningForm({ initial, canEdit }: { initial: Workspa
   }
 
   return (
-    <form onSubmit={submit} className="space-y-6">
-      <section className="rounded-2xl border border-neutral-200 bg-white p-6 space-y-4">
-        <div>
-          <h2 className="text-base font-bold text-neutral-900">What you sell</h2>
-          <p className="text-sm text-neutral-500">Used as the starting point for every message. Be specific about the problem you solve.</p>
+    <form onSubmit={submit} className="space-y-5">
+      <Section title="What you sell" description="The starting point for every message. Be specific about the problem you solve.">
+        <div className="space-y-4">
+          <Field id="pf-company" label="Company name">
+            <Input id="pf-company" value={companyName} onChange={(e) => setCompanyName(e.target.value)} disabled={!canEdit} maxLength={200} placeholder="Acme Inc." />
+          </Field>
+          <Field id="pf-positioning" label="Positioning" hint={`${positioning.length}/2000`} help="e.g. “We help B2B SaaS founders book 10 qualified demos a month without hiring an SDR.”">
+            <Textarea id="pf-positioning" value={positioning} onChange={(e) => setPositioning(e.target.value)} disabled={!canEdit} maxLength={2000} rows={4} />
+          </Field>
         </div>
-        <Field label="Company name">
-          <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} disabled={!canEdit} maxLength={200} placeholder="Acme Inc." className={inputCls} />
-        </Field>
-        <Field label="Positioning" hint="e.g. “We help B2B SaaS founders book 10 qualified demos a month without hiring an SDR.”">
-          <textarea value={positioning} onChange={(e) => setPositioning(e.target.value)} disabled={!canEdit} maxLength={2000} rows={4} className={inputCls} />
-        </Field>
-      </section>
+      </Section>
 
-      <section id="icp" className="rounded-2xl border border-neutral-200 bg-white p-6 space-y-4 scroll-mt-20">
-        <div>
-          <h2 className="text-base font-bold text-neutral-900">Ideal customer profile</h2>
-          <p className="text-sm text-neutral-500">Who you want to reach. Separate multiple values with commas. Leave anything blank to not restrict on it.</p>
-        </div>
-        <Field label="Industries"><input value={industries} onChange={(e) => setIndustries(e.target.value)} disabled={!canEdit} placeholder="B2B SaaS, Fintech" className={inputCls} /></Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Min employees"><input inputMode="numeric" value={minEmp} onChange={(e) => setMinEmp(e.target.value)} disabled={!canEdit} placeholder="50" className={inputCls} /></Field>
-          <Field label="Max employees"><input inputMode="numeric" value={maxEmp} onChange={(e) => setMaxEmp(e.target.value)} disabled={!canEdit} placeholder="500" className={inputCls} /></Field>
-        </div>
-        <Field label="Geographies"><input value={geographies} onChange={(e) => setGeographies(e.target.value)} disabled={!canEdit} placeholder="United States, India, EMEA" className={inputCls} /></Field>
-        <Field label="Target titles"><input value={titles} onChange={(e) => setTitles(e.target.value)} disabled={!canEdit} placeholder="VP Sales, Head of Growth, Founder" className={inputCls} /></Field>
+      <div id="icp" className="scroll-mt-20">
+        <Section title="Ideal customer profile" description="Who you want to reach. Separate values with commas; leave a field blank to not restrict on it.">
+          <div className="space-y-4">
+            <Field id="pf-industries" label="Industries">
+              <Input id="pf-industries" value={industries} onChange={(e) => setIndustries(e.target.value)} disabled={!canEdit} placeholder="B2B SaaS, Fintech" />
+            </Field>
+            <div>
+              <Label htmlFor="pf-min">Company size</Label>
+              <div className="flex items-center gap-2">
+                <Input id="pf-min" aria-label="Min employees" inputMode="numeric" value={minEmp} onChange={(e) => setMinEmp(e.target.value)} disabled={!canEdit} placeholder="50" />
+                <span className="shrink-0 text-xs text-neutral-400">to</span>
+                <Input aria-label="Max employees" inputMode="numeric" value={maxEmp} onChange={(e) => setMaxEmp(e.target.value)} disabled={!canEdit} placeholder="500" />
+                <span className="shrink-0 text-xs text-neutral-400">employees</span>
+              </div>
+            </div>
+            <Field id="pf-geo" label="Geographies">
+              <Input id="pf-geo" value={geographies} onChange={(e) => setGeographies(e.target.value)} disabled={!canEdit} placeholder="United States, India, EMEA" />
+            </Field>
+            <Field id="pf-titles" label="Target titles">
+              <Input id="pf-titles" value={titles} onChange={(e) => setTitles(e.target.value)} disabled={!canEdit} placeholder="VP Sales, Head of Growth, Founder" />
+            </Field>
+          </div>
+        </Section>
+      </div>
 
-        <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-4 space-y-4">
-          <p className="text-sm font-semibold text-neutral-900">Exclusions <span className="font-normal text-neutral-500">— never target these</span></p>
-          <Field label="Industries"><input value={exInd} onChange={(e) => setExInd(e.target.value)} disabled={!canEdit} className={inputCls} /></Field>
-          <Field label="Company domains" hint="e.g. competitor.com, existing-customer.com"><input value={exDom} onChange={(e) => setExDom(e.target.value)} disabled={!canEdit} className={inputCls} /></Field>
-          <Field label="Titles"><input value={exTitles} onChange={(e) => setExTitles(e.target.value)} disabled={!canEdit} placeholder="Intern, Student" className={inputCls} /></Field>
+      <Section title="Exclusions" description="Never target these, even when everything else matches.">
+        <div className="space-y-4">
+          <Field id="pf-ex-ind" label="Industries">
+            <Input id="pf-ex-ind" value={exInd} onChange={(e) => setExInd(e.target.value)} disabled={!canEdit} />
+          </Field>
+          <Field id="pf-ex-dom" label="Company domains" help="e.g. competitor.com, existing-customer.com">
+            <Input id="pf-ex-dom" value={exDom} onChange={(e) => setExDom(e.target.value)} disabled={!canEdit} />
+          </Field>
+          <Field id="pf-ex-titles" label="Titles">
+            <Input id="pf-ex-titles" value={exTitles} onChange={(e) => setExTitles(e.target.value)} disabled={!canEdit} placeholder="Intern, Student" />
+          </Field>
         </div>
-      </section>
+      </Section>
 
-      <section className="rounded-2xl border border-neutral-200 bg-white p-6">
-        <IcpScoringSection value={scoring} onChange={setScoring} canEdit={canEdit} />
-      </section>
+      <IcpScoringSection value={scoring} onChange={setScoring} canEdit={canEdit} />
 
       <IcpTestPanel getIcp={buildIcp} />
 
-      {canEdit ? (
-        <div className="flex items-center gap-3 pt-1">
-          <button type="submit" disabled={pending} className="flex items-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50">
-            {pending && <Loader2 className="w-4 h-4 animate-spin" />} Save
-          </button>
-          {message && (
-            <span role="status" className={message.ok ? "inline-flex items-center gap-1.5 text-sm text-emerald-600" : "text-sm text-rose-600"}>
-              {message.ok && <CheckCircle2 className="w-4 h-4" />}{message.text}
-            </span>
+      <div className="sticky bottom-4 z-10">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/95 px-4 py-3 shadow-[0_8px_24px_-6px_rgba(0,0,0,0.12)] ring-1 ring-neutral-200/80 backdrop-blur">
+          {canEdit ? (
+            <>
+              <div className="min-w-0 text-[13px]" role="status">
+                {message ? (
+                  <span className={message.ok ? "inline-flex items-center gap-1.5 text-emerald-700" : "inline-flex items-center gap-1.5 text-rose-600"}>
+                    {message.ok ? <CheckCircle className="h-4 w-4 shrink-0" weight="fill" /> : <WarningCircle className="h-4 w-4 shrink-0" weight="fill" />}
+                    {message.text}
+                  </span>
+                ) : (
+                  <span className="text-neutral-500">Shared by everyone in this workspace.</span>
+                )}
+              </div>
+              <Button type="submit" variant="primary" disabled={pending} className="min-w-24">
+                {pending && <Spinner className="h-3.5 w-3.5" />} Save changes
+              </Button>
+            </>
+          ) : (
+            <p className="inline-flex items-center gap-1.5 text-[13px] text-neutral-500">
+              <LockKey className="h-4 w-4 text-neutral-400" weight="duotone" /> Only workspace owners and admins can edit this.
+            </p>
           )}
         </div>
-      ) : (
-        <p className="text-sm text-neutral-500">Only workspace owners and admins can edit this.</p>
-      )}
+      </div>
     </form>
   );
 }
