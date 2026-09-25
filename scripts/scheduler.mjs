@@ -1,33 +1,16 @@
 import cron from "node-cron";
 
-// A real always-on process holding the timer in memory — the thing a Vercel
-// serverless function structurally cannot be, since it's frozen/killed
-// between invocations. Run this with `npm run scheduler`, kept alive by pm2,
-// a systemd service, or a Railway/Fly.io/VPS worker process — NOT deployed
-// to Vercel itself. It just calls the same /api/cron/send-campaigns endpoint
-// the Vercel Cron config (vercel.json) or any external pinger would.
+// Minute-cron alternative to `npm run worker` (Phase 5): ticks /api/jobs/tick once a minute. Each tick enqueues what is due
+// (including emails) and runs the queued jobs. Prefer `npm run worker` (near-instant pickup); use this — or any external
+// pinger — where a continuously-running loop isn't possible. The old /api/cron/send-campaigns endpoint is a deprecated alias.
 
 const APP_URL = process.env.APP_URL ?? "http://localhost:3000";
 const CRON_SECRET = process.env.CRON_SECRET;
-const SCHEDULE = process.env.SCHEDULER_CRON ?? "*/10 * * * *";
 const JOBS_SCHEDULE = process.env.JOBS_TICK_CRON ?? "* * * * *";
 
 if (!CRON_SECRET) {
-  console.error("CRON_SECRET is not set — required to call /api/cron/send-campaigns");
+  console.error("CRON_SECRET is not set — required to call /api/jobs/tick");
   process.exit(1);
-}
-
-async function runDispatch() {
-  const startedAt = new Date().toISOString();
-  try {
-    const res = await fetch(`${APP_URL}/api/cron/send-campaigns`, {
-      headers: { Authorization: `Bearer ${CRON_SECRET}` },
-    });
-    const body = await res.json();
-    console.log(`[${startedAt}] dispatch (${res.status}):`, JSON.stringify(body));
-  } catch (err) {
-    console.error(`[${startedAt}] dispatch failed:`, err instanceof Error ? err.message : err);
-  }
 }
 
 // Background jobs (research, re-scoring): drain due jobs. Idempotent and safe to overlap with the in-app `after()` kick.
@@ -42,10 +25,8 @@ async function runJobsTick() {
   }
 }
 
-console.log(`Scheduler started — hitting ${APP_URL}/api/cron/send-campaigns on "${SCHEDULE}"`);
-cron.schedule(SCHEDULE, runDispatch);
+console.log(`Scheduler started — ticking ${APP_URL}/api/jobs/tick on "${JOBS_SCHEDULE}"`);
 cron.schedule(JOBS_SCHEDULE, runJobsTick);
 
 // Fire once immediately on startup rather than waiting for the first tick.
-runDispatch();
 runJobsTick();

@@ -212,7 +212,7 @@ export async function resumeCampaign(actor: Actor, id: number): Promise<void> {
   const [row] = await sql`select paused_at from campaigns where id = ${id} and workspace_id = ${actor.workspaceId}`;
   const pausedAt = row?.paused_at ? new Date(String(row.paused_at)) : new Date();
   const moved = await sql`
-    update campaigns set status = 'running', updated_at = now(), paused_at = null where id = ${id} and workspace_id = ${actor.workspaceId} and status = 'paused' returning id`;
+    update campaigns set status = 'running', updated_at = now(), paused_at = null, paused_reason = null where id = ${id} and workspace_id = ${actor.workspaceId} and status = 'paused' returning id`;
   if (moved.length === 0) throw new AppError("CONFLICT", "The campaign isn't paused any more. Reload the page.");
   const shiftDays = Math.max(0, Math.ceil((Date.now() - pausedAt.getTime()) / 86_400_000));
   await sql.transaction([

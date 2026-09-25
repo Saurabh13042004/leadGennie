@@ -141,6 +141,8 @@ export type CampaignRecord = {
   approvalId: number | null;
   approvedAt: string | null;
   startedAt: string | null;
+  /** Why the system paused this campaign (bad domain, invalid API key, provider outage); null for a person's pause. */
+  pausedReason: string | null;
   totalLeads: number;
   blockedCount: number;
   sentCount: number;

@@ -1,15 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { resetDb, sql } from "../helpers/test-db";
 import { createLead, createWorkspace } from "../helpers/factories";
 
-const sendMock = vi.fn();
-vi.mock("@/lib/email/resend", () => ({
-  isEmailConfigured: () => true,
-  sendCampaignEmail: (input: unknown) => sendMock(input),
-}));
-
 import { filterCompliantLeads, CHANNEL_COOLDOWN_DAYS } from "@/lib/compliance";
-import { processEmailSends } from "@/lib/campaigns/dispatch";
+import { runSends } from "../helpers/sending";
+import { installFakeMail } from "../helpers/sending";
+import { MailProviderError } from "@/lib/email/provider";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { GET as unsubscribe } from "@/app/api/unsubscribe/route";
 
@@ -51,11 +47,10 @@ async function fixture(leadCount = 1) {
 const statusOf = async (sendId: number) =>
   (await sql`select status, error_message, provider_message_id, body from campaign_sends where id = ${sendId}`)[0];
 
+const { mail } = installFakeMail();
 let f: Fixture;
 beforeEach(async () => {
   await resetDb();
-  sendMock.mockReset();
-  sendMock.mockResolvedValue({ id: "provider-msg-1" });
   f = await fixture();
 });
 
@@ -91,32 +86,32 @@ describe("enrollment-time compliance (filterCompliantLeads)", () => {
   });
 });
 
-describe("send-time recheck (processEmailSends)", () => {
+describe("send-time recheck (the campaign_send job)", () => {
   it("sends a compliant message exactly once, with unsubscribe footer, and records the provider id", async () => {
-    const res = await processEmailSends();
+    const res = await runSends();
     expect(res).toMatchObject({ sent: 1, failed: 0, blocked: 0 });
-    expect(sendMock).toHaveBeenCalledTimes(1);
-    const sent = sendMock.mock.calls[0][0];
+    expect(mail().delivered).toHaveLength(1);
+    const sent = mail().delivered[0];
     expect(sent.to).toBe(f.leads[0].email);
-    expect(sent.body).toContain("Hello Person0 at Acme");
-    expect(sent.body).toMatch(/Unsubscribe: http.*\/api\/unsubscribe\?w=/);
+    expect(sent.text).toContain("Hello Person0 at Acme");
+    expect(sent.text).toMatch(/Unsubscribe: http.*\/api\/unsubscribe\?w=/);
 
     const row = await statusOf(f.sends[0]);
     expect(row.status).toBe("sent");
-    expect(row.provider_message_id).toBe("provider-msg-1");
+    expect(row.provider_message_id).toBe(sent.id);
     const [c] = await sql`select sent_count from campaigns where id = ${f.campaignId}`;
     expect(Number(c.sent_count)).toBe(1);
 
-    // Running the dispatcher again must not send again.
-    await processEmailSends();
-    expect(sendMock).toHaveBeenCalledTimes(1);
+    // Running the worker again must not send again.
+    await runSends();
+    expect(mail().delivered).toHaveLength(1);
   });
 
   it("blocks a lead added to DNC AFTER enrollment", async () => {
     await sql`insert into do_not_contact (workspace_id, email) values (${f.workspaceId}, ${f.leads[0].email})`;
-    const res = await processEmailSends();
+    const res = await runSends();
     expect(res).toMatchObject({ sent: 0, blocked: 1 });
-    expect(sendMock).not.toHaveBeenCalled();
+    expect(mail().requests).toHaveLength(0);
     expect((await statusOf(f.sends[0])).status).toBe("blocked");
   });
 
@@ -125,50 +120,57 @@ describe("send-time recheck (processEmailSends)", () => {
     await sql`
       insert into campaign_sends (workspace_id, campaign_id, lead_id, step_id, channel, status, scheduled_at, sent_at, body)
       values (${f.workspaceId}, ${other.id}, ${f.leads[0].id}, ${f.stepId}, 'email', 'sent', now() - interval '1 day', now() - interval '1 day', 'x')`;
-    const res = await processEmailSends();
+    const res = await runSends();
     expect(res.blocked).toBe(1);
-    expect(sendMock).not.toHaveBeenCalled();
+    expect(mail().requests).toHaveLength(0);
   });
 
-  it("blocks when the mailbox was paused after approval", async () => {
+  it("pauses the campaign (nothing sent, send kept) when the mailbox was paused after approval", async () => {
     await sql`update mailboxes set status = 'paused' where id = ${f.mailboxId}`;
-    const res = await processEmailSends();
-    expect(res.blocked).toBe(1);
-    expect(sendMock).not.toHaveBeenCalled();
+    const res = await runSends();
+    expect(res).toMatchObject({ sent: 0, pending: 1 });
+    expect(mail().requests).toHaveLength(0);
+    const [c] = await sql`select status, paused_reason from campaigns where id = ${f.campaignId}`;
+    expect(c.status).toBe("paused");
+    expect(String(c.paused_reason)).toMatch(/no longer active on a verified domain/);
   });
 
-  it("blocks when the domain lost verification", async () => {
+  it("pauses the campaign when the domain lost verification", async () => {
     await sql`update domains set status = 'pending' where id = ${f.domainId}`;
-    expect((await processEmailSends()).blocked).toBe(1);
-    expect(sendMock).not.toHaveBeenCalled();
+    await runSends();
+    expect((await sql`select status from campaigns where id = ${f.campaignId}`)[0].status).toBe("paused");
+    expect(mail().requests).toHaveLength(0);
   });
 
   it("does not send for a paused campaign", async () => {
     await sql`update campaigns set status = 'paused' where id = ${f.campaignId}`;
-    expect((await processEmailSends()).processed).toBe(0);
-    expect(sendMock).not.toHaveBeenCalled();
+    expect((await runSends()).processed).toBe(0);
+    expect(mail().requests).toHaveLength(0);
   });
 
-  it("marks a lead with no email as failed instead of sending", async () => {
+  it("stops a lead with no email instead of sending", async () => {
     await sql`update leads set email = null where id = ${f.leads[0].id}`;
-    expect((await processEmailSends()).failed).toBe(1);
-    expect(sendMock).not.toHaveBeenCalled();
+    const res = await runSends();
+    expect(res.blocked).toBe(1);
+    expect((await statusOf(f.sends[0])).error_message).toBe("Lead has no email address");
+    expect(mail().requests).toHaveLength(0);
   });
 
-  it("records a provider failure without marking the send as sent", async () => {
-    sendMock.mockRejectedValueOnce(new Error("Resend 500"));
-    const res = await processEmailSends();
+  it("a permanent provider rejection fails the email — no retry, not counted as sent", async () => {
+    mail().failNext(new MailProviderError("The recipient address is invalid", "permanent", "validation_error"));
+    const res = await runSends();
     expect(res.failed).toBe(1);
     const row = await statusOf(f.sends[0]);
     expect(row.status).toBe("failed");
-    expect(row.error_message).toBe("Resend 500");
+    expect(row.error_message).toBe("The recipient address is invalid");
+    expect(mail().requests).toHaveLength(1);
     const [c] = await sql`select sent_count from campaigns where id = ${f.campaignId}`;
     expect(Number(c.sent_count)).toBe(0);
   });
 
-  it("scoped dispatch only touches the given workspace", async () => {
+  it("a workspace-scoped run only touches the given workspace", async () => {
     const other = await fixture();
-    await processEmailSends(f.workspaceId);
+    await runSends({ workspaceId: f.workspaceId });
     expect((await statusOf(f.sends[0])).status).toBe("sent");
     expect((await statusOf(other.sends[0])).status).toBe("pending");
   });
@@ -185,9 +187,10 @@ describe("unsubscribe link", () => {
     const dnc = await sql`select source from do_not_contact where workspace_id = ${f.workspaceId} and lower(email) = lower(${email})`;
     expect(dnc[0].source).toBe("unsubscribe_link");
 
-    // The still-pending later step for that lead is now blocked, not sent.
-    expect((await processEmailSends()).blocked).toBe(1);
-    expect(sendMock).not.toHaveBeenCalled();
+    // The still-pending step for that lead is canceled at once (not merely blocked when it comes due), and nothing is sent.
+    expect((await statusOf(f.sends[0])).status).toBe("canceled");
+    expect((await runSends()).processed).toBe(0);
+    expect(mail().requests).toHaveLength(0);
   });
 
   it("is idempotent", async () => {

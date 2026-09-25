@@ -57,7 +57,13 @@ export async function enqueue(input: EnqueueInput): Promise<{ job: JobRow; creat
  * the same job. A job whose lease expired (worker crashed mid-run) is claimable again and that counts as a failure
  * (attempts + 1) so a poison job can't crash workers forever.
  */
-export async function claimJobs(workerId: string, limit: number, leaseSeconds: number, types?: string[]): Promise<JobRow[]> {
+export async function claimJobs(
+  workerId: string,
+  limit: number,
+  leaseSeconds: number,
+  types?: string[],
+  filter: { excludeTypes?: string[]; workspaceId?: number } = {},
+): Promise<JobRow[]> {
   const rows = await sql`
     /* workspace-scope-ok: the worker is cross-tenant by design; every job row carries its own workspace_id */
     update jobs
@@ -70,6 +76,8 @@ export async function claimJobs(workerId: string, limit: number, leaseSeconds: n
       select id from jobs
       where ((status = 'queued' and run_at <= now()) or (status = 'running' and locked_until < now()))
         and (${types ?? null}::text[] is null or type = any(${types ?? null}::text[]))
+        and (${filter.excludeTypes ?? null}::text[] is null or not (type = any(${filter.excludeTypes ?? null}::text[])))
+        and (${filter.workspaceId ?? null}::bigint is null or workspace_id = ${filter.workspaceId ?? null})
       order by run_at
       limit ${limit}
       for update skip locked

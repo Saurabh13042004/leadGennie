@@ -1,15 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { resetDb, sql } from "../helpers/test-db";
 import { createLead, createUser, createWorkspace } from "../helpers/factories";
 import { setSession } from "../helpers/session";
 
-const sendMock = vi.fn();
-vi.mock("@/lib/email/resend", () => ({
-  isEmailConfigured: () => true,
-  sendCampaignEmail: (input: unknown) => sendMock(input),
-}));
-
-import { processEmailSends } from "@/lib/campaigns/dispatch";
+import { runSends, installFakeMail } from "../helpers/sending";
 import { decideApproval } from "@/lib/actions/approvals";
 import { resolveAudience } from "@/lib/domain/campaigns/audience";
 import { cancelCampaign, launchCampaign, pauseCampaign, resumeCampaign, submitForApproval } from "@/lib/domain/campaigns/lifecycle";
@@ -36,7 +30,9 @@ async function setup() {
   const { workspaceId, user } = await createWorkspace();
   setSession({ workspaceId, userId: user.id, email: user.email, role: "owner" });
   const [domain] = await sql`insert into domains (workspace_id, resend_domain_id, name, status) values (${workspaceId}, ${`rd${workspaceId}`}, ${`w${workspaceId}.example.com`}, 'verified') returning id`;
-  const [mailbox] = await sql`insert into mailboxes (workspace_id, domain_id, email, status, daily_limit) values (${workspaceId}, ${domain.id}, ${`me@w${workspaceId}.example.com`}, 'active', 100) returning id`;
+  // An established mailbox (created 30 days ago), so the warm-up ramp doesn't cap these tests; the ramp has its own tests.
+  const [mailbox] = await sql`insert into mailboxes (workspace_id, domain_id, email, status, daily_limit, created_at) values (${workspaceId}, ${domain.id}, ${`me@w${workspaceId}.example.com`}, 'active', 100, now() - interval '30 days') returning id`;
+  await sql`update workspaces set sender_name = 'Leadgennie Solutions', sender_address = '221B Baker Street, London NW1 6XE, United Kingdom' where id = ${workspaceId}`;
   const leads = [];
   for (const [name, company] of [["Sarah Chen", "Acme"], ["Tom Baker", "Globex"], ["Priya Nair", "Initech"]]) leads.push(await createLead(workspaceId, { fullName: name, company }));
   return { workspaceId, user, actor: { workspaceId, userId: user.id }, mailboxId: Number(mailbox.id), leads };
@@ -66,11 +62,10 @@ async function readyCampaign(w: W) {
 const routeCtx = <P extends Record<string, string>>(p: P) => ({ params: Promise.resolve(p) });
 const json = (body: unknown, method = "POST") => new Request("http://t/api", { method, body: JSON.stringify(body), headers: { "content-type": "application/json" } });
 
+const { mail } = installFakeMail();
 let w: W;
 beforeEach(async () => {
   await resetDb();
-  sendMock.mockReset();
-  sendMock.mockResolvedValue({ id: "msg-1" });
   w = await setup();
 });
 
@@ -313,12 +308,16 @@ describe("launch → dispatch", () => {
     const after = await previewForLead(w.workspaceId, id, w.leads[0].id);
     expect(after.steps.map((s) => [s.subject, s.body])).toEqual(before.steps.map((s) => [s.subject, s.body]));
 
-    const r = await processEmailSends(w.workspaceId);
+    const r = await runSends({ workspaceId: w.workspaceId });
     expect(r.sent).toBe(3); // step 1 for each lead is due now; follow-ups are days away
-    const sarahMail = sendMock.mock.calls.map((c) => c[0]).find((m) => m.to === w.leads[0].email);
+    const sarahMail = mail().delivered.find((m) => m.to === w.leads[0].email)!;
     expect(sarahMail.subject).toBe(after.steps[0].subject);
-    expect(sarahMail.body).toBe(`${after.steps[0].body}${after.steps[0].footer}`);
+    expect(sarahMail.text).toBe(`${after.steps[0].body}${after.steps[0].footer}`);
     expect(sarahMail.from).toBe(`me@w${w.workspaceId}.example.com`);
+    // The footer names the sender and carries a postal address (identity), and every send has one-click unsubscribe headers.
+    expect(sarahMail.text).toContain("Leadgennie Solutions\n221B Baker Street");
+    expect(sarahMail.headers?.["List-Unsubscribe"]).toMatch(/^<http.*\/api\/unsubscribe\?w=/);
+    expect(sarahMail.headers?.["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
 
     const cl = await one(sql`select status, current_step, next_action_at from campaign_leads where campaign_id = ${id} and lead_id = ${w.leads[0].id}`);
     expect(cl).toMatchObject({ status: "active", current_step: 1 });
@@ -328,9 +327,9 @@ describe("launch → dispatch", () => {
   it("a follow-up is not blocked by its own campaign's first email (cooldown is cross-campaign only)", async () => {
     const { id } = await readyCampaign(w);
     await launchCampaign(w.actor, id);
-    await processEmailSends(w.workspaceId);
+    await runSends({ workspaceId: w.workspaceId });
     await sql`update campaign_sends set scheduled_at = now() - interval '1 minute' where campaign_id = ${id} and status = 'pending'`;
-    const r = await processEmailSends(w.workspaceId);
+    const r = await runSends({ workspaceId: w.workspaceId });
     expect(r.blocked).toBe(0);
     expect(r.sent).toBeGreaterThan(0);
   });
@@ -341,7 +340,7 @@ describe("launch → dispatch", () => {
     await launchCampaign(w.actor, id);
     for (let i = 0; i < 6; i++) {
       await sql`update campaign_sends set scheduled_at = now() - interval '1 minute' where campaign_id = ${id} and status = 'pending'`;
-      await processEmailSends(w.workspaceId);
+      await runSends({ workspaceId: w.workspaceId });
     }
     expect(await n(sql`select count(*)::int as n from campaign_sends where campaign_id = ${id} and status = 'sent'`)).toBe(12);
     expect((await loadCampaign(w.workspaceId, id)).status).toBe("completed");
@@ -351,10 +350,10 @@ describe("launch → dispatch", () => {
   it("a lead suppressed mid-sequence is stopped and their later steps are canceled", async () => {
     const { id } = await readyCampaign(w);
     await launchCampaign(w.actor, id);
-    await processEmailSends(w.workspaceId);
+    await runSends({ workspaceId: w.workspaceId });
     await sql`insert into do_not_contact (workspace_id, email, source) values (${w.workspaceId}, ${w.leads[0].email}, 'unsubscribe_link')`;
     await sql`update campaign_sends set scheduled_at = now() - interval '1 minute' where campaign_id = ${id} and status = 'pending'`;
-    await processEmailSends(w.workspaceId);
+    await runSends({ workspaceId: w.workspaceId });
     const sarah = await one(sql`select status, stop_reason from campaign_leads where campaign_id = ${id} and lead_id = ${w.leads[0].id}`);
     expect(sarah.status).toBe("blocked");
     expect(await n(sql`select count(*)::int as n from campaign_sends where campaign_id = ${id} and lead_id = ${w.leads[0].id} and status = 'pending'`)).toBe(0);
@@ -364,8 +363,8 @@ describe("launch → dispatch", () => {
     const { id } = await readyCampaign(w);
     const r = await sendTestEmail(w.actor, id, w.leads[0].id, 1);
     expect(r.to).toBe(w.user.email);
-    expect(sendMock).toHaveBeenCalledTimes(1);
-    expect(sendMock.mock.calls[0][0]).toMatchObject({ to: w.user.email, subject: "[Test] Question for Acme" });
+    expect(mail().requests).toHaveLength(1);
+    expect(mail().requests[0]).toMatchObject({ to: w.user.email, subject: "[Test] Question for Acme" });
     expect(await n(sql`select count(*)::int as n from campaign_sends where campaign_id = ${id}`)).toBe(0);
   });
 });
@@ -382,7 +381,7 @@ describe("editing after approval", () => {
   it("while running: sent steps are locked, unsent steps re-render into the pending sends, structure is fixed", async () => {
     const { id } = await readyCampaign(w);
     await launchCampaign(w.actor, id);
-    await processEmailSends(w.workspaceId); // step 1 goes out
+    await runSends({ workspaceId: w.workspaceId }); // step 1 goes out
     await expect(updateSteps(w.actor, id, STEPS.map((s, i) => (i === 0 ? { ...s, body: "Rewritten" } : s)))).rejects.toThrow(/already been sent/);
     await expect(updateSteps(w.actor, id, STEPS.slice(0, 3))).rejects.toThrow(/added or removed/);
     await expect(updateSteps(w.actor, id, STEPS.map((s, i) => (i === 2 ? { ...s, waitDays: 9 } : s)))).rejects.toThrow(/timing and mode/);
@@ -406,7 +405,7 @@ describe("pause / resume / cancel", () => {
     await pauseCampaign(w.actor, id);
     expect((await loadCampaign(w.workspaceId, id)).status).toBe("paused");
     expect(await n(sql`select count(*)::int as n from campaign_leads where campaign_id = ${id} and next_action_at is not null`)).toBe(0);
-    expect((await processEmailSends(w.workspaceId)).sent).toBe(0);
+    expect((await runSends({ workspaceId: w.workspaceId })).sent).toBe(0);
 
     const before = await sql`select id, scheduled_at from campaign_sends where campaign_id = ${id} and status = 'pending' order by id`;
     await sql`update campaigns set paused_at = now() - interval '2 days 3 hours' where id = ${id}`;
@@ -425,7 +424,7 @@ describe("pause / resume / cancel", () => {
     expect(await n(sql`select count(*)::int as n from campaign_sends where campaign_id = ${id} and status = 'pending'`)).toBe(0);
     expect(await n(sql`select count(*)::int as n from campaign_leads where campaign_id = ${id} and status = 'stopped' and stop_reason = 'Campaign canceled'`)).toBe(3);
     await expect(resumeCampaign(w.actor, id)).rejects.toMatchObject({ code: "CONFLICT" });
-    expect((await processEmailSends(w.workspaceId)).sent).toBe(0);
+    expect((await runSends({ workspaceId: w.workspaceId })).sent).toBe(0);
   });
 
   it("canceling a campaign awaiting approval closes the request so it can't be approved later", async () => {
@@ -486,7 +485,7 @@ describe("list, detail, tenancy, routes", () => {
   it("list shows real counts only — no reply rate, replies null until tracked", async () => {
     const { id } = await readyCampaign(w);
     await launchCampaign(w.actor, id);
-    await processEmailSends(w.workspaceId);
+    await runSends({ workspaceId: w.workspaceId });
     const [item] = await listCampaignItems(w.workspaceId);
     expect(item).toMatchObject({ id, status: "running", audienceSize: 3, sent: 3, replied: null, steps: 4 });
     expect(item.nextSendAt).not.toBeNull();

@@ -55,6 +55,7 @@ export default function CampaignCard({ campaign: c, canApprove }: { campaign: Ca
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-neutral-500">
             <EnvelopeSimple className="h-3.5 w-3.5 shrink-0 text-neutral-400" weight="duotone" aria-label="Email" />
             <span className="truncate">{c.steps} email step{c.steps === 1 ? "" : "s"}{c.sendModel === "legacy" ? " · created with the old wizard" : ""}</span>
+            {c.pausedReason && <span className="truncate text-amber-700" title={c.pausedReason}>· {c.pausedReason}</span>}
             {launched && c.excluded > 0 && (
               <span className="inline-flex shrink-0 items-center gap-1 text-amber-700">
                 <span className="text-neutral-300">·</span>

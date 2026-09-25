@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db/client";
+import { getSendingHealth, type SendingHealth } from "@/lib/domain/sending/health";
 import { loadCampaign } from "./repository";
 import type { CampaignRecord, CampaignStatus, SendModel } from "./types";
 
@@ -17,12 +18,13 @@ export type CampaignListItem = {
   nextSendAt: string | null;
   steps: number;
   approvalId: number | null;
+  pausedReason: string | null;
   createdAt: string;
 };
 
 export async function listCampaignItems(workspaceId: number): Promise<CampaignListItem[]> {
   const rows = await sql`
-    select c.id, c.name, c.status, c.send_model, c.total_leads, c.blocked_count, c.replied_count, c.approval_id, c.created_at,
+    select c.id, c.name, c.status, c.send_model, c.total_leads, c.blocked_count, c.replied_count, c.approval_id, c.paused_reason, c.created_at,
       (select count(*)::int from campaign_sends s where s.campaign_id = c.id and s.workspace_id = c.workspace_id and s.status = 'sent') as sent,
       (select min(s.scheduled_at) from campaign_sends s where s.campaign_id = c.id and s.workspace_id = c.workspace_id and s.status = 'pending') as next_send,
       (select count(*)::int from campaign_steps st where st.campaign_id = c.id) as steps
@@ -34,7 +36,7 @@ export async function listCampaignItems(workspaceId: number): Promise<CampaignLi
     audienceSize: Number(r.total_leads), excluded: Number(r.blocked_count), sent: Number(r.sent),
     replied: Number(r.replied_count) > 0 ? Number(r.replied_count) : null,
     nextSendAt: r.next_send && (r.status === "running" || r.status === "paused") ? new Date(String(r.next_send)).toISOString() : null,
-    steps: Number(r.steps), approvalId: r.approval_id === null ? null : Number(r.approval_id), createdAt: new Date(String(r.created_at)).toISOString(),
+    steps: Number(r.steps), approvalId: r.approval_id === null ? null : Number(r.approval_id), pausedReason: r.status === "paused" ? ((r.paused_reason as string | null) ?? null) : null, createdAt: new Date(String(r.created_at)).toISOString(),
   }));
 }
 
@@ -57,13 +59,18 @@ export type CampaignDetail = {
   sendCounts: Record<string, number>;
   nextSendAt: string | null;
   lockedStepIds: number[];
+  /** From `messages` (what the provider actually accepted and told us) — not from a counter. */
+  messages: { sending: number; sent: number; delivered: number; bounced: number; complained: number; failed: number };
+  failedSends: { sendId: number; leadName: string; email: string | null; step: number; error: string }[];
+  deadJobs: { sendId: number; error: string }[];
+  health: SendingHealth;
   activity: { id: number; at: string; summary: string; actor: string | null }[];
 };
 
 export async function getCampaignDetail(workspaceId: number, id: number, opts: { status?: string; limit?: number } = {}): Promise<CampaignDetail> {
   const campaign = await loadCampaign(workspaceId, id);
   const limit = Math.min(opts.limit ?? 200, 500);
-  const [approvalRows, countRows, leadRows, sendRows, nextRows, lockedRows, activityRows] = await Promise.all([
+  const [approvalRows, countRows, leadRows, sendRows, nextRows, lockedRows, activityRows, messageRows, failedRows, deadRows, health] = await Promise.all([
     campaign.approvalId
       ? sql`select a.id, a.status, a.decided_at, a.decision_note, a.payload, ru.name as requested_by, du.name as decided_by
             from approvals a left join users ru on ru.id = a.requested_by_user_id left join users du on du.id = a.decided_by_user_id
@@ -92,7 +99,14 @@ export async function getCampaignDetail(workspaceId: number, id: number, opts: {
     sql`select distinct step_id from campaign_sends where campaign_id = ${id} and workspace_id = ${workspaceId} and status in ('sent', 'queued')`,
     sql`select a.id, a.created_at, a.summary, u.name from activities a left join users u on u.id = a.actor_user_id
         where a.workspace_id = ${workspaceId} and a.entity_type = 'campaign' and a.entity_id = ${id} order by a.id desc limit 30`,
+    sql`select status, count(*)::int as n from messages where campaign_id = ${id} and workspace_id = ${workspaceId} group by status`,
+    sql`select cs.id, l.full_name, l.email, st.step_order, cs.error_message from campaign_sends cs join leads l on l.id = cs.lead_id and l.workspace_id = cs.workspace_id
+        join campaign_steps st on st.id = cs.step_id where cs.campaign_id = ${id} and cs.workspace_id = ${workspaceId} and cs.status = 'failed' order by cs.id limit 50`,
+    sql`select cs.id, j.error from jobs j join campaign_sends cs on cs.id::text = j.payload ->> 'campaignSendId' and cs.workspace_id = j.workspace_id
+        where j.workspace_id = ${workspaceId} and j.type = 'campaign_send' and j.status = 'dead' and cs.campaign_id = ${id} order by j.id desc limit 20`,
+    getSendingHealth(workspaceId),
   ]);
+  const m = Object.fromEntries(messageRows.map((r) => [String(r.status), Number(r.n)]));
   const a = approvalRows[0];
   const tally = (rows: Record<string, unknown>[]) => Object.fromEntries(rows.map((r) => [String(r.status), Number(r.n)]));
   return {
@@ -110,6 +124,10 @@ export async function getCampaignDetail(workspaceId: number, id: number, opts: {
     sendCounts: tally(sendRows),
     nextSendAt: nextRows[0]?.at && (campaign.status === "running" || campaign.status === "paused") ? new Date(String(nextRows[0].at)).toISOString() : null,
     lockedStepIds: lockedRows.map((r) => Number(r.step_id)),
+    messages: { sending: m.sending ?? 0, sent: m.sent ?? 0, delivered: m.delivered ?? 0, bounced: m.bounced ?? 0, complained: m.complained ?? 0, failed: m.failed ?? 0 },
+    failedSends: failedRows.map((r) => ({ sendId: Number(r.id), leadName: String(r.full_name), email: (r.email as string | null) ?? null, step: Number(r.step_order), error: String(r.error_message ?? "Failed") })),
+    deadJobs: deadRows.map((r) => ({ sendId: Number(r.id), error: String(r.error ?? "") })),
+    health,
     activity: activityRows.map((r) => ({ id: Number(r.id), at: new Date(String(r.created_at)).toISOString(), summary: String(r.summary), actor: (r.name as string | null) ?? null })),
   };
 }

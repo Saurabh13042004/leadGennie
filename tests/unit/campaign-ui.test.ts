@@ -16,7 +16,7 @@ import { CAMPAIGN_STATUSES, EXCLUSION_REASONS } from "@/lib/domain/campaigns/typ
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
 const item = (over: Partial<CampaignListItem> = {}): CampaignListItem => ({
   id: 7, name: "Q4 outbound", status: "running", sendModel: "leads", audienceSize: 40, excluded: 3, sent: 12, replied: null,
-  nextSendAt: "2026-09-26T09:00:00.000Z", steps: 4, approvalId: 1, createdAt: "2026-09-20T00:00:00.000Z", ...over,
+  nextSendAt: "2026-09-26T09:00:00.000Z", steps: 4, approvalId: 1, pausedReason: null, createdAt: "2026-09-20T00:00:00.000Z", ...over,
 });
 
 describe("campaign list card", () => {

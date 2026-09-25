@@ -95,7 +95,7 @@ jobs
 - **"Await external" pattern** (engine runs): a handler that has submitted an engine run re-queues itself with `run_at = now()+5s` and the engine `run_id` in `state`, until the run is terminal. Survives restarts of either side; resubmission after an engine restart uses the same idempotency key.
 - **Cancel/pause**: `status='canceled'` checked between units; campaigns pause by flipping campaign status; canceling a research job also calls engine `POST /v1/runs/{id}/cancel`.
 - **Handlers are idempotent by construction** (natural keys, `ON CONFLICT`).
-- **Worker**: `POST /api/jobs/tick` (Bearer `CRON_SECRET`) drains up to N jobs within a time budget; `scripts/scheduler.mjs` calls it every minute; optional always-on `scripts/worker.mjs`. `/api/cron/send-campaigns` becomes a thin alias in Phase 5.
+- **Worker**: `POST /api/jobs/tick` (Bearer `CRON_SECRET`) drains up to N jobs within a time budget; `scripts/scheduler.mjs` calls it every minute; optional always-on `scripts/worker.mjs`. `/api/cron/send-campaigns` is a deprecated alias for the tick (Phase 5).
 - **Job types** (PLAN §41): `lead_enrichment`, `company_research`, `lead_research`, `lead_scoring`, `personalization`, `campaign_send`, `campaign_followup`, `email_sync`, `reply_classification`, `analytics_aggregation`, `agent_run`, `agent_step`.
 - **Observability**: every attempt logs `job_id, type, workspace_id, duration_ms, status, attempts, error`.
 
@@ -150,16 +150,24 @@ Data acquisition (search, news, jobs, licensed people/company data — D-03) is 
 
 A claim without evidence is never a fact anywhere in the system.
 
-## Email pipeline (target)
+## Email pipeline (as built in Phase 5; reply half is Phase 6)
 
 ```
-Campaign(approved) ─► scheduler ─► campaign_leads.next_action_at ─► job:campaign_send
-   ─► precheck (DNC, unsub, cooldown, bounce, daily/total limit, mailbox status) ─► MailProvider.send
-   ─► messages(out) + campaign_sends.status ─► provider webhooks (delivered/bounced/complained/opened)
-   ─► inbound reply ─► messages(in) ─► inbox_threads ─► job:reply_classification ─► stop sequence for that lead
+tick ─► scheduler (campaign_sends: due + running + no live job) ─► job:campaign_send  (key send:{id}:{generation})
+   ─► load ─► guards (pending? campaign running? lead active? due?) ─► reconcile any earlier attempt
+   ─► prechecks (no email / invalid / DNC / cooldown excl. own campaign; mailbox+domain healthy; provider configured; sender identity)
+   ─► SendGate (pure: window · campaign/day · mailbox/day+warm-up ramp · workspace cap · per-domain/hour · jittered spacing)
+   ─► CLAIM: insert `messages(status=sending)` BEFORE the provider call, caps re-verified in the same statement under a per-mailbox advisory lock
+   ─► MailProvider.send(idempotency key)  ─► finalize in ONE transaction (message, send, counters, next step timing, lead state)
+   ─► provider webhooks ─► message_events (idempotent on provider event id) ─► message status (forward only) / suppression
+   ─► [Phase 6] inbound reply ─► messages(in) ─► inbox_threads ─► reply_classification ─► stop that lead's sequence
 ```
 
-The existing precheck logic in `lib/campaigns/dispatch.ts` and `lib/compliance.ts` is retained and moved into the `campaign_send` handler.
+**Delivery guarantee: at-most-once, crash-safe.** The message row exists before the provider is called, so a worker killed at any point leaves a durable record. The retry re-sends the *stored* payload with the *same* idempotency key (Resend returns the original id and sends nothing new for 24 h); past 20 h the key isn't trusted and the message is flagged `failed / unknown_outcome` for a person — a missed email over a duplicate. A double-delivered job hits `on conflict (campaign_send_id)` and only reconciles.
+
+**Error classes** (`ProviderErrorClass`): `retryable`/`rate_limited`/`quota` back off and retry; `permanent` fails that email and stops that lead; `auth`/`domain` release the claim and **auto-pause the campaign** with `paused_reason`; ≥5 exhausted provider failures in 30 min also pause it. An ambiguous network failure keeps the message `sending` and re-checks in 15 min.
+
+**Separation:** request-triggered ticks (`kickWorker`) exclude `campaign_send` and skip schedulers, so no page view ever sends mail; "Queue due emails now" only enqueues. Legacy pre-rendered `campaign_sends` (send_model `legacy`, no window) drain through the same path — there is no second sender.
 
 ## LLM usage
 

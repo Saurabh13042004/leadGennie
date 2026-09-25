@@ -2,10 +2,13 @@ import { sql } from "@/lib/db/client";
 import { AppError } from "@/lib/api/errors";
 import { logActivity } from "@/lib/activity";
 import { appBaseUrl, renderStep, unsubscribeFooter } from "@/lib/campaigns/render";
-import { isEmailConfigured, sendCampaignEmail } from "@/lib/email/resend";
+import "@/lib/email/resend-provider";
+import { getMailProvider, toProviderError } from "@/lib/email/provider";
+import { complianceHeaders } from "@/lib/domain/sending/identity";
 import { lintEmailCopy } from "@/lib/domain/personalization/validators";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { resolveAudience } from "./audience";
+import { loadSenderIdentity } from "@/lib/domain/sending/identity";
 import { loadCampaign, loadCurrentDrafts, loadMailbox } from "./repository";
 import { planSchedule } from "./schedule";
 import { EXCLUSION_LABEL, type ExclusionReason } from "./types";
@@ -49,7 +52,8 @@ export async function previewForLead(workspaceId: number, campaignId: number, le
   if (!l) throw new AppError("NOT_FOUND", "Lead not found.");
   const lead = { id: Number(l.id), name: String(l.full_name), email: (l.email as string | null) ?? null, company: (l.company as string | null) ?? null };
   const mailbox = await loadMailbox(workspaceId, c.mailboxId);
-  const footer = lead.email ? unsubscribeFooter(buildUnsubscribeUrl(appBaseUrl(), workspaceId, lead.email)) : "";
+  const identity = await loadSenderIdentity(workspaceId);
+  const footer = lead.email ? unsubscribeFooter(buildUnsubscribeUrl(appBaseUrl(), workspaceId, lead.email), identity) : "";
 
   // After launch: show the real, stored sends.
   const sent = await sql`
@@ -117,7 +121,8 @@ export async function previewCandidates(workspaceId: number, campaignId: number)
 
 /** Sends one step, exactly as rendered for `leadId`, to the signed-in user's own address. Never to the lead. */
 export async function sendTestEmail(actor: Actor & { userId: number }, campaignId: number, leadId: number, stepOrder: number): Promise<{ to: string }> {
-  if (!isEmailConfigured()) throw new AppError("NOT_CONFIGURED", "Email sending isn't configured (RESEND_API_KEY).");
+  const provider = getMailProvider();
+  if (!provider.isConfigured()) throw new AppError("NOT_CONFIGURED", "Email sending isn't configured (RESEND_API_KEY).");
   const preview = await previewForLead(actor.workspaceId, campaignId, leadId);
   const step = preview.steps.find((s) => s.order === stepOrder);
   if (!step) throw new AppError("NOT_FOUND", "That step has nothing to send for this lead.");
@@ -126,7 +131,16 @@ export async function sendTestEmail(actor: Actor & { userId: number }, campaignI
   if (!mailbox || !mailbox.active || !mailbox.verified) throw new AppError("VALIDATION_ERROR", "The sending mailbox isn't active on a verified domain.");
   const [u] = await sql`select email from users where id = ${actor.userId}`;
   if (!u?.email) throw new AppError("NOT_FOUND", "Your account has no email address.");
-  await sendCampaignEmail({ to: String(u.email), from: mailbox.email, subject: `[Test] ${step.subject}`, body: `${step.body}${step.footer}` });
+  try {
+    // A test is a person clicking a button, once: a random idempotency key, and it goes to the signed-in user only.
+    await provider.send({
+      to: String(u.email), from: mailbox.email, subject: `[Test] ${step.subject}`, text: `${step.body}${step.footer}`, headers: complianceHeaders(appBaseUrl()),
+      idempotencyKey: `test-${crypto.randomUUID()}`,
+    });
+  } catch (e) {
+    const err = toProviderError(e);
+    throw new AppError(err.cls === "auth" || err.cls === "domain" ? "NOT_CONFIGURED" : "PROVIDER_ERROR", `Couldn't send the test: ${err.message}`);
+  }
   await logActivity({
     workspaceId: actor.workspaceId, actorUserId: actor.userId, type: "campaign.test_sent", entityType: "campaign", entityId: campaignId,
     summary: `Sent a test of step ${stepOrder} (as ${preview.lead.name}) to ${u.email}`,

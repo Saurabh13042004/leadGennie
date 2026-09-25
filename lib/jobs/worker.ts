@@ -1,6 +1,7 @@
 import { createLogger } from "@/lib/log";
 import { claimJobs, completeJob, failJob, rescheduleJob } from "./queue";
-import { getJobHandler, jobSettledHooks } from "./registry";
+import { getJobHandler, getJobPayloadSchema, jobSettledHooks } from "./registry";
+import { runSchedulers } from "./schedulers";
 import { JobError, type JobRow } from "./types";
 
 export type TickResult = { claimed: number; done: number; waiting: number; retried: number; dead: number; lost: number };
@@ -13,6 +14,12 @@ export type TickOptions = {
   leaseSeconds?: number;
   workerId?: string;
   types?: string[];
+  /** Never claim these job types (a request-triggered tick must not send email: sending belongs to the worker). */
+  excludeTypes?: string[];
+  /** Only this workspace's jobs (a manual, workspace-scoped nudge). */
+  workspaceId?: number;
+  /** Skip the scheduler pass (used by the post-response `after()` kick). */
+  skipSchedulers?: boolean;
 };
 
 const log = createLogger({ scope: "jobs" });
@@ -28,8 +35,11 @@ export async function runTick(opts: TickOptions = {}): Promise<TickResult> {
   const batchSize = opts.batchSize ?? 5;
   const result: TickResult = { claimed: 0, done: 0, waiting: 0, retried: 0, dead: 0, lost: 0 };
 
+  // Find work first (enqueue what's due), then do it — one tick both schedules and runs.
+  if (!opts.skipSchedulers) await runSchedulers({ workspaceId: opts.workspaceId });
+
   while (result.claimed < maxJobs && Date.now() < deadline) {
-    const batch = await claimJobs(workerId, Math.min(batchSize, maxJobs - result.claimed), opts.leaseSeconds ?? 300, opts.types);
+    const batch = await claimJobs(workerId, Math.min(batchSize, maxJobs - result.claimed), opts.leaseSeconds ?? 300, opts.types, { excludeTypes: opts.excludeTypes, workspaceId: opts.workspaceId });
     if (batch.length === 0) break;
     result.claimed += batch.length;
     await Promise.all(batch.map((job) => runOne(job, workerId, result)));
@@ -55,6 +65,17 @@ async function runOne(job: JobRow, workerId: string, tally: TickResult): Promise
     return;
   }
 
+  const schema = getJobPayloadSchema(job.type);
+  if (schema) {
+    const parsed = schema.safeParse(job.payload);
+    if (!parsed.success) {
+      const r = await failJob(job, workerId, `Invalid job payload: ${parsed.error.issues[0]?.message ?? "does not match the schema"}`, { retryable: false });
+      tally[r === "lost" ? "lost" : "dead"]++;
+      jobLog.error("job.invalid_payload");
+      return;
+    }
+  }
+
   try {
     const outcome = await handler({ job, workspaceId: job.workspaceId, userId: job.userId, log: jobLog });
     if (outcome.kind === "done") {
@@ -63,7 +84,8 @@ async function runOne(job: JobRow, workerId: string, tally: TickResult): Promise
         await settled(job, jobLog);
       } else tally.lost++;
     } else {
-      (await rescheduleJob(job, workerId, outcome.afterSeconds, outcome.state)) ? tally.waiting++ : tally.lost++;
+      if (await rescheduleJob(job, workerId, outcome.afterSeconds, outcome.state)) tally.waiting++;
+      else tally.lost++;
     }
     jobLog.info("job.ran", { outcome: outcome.kind, duration_ms: Date.now() - started });
   } catch (err) {

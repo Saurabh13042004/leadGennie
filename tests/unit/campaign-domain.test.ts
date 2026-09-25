@@ -174,7 +174,7 @@ describe("readiness (blockers vs warnings)", () => {
   const base = (over: Partial<CampaignRecord> = {}): CampaignRecord => ({
     id: 1, workspaceId: 1, name: "Q4", status: "draft", sendModel: "leads", mailboxId: 1, fromEmail: "a@x.example", tone: "concise",
     dailyLimit: 50, totalLimit: null, sendWindow: DEFAULT_SEND_WINDOW, audience: DEFAULT_AUDIENCE, allowTemplateFallback: false,
-    approvalId: null, approvedAt: null, startedAt: null, totalLeads: 0, blockedCount: 0, sentCount: 0, repliedCount: 0, createdAt: "2026-09-25T00:00:00Z",
+    approvalId: null, approvedAt: null, startedAt: null, pausedReason: null, totalLeads: 0, blockedCount: 0, sentCount: 0, repliedCount: 0, createdAt: "2026-09-25T00:00:00Z",
     steps: [
       { id: 1, order: 1, waitDays: 0, subject: "Hi {{first_name}}", body: "Hello {{first_name}}", mode: "template" },
       { id: 2, order: 2, waitDays: 3, subject: "", body: "Following up", mode: "template" },
@@ -189,6 +189,17 @@ describe("readiness (blockers vs warnings)", () => {
 
   it("a complete template campaign has no blockers", () => {
     expect(run(base()).blockers).toEqual([]);
+  });
+
+  it("launch is blocked without a sender name AND postal address, and clears once both are set", () => {
+    const withIdentity = (identity: { name: string | null; address: string | null }) =>
+      evaluateReadiness(base(), { audience: audience(3), mailbox, drafts: new Map(), identity });
+    for (const identity of [{ name: null, address: null }, { name: "Acme", address: null }, { name: null, address: "1 Main St" }, { name: " ", address: " " }]) {
+      const r = withIdentity(identity);
+      expect(r.blockers.map((b) => b.message)).toEqual([expect.stringMatching(/sender name and postal address/)]);
+      expect(r.blockers[0].section).toBe("review");
+    }
+    expect(withIdentity({ name: "Acme Inc", address: "1 Main St, Springfield" }).blockers).toEqual([]);
   });
 
   it.each([

@@ -1,30 +1,26 @@
 import { Webhook } from "standardwebhooks";
 import { AppError, ok, withApi } from "@/lib/api";
-import { sql } from "@/lib/db/client";
-import { logActivity } from "@/lib/activity";
+import { applyProviderEvent } from "@/lib/domain/sending/events";
 
 export const dynamic = "force-dynamic";
 
 type ResendWebhookEvent = {
   type: string;
+  created_at?: string;
   data: {
     email_id: string;
-    to: string[];
-    bounce?: { type: string };
-    suppressed?: { type: string };
+    to?: string[];
+    bounce?: { type?: string; subType?: string; message?: string };
+    suppressed?: { type?: string };
   };
 };
 
 /**
- * DEL-03: hard bounces and spam complaints immediately suppress the affected
- * address — before any later step of the sequence can send to it.
+ * Resend delivery events: sent · delivered · delivery_delayed · bounced · complained · opened · clicked · failed · suppressed.
  *
- * Verification is done directly with `standardwebhooks` (the spec Resend's
- * webhooks follow) rather than `resend.webhooks.verify()` — that method
- * requires constructing a full Resend API client, which throws if
- * RESEND_API_KEY isn't set even though verifying a signature needs no API
- * call at all. Keeping this decoupled means bounce/complaint suppression
- * works independently of whether outbound sending is configured.
+ * Signature-verified with `standardwebhooks` (the spec Resend's webhooks follow) rather than the SDK — verifying needs no
+ * API call, so bounce/complaint suppression keeps working even if outbound sending isn't configured. Idempotent on the
+ * webhook's own id (`webhook-id`): a redelivery is acknowledged and changes nothing (see lib/domain/sending/events.ts).
  */
 export const POST = withApi(async (request) => {
   const secret = process.env.RESEND_WEBHOOK_SECRET;
@@ -34,72 +30,21 @@ export const POST = withApi(async (request) => {
   const id = request.headers.get("webhook-id");
   const timestamp = request.headers.get("webhook-timestamp");
   const signature = request.headers.get("webhook-signature");
-  if (!id || !timestamp || !signature) {
-    throw new AppError("UNAUTHENTICATED", "Missing webhook signature headers");
-  }
+  if (!id || !timestamp || !signature) throw new AppError("UNAUTHENTICATED", "Missing webhook signature headers");
 
   let event: ResendWebhookEvent;
   try {
-    const verified = new Webhook(secret).verify(payload, {
-      "webhook-id": id,
-      "webhook-timestamp": timestamp,
-      "webhook-signature": signature,
-    });
-    event = verified as ResendWebhookEvent;
+    event = new Webhook(secret).verify(payload, { "webhook-id": id, "webhook-timestamp": timestamp, "webhook-signature": signature }) as ResendWebhookEvent;
   } catch {
     throw new AppError("UNAUTHENTICATED", "Invalid signature");
   }
 
-  if (event.type !== "email.bounced" && event.type !== "email.complained" && event.type !== "email.suppressed") {
-    return ok({ ignored: event.type });
-  }
+  if (!event.type?.startsWith("email.") || !event.data?.email_id) return ok({ ignored: event.type ?? "unknown" });
 
-  const emailId = event.data.email_id;
-  const toEmail = event.data.to?.[0];
-  if (!toEmail) {
-    return ok({ correlated: false });
-  }
-
-  // Correlate via provider_message_id (Resend's own send id), not just the
-  // recipient address — the same address could be a lead in more than one
-  // workspace, and this is the only reliable way to know which one sent it.
-  const rows = await sql`
-    select workspace_id, lead_id from campaign_sends where provider_message_id = ${emailId} limit 1
-  `;
-  const row = rows[0];
-  if (!row) {
-    return ok({ correlated: false });
-  }
-  const workspaceId = row.workspace_id as number;
-
-  let reason: string | null = null;
-  if (event.type === "email.complained") {
-    reason = "Spam complaint";
-  } else if (event.type === "email.suppressed") {
-    reason = `Provider-suppressed (${event.data.suppressed?.type ?? "unknown"})`;
-  } else if (event.type === "email.bounced") {
-    // Only a hard/permanent bounce suppresses immediately — a transient/soft
-    // bounce (mailbox full, temporary provider issue) does not.
-    if (event.data.bounce?.type?.toLowerCase() === "permanent") {
-      reason = "Hard bounce";
-    }
-  }
-
-  if (reason) {
-    await sql`
-      insert into do_not_contact (workspace_id, email, reason, source)
-      values (${workspaceId}, ${toEmail.toLowerCase()}, ${reason}, 'resend_webhook')
-      on conflict (workspace_id, lower(email)) do nothing
-    `;
-    await logActivity({
-      workspaceId,
-      actorUserId: null,
-      type: "compliance.auto_suppressed",
-      entityType: "lead",
-      entityId: row.lead_id as number,
-      summary: `${toEmail} added to Do Not Contact (${reason}) via Resend webhook`,
-    });
-  }
-
-  return ok({ suppressed: Boolean(reason) });
+  const occurred = event.created_at ? new Date(event.created_at) : new Date();
+  const outcome = await applyProviderEvent({
+    eventId: id, type: event.type, providerMessageId: event.data.email_id, occurredAt: Number.isNaN(occurred.getTime()) ? new Date() : occurred,
+    bounce: event.data.bounce ?? null, suppressed: event.data.suppressed ?? null, payload: event,
+  });
+  return ok({ correlated: outcome.matched, duplicate: outcome.matched && !outcome.recorded, suppressed: outcome.suppressed });
 });

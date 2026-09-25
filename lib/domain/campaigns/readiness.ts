@@ -1,5 +1,6 @@
 import { lintEmailCopy } from "@/lib/domain/personalization/validators";
-import { unknownPlaceholders } from "@/lib/campaigns/render";
+import { hasSenderIdentity, unknownPlaceholders, type SenderIdentity } from "@/lib/campaigns/render";
+import { loadSenderIdentity } from "@/lib/domain/sending/identity";
 import { resolveAudience, type AudienceResolution } from "./audience";
 import { loadCurrentDrafts, loadMailbox, type LeadDraft, type MailboxInfo } from "./repository";
 import type { CampaignRecord } from "./types";
@@ -37,7 +38,7 @@ export type Readiness = {
 /** Pure part: turns loaded facts into checks. Unit-tested without a database. */
 export function evaluateReadiness(
   c: CampaignRecord,
-  facts: { audience: AudienceResolution; mailbox: MailboxInfo | null; drafts: Map<number, LeadDraft> },
+  facts: { audience: AudienceResolution; mailbox: MailboxInfo | null; drafts: Map<number, LeadDraft>; identity?: SenderIdentity | null },
 ): Readiness {
   const blockers: Check[] = [];
   const warnings: Check[] = [];
@@ -49,6 +50,10 @@ export function evaluateReadiness(
   else {
     if (!mailbox.active || !mailbox.verified) blockers.push({ section: "basics", message: `${mailbox.email} isn't active on a verified domain. Fix it in Email Deliverability or pick another mailbox.` });
     if (c.dailyLimit > mailbox.dailyLimit) blockers.push({ section: "basics", message: `The daily limit (${c.dailyLimit}) is higher than ${mailbox.email}'s limit of ${mailbox.dailyLimit}/day.` });
+  }
+  // Every email must say who sent it and where (CAN-SPAM / GDPR). `undefined` = not checked (pure unit tests); checkReadiness always passes it.
+  if (facts.identity !== undefined && !hasSenderIdentity(facts.identity)) {
+    blockers.push({ section: "review", message: "Add your sender name and postal address in Settings → Positioning & ICP. Every email carries them in its footer." });
   }
   if (c.dailyLimit < 20) warnings.push({ section: "basics", message: `A daily limit of ${c.dailyLimit} will take a while to reach everyone.` });
 
@@ -106,8 +111,8 @@ export function evaluateReadiness(
 }
 
 export async function checkReadiness(workspaceId: number, c: CampaignRecord): Promise<Readiness> {
-  const [audience, mailbox] = await Promise.all([resolveAudience(workspaceId, c.audience, { excludeCampaignId: c.id }), loadMailbox(workspaceId, c.mailboxId)]);
+  const [audience, mailbox, identity] = await Promise.all([resolveAudience(workspaceId, c.audience, { excludeCampaignId: c.id }), loadMailbox(workspaceId, c.mailboxId), loadSenderIdentity(workspaceId)]);
   const personalized = c.steps.some((s) => s.mode === "personalized");
   const drafts = personalized ? await loadCurrentDrafts(workspaceId, audience.eligible.map((l) => l.id)) : new Map<number, LeadDraft>();
-  return evaluateReadiness(c, { audience, mailbox, drafts });
+  return evaluateReadiness(c, { audience, mailbox, drafts, identity });
 }

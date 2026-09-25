@@ -15,7 +15,8 @@ export function kickWorker(): void {
   try {
     after(async () => {
       try {
-        await runTick({ budgetMs: 20_000, maxJobs: 10 });
+        // Never sends email from a request: `campaign_send` jobs are left to the worker's own tick.
+        await runTick({ budgetMs: 20_000, maxJobs: 10, excludeTypes: ["campaign_send"], skipSchedulers: true });
       } catch (err) {
         log.warn("kick.tick_failed", { err });
       }

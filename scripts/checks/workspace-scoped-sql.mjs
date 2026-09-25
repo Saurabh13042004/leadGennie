@@ -19,6 +19,8 @@ const WS_TABLES = [
   "do_not_contact", "import_jobs", "activities", "approvals", "pipelines", "pipeline_stages",
   "deals", "tasks", "message_generations", "prompts", "prompt_versions", "domains",
   "mailboxes", "forms", "form_submissions", "workflows", "workspace_members",
+  // Phase 5
+  "messages", "message_events",
   // Phase 4
   "campaign_leads",
   // Phase 3

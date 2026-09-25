@@ -1,5 +1,7 @@
 # Phase 5 — Email Execution Engine
 
+> **Status: code complete (2026-09-25).** Evidence, deviations and honest gaps: [`CHANGELOG-phases.md`](../CHANGELOG-phases.md). The "Starting point" below describes the code *before* this phase.
+
 ## Goal
 Reliable sending. No duplicate sends, no lost sends, no sends to suppressed recipients, and every delivery event recorded — without depending on a single long HTTP request.
 

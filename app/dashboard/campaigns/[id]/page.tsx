@@ -20,6 +20,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import Card, { CardHeader } from "@/components/ui/Card";
 import Stat from "@/components/ui/Stat";
 import { SidebarSection } from "@/components/leads/LeadProperties";
+import SendIssuesCard from "@/components/campaigns/detail/SendIssuesCard";
 import CampaignActions from "@/components/campaigns/detail/CampaignActions";
 import ApprovalSummary from "@/components/campaigns/detail/ApprovalSummary";
 import CampaignLeadsTable from "@/components/campaigns/detail/CampaignLeadsTable";
@@ -59,7 +60,8 @@ export default async function CampaignPage({ params, searchParams }: { params: P
     }),
   ]);
   const role = session?.user?.role;
-  const { campaign: c, sendCounts } = detail;
+  const { campaign: c, sendCounts, messages } = detail;
+  const wentOut = messages.sent + messages.delivered + messages.bounced + messages.complained;
   const launched = !["draft", "pending_approval", "ready", "rejected"].includes(c.status);
   const w = c.sendWindow;
 
@@ -83,17 +85,22 @@ export default async function CampaignPage({ params, searchParams }: { params: P
       <div className="grid lg:min-h-[calc(100%-57px)] lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-4 px-4 py-5 md:px-6 lg:py-6">
           {c.sendModel === "legacy" && <Notice tone="info" title="Created with the previous campaign wizard">It keeps sending as before. To change its content, create a new campaign.</Notice>}
+          {c.status === "paused" && c.pausedReason && <Notice tone="warn" title="Paused automatically">{c.pausedReason}</Notice>}
+          {detail.health.workerStalled && c.status === "running" && (
+            <Notice tone="warn" title="The sending worker doesn't seem to be running">{detail.health.dueNow} email(s) are due but nothing has been picked up for a few minutes. Start the worker (<code>npm run worker</code>) or point a cron at <code>/api/jobs/tick</code>.</Notice>
+          )}
           {c.status === "ready" && <Notice tone="info" title="Approved">Nothing sends until someone clicks Launch.</Notice>}
           {(c.status === "draft" || c.status === "rejected") && <Notice tone="info" title="Not submitted yet">Finish the builder and submit it for approval — nothing is sent from a draft.</Notice>}
 
           <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <Stat label="Enrolled" value={launched ? c.totalLeads.toLocaleString() : "—"} icon={UsersThree} tone="indigo" sub={launched && c.blockedCount > 0 ? `${c.blockedCount} excluded` : undefined} />
-            <Stat label="Sent" value={(sendCounts.sent ?? 0).toLocaleString()} icon={PaperPlaneTilt} tone="emerald" />
-            <Stat label="Scheduled" value={(sendCounts.pending ?? 0).toLocaleString()} icon={ClockCountdown} tone="sky" sub={detail.nextSendAt ? `next ${formatWhen(detail.nextSendAt)}` : undefined} />
-            <Stat label="Blocked at send" value={((sendCounts.blocked ?? 0) + (sendCounts.failed ?? 0)).toLocaleString()} icon={Prohibit} tone="amber" />
+            <Stat label="Sent" value={wentOut.toLocaleString()} icon={PaperPlaneTilt} tone="emerald" sub={`${(sendCounts.pending ?? 0).toLocaleString()} scheduled${detail.nextSendAt ? ` · next ${formatWhen(detail.nextSendAt)}` : ""}`} />
+            <Stat label="Delivered" value={(messages.delivered + messages.bounced + messages.complained > 0 ? messages.delivered : "—").toLocaleString()} icon={ClockCountdown} tone="sky" sub="confirmed by the provider" />
+            <Stat label="Bounced" value={(messages.bounced + messages.complained).toLocaleString()} icon={Prohibit} tone="amber" sub={`${messages.complained} spam complaint${messages.complained === 1 ? "" : "s"} · ${messages.failed + (sendCounts.blocked ?? 0)} failed or blocked`} />
           </div>
           <p className="px-1 text-xs text-neutral-400">Replies and opens appear once inbox sync is connected — until then they aren&apos;t shown, rather than shown as zero.</p>
 
+          <SendIssuesCard failed={detail.failedSends} deadJobs={detail.deadJobs} canAct={role !== "viewer"} />
           {detail.approval && <ApprovalSummary approval={detail.approval} />}
           <CampaignLeadsTable id={c.id} rows={detail.leads} counts={detail.leadCounts} filter={filter} steps={c.steps.length} />
 

@@ -2,3 +2,4 @@
 import "@/lib/intelligence/jobs";
 import "@/lib/domain/personalization/jobs";
 import "@/lib/domain/gennie/jobs";
+import "@/lib/domain/sending/register";

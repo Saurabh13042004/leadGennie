@@ -2,6 +2,60 @@
 
 Evidence log for each phase. Newest first.
 
+## Phase 5 — Email execution engine (code complete 2026-09-25; verified hermetically + in the built app against a throwaway DB; migrations 0011/0012 not yet on Neon; no real provider send yet)
+
+Decision taken: **D-01** Postgres queue, workers stay in the Next.js app (owner, 2026-09-25).
+
+**What exists**
+- `lib/email/` — `MailProvider` port (`send`, `capabilities`, `isConfigured`), `ResendProvider` (+ `classifyResendError` from Resend's documented codes), `FakeMailProvider` (idempotent replay by key, scripted failures, "provider accepted but response lost").
+- `lib/domain/sending/` — `gate` (pure `SendGate`), `claim` (message-before-send, caps re-verified atomically), `handler` (the `campaign_send` job), `scheduler`, `events`, `suppression`, `failures` (auto-pause, retry/skip), `identity`, `health`, `register`. `lib/jobs/schedulers.ts` (schedulers run first in every tick), payload schemas per job type, `claimJobs` type/workspace filters.
+- Migration `0012` (`messages`, `message_events`, sender identity, `daily_send_cap`, `paused_reason`); `scripts/worker.mjs` (`npm run worker`); `/api/cron/send-campaigns` reduced to a deprecated alias; `/api/unsubscribe` accepts RFC 8058 one-click `POST`; webhook rewritten on `applyProviderEvent`.
+- UI: sender-identity form (Settings → Positioning), paused-automatically / worker-stalled banners, real sent/delivered/bounced/complained counts, "Send issues" card (retry / skip / dead jobs), "Queue due emails now" (enqueues only), paused reason on list cards.
+- Deleted: `lib/campaigns/dispatch.ts` (old in-request dispatcher) and the now-dead `sendCampaignEmail`.
+
+**Acceptance criteria**
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Kill the worker mid-batch: nothing lost, nothing duplicated | ✅ (simulated) | `sending-engine.test.ts`: crash after the provider accepted but before the DB update → message row `sending`, retry replays the same key → 1 delivery, message reconciled; lost-response variant; lease-expiry takeover; 2 concurrent `claimJobs` never overlap. **Not** a real SIGKILL of a real process |
+| Same email never sent twice (double job, re-tick, concurrent scheduler) | ✅ | Two jobs for one send → 1 email, `sent_count` 1; scheduler ×3 concurrent → 5 jobs for 5 sends; re-running scheduler+worker changes nothing |
+| Every limit respected | ✅ | Unit (pure gate, incl. order, DST-safe day boundaries, ramp table) + integration: campaign/day (then next day via injected clock), mailbox/day, warm-up (15 for a new mailbox), workspace cap, per-domain throttle (+ free-mail exempt), spacing (30–90 min jitter), never exceeded when a whole batch is claimed at once |
+| Suppression respected at send time, and mid-sequence | ✅ | DNC added after enrollment → `blocked`; unsubscribe (GET and one-click POST), hard bounce, complaint, provider suppression each stop the address in **every** campaign of the workspace (not another workspace's) and cancel pending sends; soft bounces stop at 3 |
+| Retries with backoff; permanent failures don't retry | ✅ | 429 ×2 → succeeds on 3rd, one delivery; permanent → failed, 1 request, campaign keeps running; exhausted retries → failed; ambiguous network failure keeps `sending`, >20 h → `failed/unknown_outcome`, **no resend** |
+| Systemic errors auto-pause with a reason | ✅ | auth/domain → campaign `paused` + `paused_reason`, all sends still pending, resume → all sent once; ≥5 exhausted failures → outage pause; **no provider key → pause before claiming** (found by the running-app check) |
+| Delivery events recorded idempotently; status only moves forward | ✅ | Same event twice → one row; late `delivered` can't un-bounce; opened/clicked set timestamps only; unmatched event writes nothing; bad/missing signature → 401 |
+| Compliance headers + identity footer; launch blocked without identity | ✅ | Headers asserted on the delivered payload; footer has name+address above the unsubscribe link; readiness blocker (unit) and in the running app (blocker shown, cleared once set) |
+| Operator tools | ✅ | Retry re-queues and sends once; skip drops it; both refuse non-failed sends and other workspaces' sends |
+| Legacy campaigns keep sending | ✅ | Pre-rendered `campaign_sends` drain through the same path (existing compliance/dispatch suite migrated, 51 tests) |
+| 1,000 recipients drain across ticks | ✅ | 1,000 distinct emails, 1,000 distinct provider ids, `sent_count` 1,000, ≈10 s in-process |
+| Tenant isolation | ✅ | `messages`/`message_events` in the tenancy gate; a workspace-scoped worker doesn't touch another workspace; a job can't send another workspace's send |
+| `npm run verify` green | ⚠️ not as a single command | typecheck ✅ · lint ✅ (0 errors) · tenancy gate ✅ · build ✅ · tests: 828 pass, **3 fail** (below) · `check:fake-metrics` **fails on another session's file** |
+
+**Found by running the built app (not by unit tests):** with no `RESEND_API_KEY` the first email was retried as a "network error" and left a message stuck `sending`. Now it is a precheck: the campaign pauses ("Email sending isn't configured on this server…") before anything is claimed. Regression test added.
+
+**Also found and fixed**
+1. `classifyResendError` matched the generic `429` rule before the quota names, so `daily_quota_exceeded`/`monthly_quota_exceeded` were treated as plain rate limits.
+2. The scheduler's poison-send update was not workspace-scoped (tenancy gate caught it).
+
+**Not green, and not mine (other sessions' in-flight work)**
+- `check:fake-metrics` flags `Math.random()` in the untracked `lib/api/rate-limit.ts` (a GC sweep, not a displayed value — needs an allow-list entry or a deterministic sweep).
+- `tests/integration/tenancy.test.ts` "extension API" ×3 fail: `app/api/extension/queue` now requires the `automation` scope and the D-05 flag, the test still expects items for a plain token.
+
+**Honest gaps**
+- **No real send yet.** Never exercised against Resend (only the fake provider, and the real provider's error path with no key). Do one send to your own inbox before trusting deliverability, and check that the `Idempotency-Key` behaviour matches Resend's docs for your account.
+- **Concurrency is argued and tested single-connection.** The claim's caps are enforced by a per-mailbox `pg_advisory_xact_lock` + guarded insert, and the same-batch race is exercised (excess jobs come back as `claim_contended` and are re-gated 15 s later), but PGlite is one connection: there is no multi-connection Postgres test.
+- **"Worker" is a tick loop**, not a separate job-runner process: `npm run worker` calls `POST /api/jobs/tick`. Fine for V1 scale; a slow tick delays the next.
+- No `Message-ID`/`In-Reply-To` threading headers (follow-ups thread by `Re:` subject only) — belongs with Phase 6.
+- Open/click *tracking* is whatever the Resend domain has (off by default); the UI shows no open rate.
+- `workspaces.daily_send_cap` has no UI (set by SQL).
+- LinkedIn queue processing is only relocated (`lib/campaigns/linkedin-queue.ts`, moves due DMs to `queued`, never sends); real work is Phase 7.
+- Spacing means a large backlog drains at ~1 email / 20 s / mailbox by default — deliberate; tune `SEND_SPACING_SECONDS`.
+
+**Deviations from the spec**
+- The scheduler enqueues from due `campaign_sends` (the compat path from Phase 4), not from `campaign_leads.next_action_at`; job key is `send:{campaign_send_id}:{generation}` rather than `send:{campaign_lead_id}:{step}`. Same guarantee, and legacy rows work unchanged. Pre-rendering is still what launch does.
+- The message is inserted as `sending` (not `queued`); crash reconciliation replays the stored payload with the same provider idempotency key instead of "querying the provider by key/tags" (Resend has no lookup by key).
+- `MailProvider` has no `parseWebhook`: signature verification and event parsing stay in the route/`applyProviderEvent`.
+
 ## Phase 4 — Campaign builder (code complete 2026-09-25; verified hermetically + in the built app against a throwaway DB; migration 0011 not yet on Neon; real browser and real-mailbox send pending)
 
 Decisions taken before starting (owner, 2026-09-25): **D-05** email-only builder, LinkedIn behind `FEATURE_LINKEDIN_AUTOMATION` (default off); **D-06** legacy modules hidden, not deleted; approvals keep today's rule (owner/admin decides; self-approval allowed).

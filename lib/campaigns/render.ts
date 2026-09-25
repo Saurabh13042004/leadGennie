@@ -35,12 +35,19 @@ export function threadedSubject(firstSubject: string): string {
   return /^re:/i.test(s) ? s : `Re: ${s}`;
 }
 
-export function unsubscribeFooter(unsubscribeUrl: string): string {
-  return `\n\n---\nUnsubscribe: ${unsubscribeUrl}`;
+/** Who is sending, for the compliance footer (CAN-SPAM/GDPR need a sender name and a postal address). */
+export type SenderIdentity = { name: string | null; address: string | null };
+
+export const hasSenderIdentity = (i: SenderIdentity | null | undefined) => !!(i?.name?.trim() && i?.address?.trim());
+
+/** `\n\n---\n<name>\n<address>\nUnsubscribe: <url>` — identity lines appear only when configured. */
+export function unsubscribeFooter(unsubscribeUrl: string, identity?: SenderIdentity | null): string {
+  const lines = [identity?.name?.trim(), identity?.address?.trim()].filter((l): l is string => !!l);
+  return `\n\n---\n${lines.length > 0 ? `${lines.join("\n")}\n` : ""}Unsubscribe: ${unsubscribeUrl}`;
 }
 
-export function withUnsubscribeFooter(body: string, unsubscribeUrl: string): string {
-  return `${body}${unsubscribeFooter(unsubscribeUrl)}`;
+export function withUnsubscribeFooter(body: string, unsubscribeUrl: string, identity?: SenderIdentity | null): string {
+  return `${body}${unsubscribeFooter(unsubscribeUrl, identity)}`;
 }
 
 export type StepSource = { order: number; subject: string; body: string; mode: "template" | "personalized" };

@@ -2,31 +2,24 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/workspace-context";
-import { processEmailSends, processLinkedinSends } from "@/lib/campaigns/dispatch";
 import { logActivity } from "@/lib/activity";
+import { enqueueDueSends } from "@/lib/domain/sending/scheduler";
+import { getSendingHealth, type SendingHealth } from "@/lib/domain/sending/health";
+import "@/lib/jobs/handlers";
 
 /**
- * Manual trigger for local/dev testing and on-demand "why hasn't this sent
- * yet" checks — runs the exact same dispatch logic as the scheduled cron,
- * scoped to the caller's own workspace only. Admin-gated since it causes
- * real emails to go out immediately rather than on the usual schedule.
+ * "Send due messages now": queues every email that is due for this workspace and returns. It never sends from the request —
+ * the sending worker picks the jobs up within seconds (the worker ticks continuously; see docs/deployment.md).
+ * Admin-gated because it is an explicit "go now" on top of the normal schedule.
  */
-export async function runDueSendsNow() {
+export async function runDueSendsNow(): Promise<{ queued: number; poisoned: number; health: SendingHealth }> {
   const { workspaceId, userId } = await requireRole("admin");
-
-  const email = await processEmailSends(workspaceId);
-  const linkedin = await processLinkedinSends(workspaceId);
-
+  const r = await enqueueDueSends({ workspaceId });
   await logActivity({
-    workspaceId,
-    actorUserId: userId,
-    type: "campaign.manual_dispatch",
-    entityType: "campaign",
-    entityId: null,
-    summary: `Manually ran due sends: ${email.sent ?? 0} sent, ${email.failed ?? 0} failed, ${email.blocked ?? 0} blocked (email); ${linkedin.queued} queued, ${linkedin.blocked} blocked (LinkedIn)`,
+    workspaceId, actorUserId: userId, type: "campaign.manual_dispatch", entityType: "campaign", entityId: null,
+    summary: `Queued ${r.enqueued} due email(s) for the sending worker${r.poisoned ? ` (${r.poisoned} marked failed after repeated errors)` : ""}`,
   });
-
   revalidatePath("/dashboard/campaigns");
   revalidatePath("/dashboard/brief");
-  return { email, linkedin };
+  return { queued: r.enqueued, poisoned: r.poisoned, health: await getSendingHealth(workspaceId) };
 }

@@ -1,9 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Webhook } from "standardwebhooks";
 import { resetDb, sql } from "../helpers/test-db";
 import { createLead, createWorkspace } from "../helpers/factories";
-
-vi.mock("@/lib/email/resend", () => ({ isEmailConfigured: () => false, sendCampaignEmail: vi.fn() }));
 
 import { POST as resendWebhook } from "@/app/api/webhooks/resend/route";
 import { GET as cron } from "@/app/api/cron/send-campaigns/route";
@@ -37,9 +35,13 @@ beforeEach(async () => {
   leadEmail = lead.email as string;
   const [campaign] = await sql`insert into campaigns (workspace_id, name) values (${workspaceId}, 'C') returning id`;
   const [step] = await sql`insert into campaign_steps (campaign_id, step_order, channel) values (${campaign.id}, 1, 'email') returning id`;
-  await sql`
+  const [send] = await sql`
     insert into campaign_sends (workspace_id, campaign_id, lead_id, step_id, channel, status, scheduled_at, body, provider_message_id)
-    values (${workspaceId}, ${campaign.id}, ${lead.id}, ${step.id}, 'email', 'sent', now(), 'x', 'email_123')`;
+    values (${workspaceId}, ${campaign.id}, ${lead.id}, ${step.id}, 'email', 'sent', now(), 'x', 'email_123') returning id`;
+  // The message record the sender writes before calling the provider — webhooks correlate on its provider id.
+  await sql`
+    insert into messages (workspace_id, campaign_id, campaign_send_id, lead_id, from_email, to_email, to_domain, provider_message_id, idempotency_key, status, attempts)
+    values (${workspaceId}, ${campaign.id}, ${send.id}, ${lead.id}, 'me@x.example', ${lead.email}, 'example.com', 'email_123', 'k1', 'sent', 1)`;
 });
 afterEach(() => {
   delete process.env.RESEND_WEBHOOK_SECRET;
@@ -79,9 +81,18 @@ describe("Resend webhook (DEL-03)", () => {
     expect(await dnc()).toHaveLength(0);
   });
 
-  it("ignores unrelated event types", async () => {
+  it("ignores event types that are not about an email", async () => {
+    const res = await resendWebhook(signedRequest({ type: "domain.updated", data: { id: "d1" } }), undefined);
+    expect(await res.json()).toMatchObject({ ok: true, ignored: "domain.updated" });
+  });
+
+  it("records a delivery confirmation and moves the message forward", async () => {
     const res = await resendWebhook(signedRequest({ type: "email.delivered", data: { email_id: "email_123", to: [leadEmail] } }), undefined);
-    expect(await res.json()).toMatchObject({ ok: true, ignored: "email.delivered" });
+    expect(await res.json()).toMatchObject({ ok: true, correlated: true });
+    const [m] = await sql`select status, delivered_at from messages where workspace_id = ${workspaceId} and provider_message_id = 'email_123'`;
+    expect(m.status).toBe("delivered");
+    expect(m.delivered_at).not.toBeNull();
+    expect(await dnc()).toHaveLength(0);
   });
 
   it("rejects a bad signature with 401 and suppresses nothing", async () => {

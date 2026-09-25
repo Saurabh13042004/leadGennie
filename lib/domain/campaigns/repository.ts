@@ -40,7 +40,7 @@ export async function loadCampaign(workspaceId: number, campaignId: number): Pro
     dailyLimit: Number(c.daily_email_limit), totalLimit: c.total_limit === null ? null : Number(c.total_limit),
     sendWindow: window.success ? window.data : DEFAULT_SEND_WINDOW, audience: audience.success ? audience.data : DEFAULT_AUDIENCE,
     allowTemplateFallback: Boolean(c.allow_template_fallback), approvalId: c.approval_id === null ? null : Number(c.approval_id),
-    approvedAt: iso(c.approved_at), startedAt: iso(c.started_at), totalLeads: Number(c.total_leads), blockedCount: Number(c.blocked_count),
+    approvedAt: iso(c.approved_at), startedAt: iso(c.started_at), pausedReason: (c.paused_reason as string | null) ?? null, totalLeads: Number(c.total_leads), blockedCount: Number(c.blocked_count),
     sentCount: Number(c.sent_count), repliedCount: Number(c.replied_count), createdAt: iso(c.created_at)!, steps: await loadSteps(campaignId),
   };
 }

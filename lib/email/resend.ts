@@ -12,17 +12,3 @@ export function getResendClient(): Resend {
   if (!client) client = new Resend(apiKey);
   return client;
 }
-
-export async function sendCampaignEmail(input: { to: string; from: string; subject: string; body: string }) {
-  const result = await getResendClient().emails.send({
-    from: input.from,
-    to: input.to,
-    subject: input.subject,
-    text: input.body,
-  });
-
-  if (result.error) {
-    throw new Error(result.error.message);
-  }
-  return result.data;
-}

@@ -18,15 +18,16 @@ export default function SendNowButton() {
     setResult(null);
     startTransition(async () => {
       try {
-        const { email, linkedin } = await runDueSendsNow();
-        if ("skipped" in email) {
-          setError(email.skipped as string);
-          return;
+        const { queued, poisoned, health } = await runDueSendsNow();
+        if (health.workerStalled) {
+          setError(`${queued} email(s) queued, but the sending worker doesn't seem to be running — nothing will go out until it is. See docs/deployment.md.`);
+        } else {
+          setResult(
+            queued === 0
+              ? "Nothing new to queue — due emails are already with the worker."
+              : `${queued} email(s) queued. The sending worker sends them within seconds, spaced out to protect your sender reputation.${poisoned ? ` ${poisoned} were marked failed after repeated errors.` : ""}`,
+          );
         }
-        setResult(
-          `Email: ${email.sent} sent, ${email.failed} failed, ${email.blocked} blocked (${email.processed} due). ` +
-            `LinkedIn: ${linkedin.queued} queued, ${linkedin.blocked} blocked.`
-        );
         router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Could not run due sends");
@@ -40,8 +41,8 @@ export default function SendNowButton() {
     <div className="relative">
       <Button variant="secondary" onClick={handleClick} disabled={isPending}>
         {isPending ? <CircleNotch className="h-4 w-4 animate-spin" weight="bold" /> : <PaperPlaneTilt className="h-4 w-4" weight="duotone" />}
-        <span className="hidden sm:inline">Send due messages now</span>
-        <span className="sm:hidden">Send due</span>
+        <span className="hidden sm:inline">Queue due emails now</span>
+        <span className="sm:hidden">Queue due</span>
       </Button>
       {message && (
         <div

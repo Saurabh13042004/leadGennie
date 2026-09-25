@@ -117,3 +117,13 @@ Checklist before production: ≥ 2 replicas; TLS + private networking only; **eg
 2. Optional env `FEATURE_LINKEDIN_AUTOMATION=true` re-offers the multi-channel (LinkedIn DM) wizard next to the email-only builder (D-05, default off).
 3. No new scheduler entries: builder campaigns send through the existing `/api/cron/send-campaigns` dispatcher.
 4. Behaviour change worth knowing: the pre-send cooldown no longer counts a campaign's **own** earlier steps. Before this, any follow-up within 14 days of step 1 was blocked as "contacted by another campaign" — existing legacy campaigns' pending follow-ups will now actually send.
+
+## Phase 5 rollout (email execution engine)
+
+1. `npm run db:migrate` — applies `0012` (and `0011` if not yet applied). Additive; already-sent legacy sends are backfilled into `messages` so counts and webhook correlation stay continuous.
+2. **Run a worker.** Sending is done only by jobs, never by a web request. Either `npm run worker` (always-on loop over `POST /api/jobs/tick`; `APP_URL`/`CRON_SECRET` from env) or point any pinger at `POST /api/jobs/tick` (Bearer `CRON_SECRET`) every minute — `scripts/scheduler.mjs` does this. If `/api/cron/send-campaigns` is still wired anywhere it keeps working (deprecated alias for the tick); replace it. A running campaign with due emails and no worker shows a "sending worker doesn't seem to be running" banner after ~3 minutes.
+3. **Every workspace needs a sender name and postal address** (Settings → Positioning & ICP → Sender identity) before a new campaign can launch; legacy campaigns get the lines only if configured. Set them for `workspaces` that already send.
+4. Optional env: `SEND_SPACING_SECONDS` (default 20; jittered 0.5–1.5×, per mailbox), `SEND_DOMAIN_HOURLY_LIMIT` (default 10 per recipient domain per hour; free-mail domains exempt). A brand-new mailbox ramps `15 · 1.5^days` up to its configured daily limit.
+5. **Behaviour change:** legacy campaigns' pending follow-ups (blocked before by the cooldown bug, see Phase 4) and any backlog now send through the new path — with spacing, so a large backlog drains over time rather than in one burst. Unsubscribing, hard-bouncing or complaining now cancels that address's pending emails in every campaign immediately.
+6. Resend: keep the webhook (`/api/webhooks/resend`, signing secret set) — it now also records delivered/opened/clicked. Open/click *tracking* stays whatever the Resend domain setting is (off by default); nothing shows opens as a rate.
+7. No provider key ⇒ the first due email pauses the campaign with "Email sending isn't configured on this server" — nothing is lost; add `RESEND_API_KEY`, then Resume.

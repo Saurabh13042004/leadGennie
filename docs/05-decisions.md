@@ -12,7 +12,7 @@ Open questions that change what gets built. Each has a **recommendation** so wor
 - B. Inngest / Trigger.dev (hosted durable functions). *Less code, real dashboards, but a new vendor + pricing + local-dev story.*
 - C. Temporal. *Strongest guarantees; heavy ops burden; overkill for V1.*
 **Recommendation:** **A**, behind an `enqueue()/handler` interface so B is a drop-in later.
-**Decision:** _pending_
+**Decision: DECIDED — A, Postgres queue (owner, 2026-09-25).** Already built in Phase 2B (`lib/jobs/*`) and now carries the email engine (Phase 5). Confirmed when the owner asked where the background workers should live and then said "ok start phase 5": the queue, schedulers and workers stay in the Next.js app (`POST /api/jobs/tick` + `npm run worker`); the Python engine only investigates the world and never sends. The `enqueue()`/handler-registry interface keeps B a drop-in later.
 
 ## D-02 — LLM provider, billing tier, and model routing
 **Status: DECIDED (owner, 2026-09-24): OpenAI `gpt-4o-mini`.** Migrated off Gemini; a stronger model isn't needed. The Gemini free tier (20 requests/day) is no longer a blocker.

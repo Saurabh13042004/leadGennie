@@ -105,3 +105,36 @@ export function planSchedule(input: { leadCount: number; waitDays: number[]; win
   });
   return { sends, firstSendAt, lastSendAt: lastDay === null ? null : instantFor(lastDay) };
 }
+
+// ---- send-time helpers (used by the SendGate, which decides at the moment of sending) ---------------------------------
+
+/** Start (00:00) of the local calendar day containing `now`, as a UTC instant. Used for "today's" send counts. */
+export function localDayStart(now: Date, timeZone: string): Date {
+  const p = localParts(now, timeZone);
+  return zonedTimeToUtc({ y: p.y, m: p.m, d: p.d }, 0, timeZone);
+}
+
+/** Start of the NEXT local day — when a daily limit resets. */
+export function nextLocalDayStart(now: Date, timeZone: string): Date {
+  const p = localParts(now, timeZone);
+  return zonedTimeToUtc(fromDayIndex(dayIndex({ y: p.y, m: p.m, d: p.d }) + 1), 0, timeZone);
+}
+
+/** Is `now` inside the send window (allowed weekday AND start ≤ hour < end, in the window's timezone)? */
+export function isWindowOpen(now: Date, window: SendWindow): boolean {
+  const p = localParts(now, window.timezone);
+  return window.days.includes(p.weekday) && p.hour >= window.startHour && p.hour < window.endHour;
+}
+
+/** The next instant the window opens (after `now`; `now` itself when it is already open). */
+export function nextWindowOpen(now: Date, window: SendWindow): Date {
+  if (isWindowOpen(now, window)) return now;
+  const p = localParts(now, window.timezone);
+  const today = dayIndex({ y: p.y, m: p.m, d: p.d });
+  // Later today, if today is an allowed day and the window hasn't opened yet.
+  if (window.days.includes(p.weekday) && p.hour < window.startHour) return zonedTimeToUtc(fromDayIndex(today), window.startHour, window.timezone);
+  for (let i = 1; i <= 8; i++) {
+    if (window.days.includes(weekdayOf(today + i))) return zonedTimeToUtc(fromDayIndex(today + i), window.startHour, window.timezone);
+  }
+  return new Date(now.getTime() + 3_600_000); // unreachable for a valid window; never spin
+}
