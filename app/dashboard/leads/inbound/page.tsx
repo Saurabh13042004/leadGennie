@@ -24,16 +24,14 @@ export default async function Page() {
   return (
     <>
       <LeadsPageHeader description="Form submissions that are unmatched or awaiting review" />
-      <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
-        <InboxView
-          submissions={submissions}
-          forms={forms}
-          leads={leads}
-          members={members}
-          canManage={canManage}
-          canApprove={canApprove}
-        />
-      </div>
+      <InboxView
+        submissions={submissions}
+        forms={forms}
+        leads={leads}
+        members={members}
+        canManage={canManage}
+        canApprove={canApprove}
+      />
     </>
   );
 }

@@ -75,8 +75,9 @@ export default function ReviewStep({
         <p className="flex items-start gap-2 rounded-lg bg-orange-50 px-3 py-2 text-xs text-orange-800 ring-1 ring-inset ring-orange-200/70">
           <Prohibit className="mt-px h-3.5 w-3.5 shrink-0 text-orange-500" weight="bold" />
           <span>
-          {classification.blocked} row{classification.blocked === 1 ? " is" : "s are"} on your Do Not Contact list. They&apos;re imported (nothing is silently dropped) but flagged
-          <b> blocked</b>, and can never be enrolled in a campaign.</span>
+            {`${classification.blocked} row${classification.blocked === 1 ? " is" : "s are"} on your Do Not Contact list. They're imported (nothing is silently dropped) but flagged `}
+            <b>blocked</b>, and can never be enrolled in a campaign.
+          </span>
         </p>
       )}
 

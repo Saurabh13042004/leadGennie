@@ -78,7 +78,7 @@ export function SummaryStep({
         </span>
         <p className="text-[15px] font-semibold tracking-tight text-neutral-900">{interrupted ? "Import incomplete" : "Import complete"}</p>
         <p className="mt-1 max-w-md text-[13px] text-neutral-500">
-          {job.processedRows.toLocaleString()} of {job.totalRows.toLocaleString()} rows processed. Safe to re-upload the same file — existing leads are matched, never duplicated.
+          {`${job.processedRows.toLocaleString()} of ${job.totalRows.toLocaleString()} rows processed. Safe to re-upload the same file — existing leads are matched, never duplicated.`}
         </p>
       </div>
 

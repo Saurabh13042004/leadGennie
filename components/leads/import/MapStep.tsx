@@ -29,7 +29,7 @@ export default function MapStep({
         <div className="min-w-0">
           <p className="truncate text-[13px] font-medium text-neutral-900">{fileName}</p>
           <p className="text-xs text-neutral-500">
-            {rows.length.toLocaleString()} rows detected. We matched your columns automatically — check them, and change anything that&apos;s wrong.
+            {`${rows.length.toLocaleString()} rows detected. We matched your columns automatically — check them, and change anything that's wrong.`}
           </p>
         </div>
       </div>
