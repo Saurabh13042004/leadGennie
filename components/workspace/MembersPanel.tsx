@@ -133,14 +133,14 @@ export default function MembersPanel({
               <tr className={THEAD_ROW}>
                 <th className={TH}>Member</th>
                 <th className={cn(TH, "w-36")}>Role</th>
-                <th className={cn(TH, "w-28")}>Status</th>
+                <th className={cn(TH, "hidden w-28 sm:table-cell")}>Status</th>
                 <th className={cn(TH, "hidden w-32 sm:table-cell")}>Added</th>
                 {canManage && <th className={cn(TH, "w-12")}><span className="sr-only">Actions</span></th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
               {members.map((m) => {
-                const isSelf = m.userId === currentUserId;
+                const isSelf = m.userId !== null && Number(m.userId) === currentUserId; // the driver returns bigint ids as strings
                 const isBusy = busyId === m.id;
                 const invited = m.status !== "active";
                 return (
@@ -158,6 +158,7 @@ export default function MembersPanel({
                           <p className="flex items-center gap-1.5 truncate font-medium text-neutral-900">
                             <span className="truncate">{m.name ?? m.email}</span>
                             {isSelf && <Badge tone="indigo">You</Badge>}
+                            {invited && <Badge tone="amber" className="sm:hidden">Invited</Badge>}
                           </p>
                           {m.name && <p className="truncate text-xs text-neutral-500">{m.email}</p>}
                         </div>
@@ -185,7 +186,7 @@ export default function MembersPanel({
                         <Badge tone={ROLE_TONE[m.role]}>{ROLE_LABEL[m.role]}</Badge>
                       )}
                     </td>
-                    <td className={TD}>
+                    <td className={cn(TD, "hidden sm:table-cell")}>
                       <Badge tone={invited ? "amber" : "emerald"} dot>
                         {invited ? "Invited" : "Active"}
                       </Badge>

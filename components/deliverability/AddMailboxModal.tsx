@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { CaretDown } from "@phosphor-icons/react/ssr";
 import { requestAddMailbox } from "@/lib/actions/mailboxes";
 import type { Domain } from "@/lib/actions/domains";
 import Button from "@/components/ui/Button";
@@ -62,7 +63,7 @@ export default function AddMailboxModal({ domains, onClose }: { domains: Domain[
         <form id="add-mailbox-form" onSubmit={handleSubmit} className="space-y-4 px-5 pb-5 pt-3">
           <div>
             <Label htmlFor="mailbox-local">Address</Label>
-            <div className="flex h-9 items-stretch overflow-hidden rounded-lg ring-1 ring-inset ring-neutral-200 shadow-[0_1px_2px_rgba(0,0,0,0.03)] focus-within:ring-2 focus-within:ring-indigo-500/50">
+            <div className="flex h-9 items-stretch overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-shadow hover:border-neutral-300 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20">
               <input
                 id="mailbox-local"
                 autoFocus
@@ -73,18 +74,21 @@ export default function AddMailboxModal({ domains, onClose }: { domains: Domain[
                 className="min-w-0 flex-1 bg-white px-3 text-[13px] text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
               />
               <span className="flex items-center border-x border-neutral-200 bg-neutral-50 px-2 text-[13px] text-neutral-400">@</span>
-              <select
-                aria-label="Domain"
-                value={domainId ?? ""}
-                onChange={(e) => setDomainId(Number(e.target.value))}
-                className={cn(inputClasses, "h-full w-auto max-w-[55%] cursor-pointer rounded-none shadow-none ring-0 hover:ring-0 focus:ring-0")}
-              >
-                {domains.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
+              <div className="relative flex max-w-[60%]">
+                <select
+                  aria-label="Domain"
+                  value={domainId ?? ""}
+                  onChange={(e) => setDomainId(Number(e.target.value))}
+                  className={cn(inputClasses, "h-full w-full min-w-0 cursor-pointer appearance-none truncate rounded-none pr-7 shadow-none ring-0 hover:ring-0 focus:ring-0")}
+                >
+                  {domains.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+                <CaretDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" weight="bold" />
+              </div>
             </div>
             {selectedDomain && selectedDomain.status !== "verified" && (
               <Callout tone="warning" className="mt-2 text-xs">
