@@ -1,9 +1,6 @@
 import { redirect } from "next/navigation";
-import { Geist } from "next/font/google";
 import { auth } from "@/auth";
 import DashboardShell from "@/components/dashboard/DashboardShell";
-
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 
 export default async function DashboardLayout({
   children,
@@ -17,8 +14,6 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className={`${geist.variable} ${geist.className} contents`}>
-      <DashboardShell user={session.user}>{children}</DashboardShell>
-    </div>
+    <DashboardShell user={session.user}>{children}</DashboardShell>
   );
 }
