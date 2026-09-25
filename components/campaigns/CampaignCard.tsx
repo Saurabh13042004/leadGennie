@@ -2,25 +2,29 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Play, Pause, ArrowUpRight, Loader2, Check, X, Clock } from "lucide-react";
+import {
+  ChartLineUp,
+  Check,
+  CircleNotch,
+  Clock,
+  EnvelopeSimple,
+  LinkedinLogo,
+  Pause,
+  Play,
+  Warning,
+  X,
+} from "@phosphor-icons/react/ssr";
 import { cn } from "@/lib/utils";
 import { updateCampaignStatus, type Campaign } from "@/lib/actions/campaigns";
 import { decideApproval } from "@/lib/actions/approvals";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import { CAMPAIGN_ROW_GRID, CAMPAIGN_STATUS, channelFamilies } from "./campaign-status";
 
-const STATUS_STYLES: Record<Campaign["status"], string> = {
-  running: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
-  paused: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
-  pending_approval: "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200",
-  rejected: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
-};
-
-const STATUS_LABEL: Record<Campaign["status"], string> = {
-  running: "Running",
-  paused: "Paused",
-  pending_approval: "Pending approval",
-  rejected: "Rejected",
-};
-
+/**
+ * One campaign in the campaigns list: status, name + audience/channels, lead/send/reply numbers, and the
+ * pause/resume or approve/reject actions. (File name kept from the old card layout.)
+ */
 export default function CampaignCard({ campaign, canApprove }: { campaign: Campaign; canApprove: boolean }) {
   const [status, setStatus] = useState(campaign.status);
   const [isPending, startTransition] = useTransition();
@@ -47,100 +51,121 @@ export default function CampaignCard({ campaign, canApprove }: { campaign: Campa
     });
   }
 
-  const createdLabel = new Date(campaign.created_at).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
+  const created = new Date(campaign.created_at);
+  const createdLabel = created.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const meta = CAMPAIGN_STATUS[status];
+  const families = channelFamilies(campaign.channels);
+  const totalLeads = Number(campaign.total_leads);
+  const sent = Number(campaign.sent_count);
+  const replied = Number(campaign.replied_count);
+  const replyRate = Number(campaign.reply_rate);
+  const blocked = Number(campaign.blocked_count);
 
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-5 flex flex-col gap-4 hover:border-neutral-300 transition-colors">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-neutral-900 font-semibold truncate">{campaign.name}</h3>
-          <p className="text-xs text-neutral-500 mt-1">created {createdLabel}</p>
+    <li className={cn("group relative px-4 py-3 transition-colors hover:bg-neutral-50/80 md:px-6", CAMPAIGN_ROW_GRID)}>
+      {/* Name + audience/channels */}
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate text-[13px] font-medium text-neutral-900">{campaign.name}</p>
+            <Badge tone={meta.tone} dot pulse={meta.pulse} className="md:hidden">
+              {meta.label}
+            </Badge>
+          </div>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-neutral-500">
+            <span className="flex shrink-0 items-center gap-1 text-neutral-400">
+              {families.includes("email") && <EnvelopeSimple className="h-3.5 w-3.5" weight="duotone" aria-label="Email" />}
+              {families.includes("linkedin") && <LinkedinLogo className="h-3.5 w-3.5" weight="duotone" aria-label="LinkedIn" />}
+            </span>
+            <span className="truncate">{campaign.audience_label || "No audience label"}</span>
+            {blocked > 0 && (
+              <span className="inline-flex shrink-0 items-center gap-1 text-amber-700">
+                <span className="text-neutral-300">·</span>
+                <Warning className="h-3 w-3" weight="fill" />
+                {blocked} lead(s) excluded by compliance rules
+              </span>
+            )}
+          </div>
+          {decisionError && <p className="mt-1 text-xs text-rose-600">{decisionError}</p>}
+          {/* Compact metrics for small screens */}
+          <p className="mt-1 text-xs tabular-nums text-neutral-500 md:hidden">
+            {totalLeads.toLocaleString()} leads · {sent.toLocaleString()} sent · {replied.toLocaleString()} replied ({replyRate}%) · {createdLabel}
+          </p>
         </div>
-        <span className={cn("text-xs font-medium rounded-full px-2.5 py-1 shrink-0", STATUS_STYLES[status])}>
-          {STATUS_LABEL[status]}
+      </div>
+
+      <div className="hidden md:block">
+        <Badge tone={meta.tone} dot pulse={meta.pulse}>
+          {meta.label}
+        </Badge>
+      </div>
+
+      <Metric value={totalLeads.toLocaleString()} />
+      <Metric value={sent.toLocaleString()} muted={sent === 0} />
+      <div className="hidden text-right md:block">
+        <span className={cn("text-[13px] tabular-nums", replied === 0 ? "text-neutral-400" : "text-neutral-900")}>
+          {replied.toLocaleString()}
         </span>
+        <span className={cn("ml-1.5 text-xs tabular-nums", replyRate > 0 ? "text-emerald-600" : "text-neutral-400")}>{replyRate}%</span>
       </div>
+      <time dateTime={created.toISOString()} className="hidden text-right text-xs tabular-nums text-neutral-400 md:block">
+        {createdLabel}
+      </time>
 
-      <div className="grid grid-cols-4 gap-2 text-center rounded-xl bg-neutral-50 py-3">
-        <div>
-          <p className="text-sm font-bold text-neutral-900 tabular-nums">{campaign.total_leads.toLocaleString()}</p>
-          <p className="text-[11px] text-neutral-500 mt-0.5">Leads</p>
-        </div>
-        <div>
-          <p className="text-sm font-bold text-neutral-900 tabular-nums">{campaign.sent_count.toLocaleString()}</p>
-          <p className="text-[11px] text-neutral-500 mt-0.5">Sent</p>
-        </div>
-        <div>
-          <p className="text-sm font-bold text-neutral-900 tabular-nums">{campaign.replied_count.toLocaleString()}</p>
-          <p className="text-[11px] text-neutral-500 mt-0.5">Replied</p>
-        </div>
-        <div>
-          <p className="text-sm font-bold text-emerald-600 tabular-nums">{campaign.reply_rate}%</p>
-          <p className="text-[11px] text-neutral-500 mt-0.5">Reply rate</p>
-        </div>
-      </div>
-
-      {campaign.blocked_count > 0 && (
-        <p className="text-xs text-amber-700">{campaign.blocked_count} lead(s) excluded by compliance rules</p>
-      )}
-      {decisionError && <p className="text-xs text-rose-600">{decisionError}</p>}
-
-      <div className="flex items-center gap-2 pt-1 border-t border-neutral-100">
+      {/* Actions */}
+      <div className="mt-2 flex items-center justify-start gap-1 md:mt-0 md:justify-end">
         {status === "pending_approval" ? (
           canApprove ? (
             <>
-              <button
-                onClick={() => handleDecision("approved")}
-                disabled={isPending}
-                className="flex-1 flex items-center justify-center gap-1.5 text-sm text-white bg-neutral-900 hover:bg-neutral-800 rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
-              >
-                {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              <Button variant="primary" size="xs" onClick={() => handleDecision("approved")} disabled={isPending}>
+                {isPending ? <CircleNotch className="h-3.5 w-3.5 animate-spin" weight="bold" /> : <Check className="h-3.5 w-3.5" weight="bold" />}
                 Approve
-              </button>
-              <button
-                onClick={() => handleDecision("rejected")}
-                disabled={isPending}
-                className="flex items-center justify-center gap-1.5 text-sm text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
-              >
-                <X className="w-3.5 h-3.5" />
+              </Button>
+              <Button variant="danger" size="xs" onClick={() => handleDecision("rejected")} disabled={isPending}>
+                <X className="h-3.5 w-3.5" weight="bold" />
                 Reject
-              </button>
+              </Button>
             </>
           ) : (
-            <p className="flex-1 flex items-center gap-1.5 text-sm text-neutral-500">
-              <Clock className="w-3.5 h-3.5" />
+            <span className="inline-flex items-center gap-1.5 text-xs text-neutral-500">
+              <Clock className="h-3.5 w-3.5" weight="duotone" />
               Waiting on owner/admin approval
-            </p>
+            </span>
           )
         ) : status === "rejected" ? (
-          <p className="flex-1 text-sm text-neutral-500">This launch request was rejected.</p>
+          <span className="text-xs text-neutral-400">This launch request was rejected.</span>
         ) : (
-          <button
-            onClick={toggleStatus}
-            disabled={isPending}
-            className="flex-1 flex items-center justify-center gap-1.5 text-sm text-neutral-700 bg-white border border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300 rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
-          >
-            {isPending ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : status === "running" ? (
-              <Pause className="w-3.5 h-3.5" />
-            ) : (
-              <Play className="w-3.5 h-3.5" />
+          <div
+            className={cn(
+              "flex items-center gap-1 transition-opacity",
+              isPending ? "opacity-100" : "md:opacity-0 md:focus-within:opacity-100 md:group-hover:opacity-100",
             )}
-            {status === "running" ? "Pause" : "Resume"}
-          </button>
+          >
+            <Button variant="secondary" size="xs" onClick={toggleStatus} disabled={isPending}>
+              {isPending ? (
+                <CircleNotch className="h-3.5 w-3.5 animate-spin" weight="bold" />
+              ) : status === "running" ? (
+                <Pause className="h-3.5 w-3.5" weight="fill" />
+              ) : (
+                <Play className="h-3.5 w-3.5" weight="fill" />
+              )}
+              {status === "running" ? "Pause" : "Resume"}
+            </Button>
+          </div>
         )}
         <Link
           href="/dashboard"
-          className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 rounded-lg px-3 py-2 transition-colors"
+          title="View analytics"
+          aria-label="View analytics"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-neutral-400 transition-all hover:bg-neutral-100 hover:text-neutral-900 md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
         >
-          View analytics
-          <ArrowUpRight className="w-3.5 h-3.5" />
+          <ChartLineUp className="h-4 w-4" weight="duotone" />
         </Link>
       </div>
-    </div>
+    </li>
   );
+}
+
+function Metric({ value, muted }: { value: string; muted?: boolean }) {
+  return <span className={cn("hidden text-right text-[13px] tabular-nums md:block", muted ? "text-neutral-400" : "text-neutral-900")}>{value}</span>;
 }

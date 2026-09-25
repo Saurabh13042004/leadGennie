@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { Megaphone } from "@phosphor-icons/react/ssr";
+import PageHeader from "@/components/ui/PageHeader";
 import WizardStepper from "./WizardStepper";
+import DraftSummary from "./DraftSummary";
 import AudienceStep from "./AudienceStep";
 import SequenceEditor from "./SequenceEditor";
 import ReviewStep from "./ReviewStep";
@@ -25,23 +26,28 @@ export default function CampaignWizard({
   const draft = useCampaignDraft({ audiences, initialPitch, mailboxes, workflows });
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto">
-      <Link
-        href="/dashboard/campaigns"
-        className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back
-      </Link>
+    <div className="flex min-h-full flex-col">
+      <PageHeader
+        title="New campaign"
+        icon={Megaphone}
+        crumbs={[{ label: "Campaigns", href: "/dashboard/campaigns" }]}
+        description="Multi-channel sequence builder"
+      />
 
-      <h1 className="text-xl font-bold tracking-tight text-neutral-900 mb-1">Create campaign</h1>
-      <p className="text-sm text-neutral-500 mb-6">Multi-channel sequence builder</p>
+      <div className="flex flex-1 flex-col lg:flex-row">
+        <aside className="shrink-0 border-b border-neutral-200/80 bg-neutral-50/50 px-4 py-3 md:px-6 lg:w-64 lg:border-b-0 lg:border-r lg:px-5 lg:py-6">
+          <div className="lg:sticky lg:top-20">
+            <WizardStepper current={draft.step} />
+            <DraftSummary draft={draft} />
+          </div>
+        </aside>
 
-      <WizardStepper current={draft.step} />
-
-      {draft.step === 1 && <AudienceStep draft={draft} />}
-      {draft.step === 2 && <SequenceEditor draft={draft} />}
-      {draft.step === 3 && <ReviewStep draft={draft} />}
+        <div className="flex min-w-0 flex-1 flex-col">
+          {draft.step === 1 && <AudienceStep draft={draft} />}
+          {draft.step === 2 && <SequenceEditor draft={draft} />}
+          {draft.step === 3 && <ReviewStep draft={draft} />}
+        </div>
+      </div>
     </div>
   );
 }
