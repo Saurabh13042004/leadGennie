@@ -37,7 +37,7 @@ Typecheck passes. No tests, no lint/build baseline recorded, ad-hoc migration ru
 - `CampaignWizard`: delete `hashRate()`/predicted reply rate; remove the four decorative personalization options (news, tone, localize, A/B) — they return in Phases 2/3 only when real.
 - Landing: remove every fabricated metric (`Hero.tsx` activity feed/bars/campaign table, `Features.tsx` "+31% Avg Reply Rate", `AiTerminal.tsx` "92%", any testimonial-like numbers) → replace with neutral copy or a component wrapped in an explicit **"Demo data"** label. Remove `SocialProof` third-party logo marquee (implies endorsement) and the hardcoded logo.dev key fallback.
 - Grep gate script `scripts/checks/no-fake-metrics.mjs` (see `06-quality`).
-- Fix `nav-config.ts` "Juntrax Solutions Sales Agent" → workspace name.
+- Fix `nav-config.ts` "LeadGennie Solutions Sales Agent" → workspace name.
 
 ### WP0.6 — Navigation & structure
 - Nav → six items (Command Center [temporarily the existing dashboard], Leads, Campaigns, Inbox, Analytics, Settings). Settings hub links: Workspace/Team, Mailboxes & Domains, Do Not Contact, AI Prompts, Integrations, API Credentials, Approvals.

@@ -66,7 +66,7 @@ Legend: **Keep** = maps directly to V1 · **Extend** = exists, needs work · **H
 | Chrome extension | Scrapes profile via raw text + Gemini extraction, adds leads, **and sends real LinkedIn DMs** (`DRY_RUN=false`) | Extend as capture (Phase 7); **LinkedIn auto-send conflicts with PLAN §6 — see decision D-05** |
 | Dashboard / Insight Board | Honest metrics on real data (AUD-04 done) | Extend → becomes Command Center (Phase 8) and Analytics (Phase 9) |
 | Landing page | **Fake metrics**: `Hero.tsx` (A/B "42% higher CTR", "245 leads scored", campaign table with 17% rate), `Features.tsx` ("+31% Avg Reply Rate"), `AiTerminal.tsx` ("92%"). `SocialProof.tsx` shows real company logos (Linear, Vercel, Stripe, Clay…) under "Designed for modern GTM teams" which reads as customer endorsement | **Remove/replace → Phase 0 (removal), Phase 11 (final)** |
-| Nav | 8 groups / ~25 items; `nav-config.ts` still says "Juntrax Solutions Sales Agent"; 9 pages are `ComingSoon` stubs (accounts, crm-sync, help, knowledge, meetings, notifications, signals, usage, webhooks) | **Consolidate to 6 → Phase 0** |
+| Nav | 8 groups / ~25 items; `nav-config.ts` still says "LeadGennie Solutions Sales Agent"; 9 pages are `ComingSoon` stubs (accounts, crm-sync, help, knowledge, meetings, notifications, signals, usage, webhooks) | **Consolidate to 6 → Phase 0** |
 
 ## Known defects to fix in Phase 0
 

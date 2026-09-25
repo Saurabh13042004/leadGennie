@@ -73,7 +73,7 @@ export default function SignupForm() {
           type="text"
           value={company}
           onChange={(e) => setCompany(e.target.value)}
-          placeholder="Juntrax Solutions"
+          placeholder="LeadGennie Solutions"
           className="h-10"
         />
       </div>
