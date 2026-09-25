@@ -74,17 +74,18 @@ export default function AskGennie({
             ? "You need member access to ask Gennie"
             : home
               ? "Ask Gennie to find, research or rank your leads…"
-              : "Ask Gennie something else — it starts a new plan…"
+              : "Ask Gennie something else…"
         }
         footer={
           home && <span className="inline-flex items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-neutral-400" weight="duotone" />
-            Plans first — nothing runs until you approve, and it never sends email.
+            <span className="hidden sm:inline">Plans first — nothing runs until you approve, and it never sends email.</span>
+            <span className="sm:hidden">Plans first · never sends email</span>
           </span>
         }
       />
 
-      {!home && <p className="mt-2 text-center text-[11px] text-neutral-400">Plans first — nothing runs until you approve, and it never sends email.</p>}
+      {!home && <p className="mt-2 text-center text-[11px] text-neutral-400">Starts a new plan — nothing runs until you approve, and Gennie never sends email.</p>}
 
       {error && (
         <p role="alert" className="mt-2.5 flex items-start gap-1.5 px-1 text-[13px] text-rose-600">

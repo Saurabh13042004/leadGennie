@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
 import { disconnectConnection } from "@/lib/actions/integrations";
+import Button from "@/components/ui/Button";
+import { Spinner } from "@/components/settings/bits";
 
 export default function DisconnectButton({ id }: { id: number }) {
   const [isPending, setIsPending] = useState(false);
@@ -20,13 +21,9 @@ export default function DisconnectButton({ id }: { id: number }) {
   };
 
   return (
-    <button
-      onClick={handleClick}
-      disabled={isPending}
-      className="text-sm text-neutral-500 hover:text-rose-600 transition-colors disabled:opacity-50 flex items-center gap-2"
-    >
-      {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+    <Button size="xs" variant="ghost" onClick={handleClick} disabled={isPending} className="hover:bg-rose-50 hover:text-rose-600">
+      {isPending && <Spinner className="h-3 w-3" />}
       Disconnect
-    </button>
+    </Button>
   );
 }

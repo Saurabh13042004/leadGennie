@@ -1,6 +1,9 @@
 "use client";
 
-import { AlertTriangle, RotateCw } from "lucide-react";
+import Link from "next/link";
+import { ArrowClockwise, WarningCircle } from "@phosphor-icons/react/ssr";
+import EmptyState from "@/components/ui/EmptyState";
+import Button, { buttonClasses } from "@/components/ui/Button";
 
 /**
  * Catches any error thrown while rendering a dashboard page so users get a
@@ -16,26 +19,29 @@ export default function DashboardError({
   unstable_retry: () => void;
 }) {
   return (
-    <div className="p-4 md:p-8 max-w-2xl mx-auto">
-      <div className="rounded-xl border border-white/10 bg-[#0A0A0A] flex flex-col items-center text-center py-16 px-6">
-        <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center mb-4">
-          <AlertTriangle className="w-5 h-5 text-red-400" />
-        </div>
-        <h1 className="text-white font-medium">Something went wrong</h1>
-        <p className="text-sm text-neutral-500 mt-1 max-w-sm">
-          This page hit an unexpected error. Your data is safe — try again, and if it keeps happening let us know.
-        </p>
+    <div className="flex min-h-full items-center justify-center px-4 py-16">
+      <EmptyState
+        icon={WarningCircle}
+        title="Something went wrong"
+        description="This page hit an unexpected error. Your data is safe — try again, and if it keeps happening let us know."
+        actions={
+          <>
+            <Button variant="primary" onClick={() => unstable_retry()}>
+              <ArrowClockwise className="h-4 w-4" weight="bold" />
+              Try again
+            </Button>
+            <Link href="/dashboard" className={buttonClasses({ variant: "secondary" })}>
+              Back to Command Center
+            </Link>
+          </>
+        }
+      >
         {error.digest && (
-          <p className="text-xs text-neutral-600 mt-3 font-mono">Reference: {error.digest}</p>
+          <p className="mt-6 inline-flex items-center gap-1.5 rounded-md bg-neutral-50 px-2 py-1 font-mono text-[11px] text-neutral-500 ring-1 ring-inset ring-neutral-200/80">
+            <span className="font-sans text-neutral-400">Reference</span> {error.digest}
+          </p>
         )}
-        <button
-          onClick={() => unstable_retry()}
-          className="mt-6 flex items-center gap-1.5 text-sm text-neutral-300 hover:text-white border border-white/10 rounded-lg px-3 py-2 transition-colors"
-        >
-          <RotateCw className="w-4 h-4" />
-          Try again
-        </button>
-      </div>
+      </EmptyState>
     </div>
   );
 }

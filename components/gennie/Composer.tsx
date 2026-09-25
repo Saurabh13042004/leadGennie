@@ -7,7 +7,7 @@ import { PROMPT_MAX_LENGTH, PROMPT_MIN_LENGTH } from "@/lib/agent/types";
 import { cn } from "@/lib/utils";
 
 /**
- * The big rounded prompt box: auto-growing textarea, send button, ⌘↵ to send. Purely presentational —
+ * The big rounded prompt box: auto-growing textarea, send button, Enter to send. Purely presentational —
  * the owner holds the value and decides what "submit" means.
  */
 export default function Composer({
@@ -38,8 +38,8 @@ export default function Composer({
   const send = (
     <>
       <span className="hidden items-center gap-1 sm:flex" aria-hidden>
-        <Kbd>⌘</Kbd>
         <Kbd>↵</Kbd>
+        <span className="text-[11px] text-neutral-400">to plan</span>
       </span>
       <button
         type="submit"
@@ -77,7 +77,8 @@ export default function Composer({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+          // Enter sends (Shift+Enter for a new line), like every chat app; skip while an IME is composing.
+          if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
             e.preventDefault();
             if (canSend) onSubmit();
           }

@@ -8,7 +8,6 @@ import { RUN_STATUS, timeAgo } from "./status";
 /** A quiet history list — status dot, the prompt, when. */
 export default function RecentRuns({ runs }: { runs: RecentRun[] }) {
   if (runs.length === 0) return null;
-  const now = Date.now();
   return (
     <section aria-labelledby="recent-runs-title">
       <h2 id="recent-runs-title" className="mb-1.5 px-3 text-[11px] font-medium uppercase tracking-wider text-neutral-400">
@@ -31,7 +30,7 @@ export default function RecentRuns({ runs }: { runs: RecentRun[] }) {
                 <span className={cn("hidden shrink-0 text-[12px] sm:inline", r.status === "awaiting_approval" ? "text-amber-600" : "text-neutral-400")}>
                   {s.label}
                 </span>
-                <span className="w-16 shrink-0 text-right text-[12px] tabular-nums text-neutral-400">{timeAgo(r.createdAt, now)}</span>
+                <span className="w-16 shrink-0 text-right text-[12px] tabular-nums text-neutral-400">{timeAgo(r.createdAt)}</span>
                 <CaretRight className="h-3 w-3 shrink-0 text-neutral-300 opacity-0 transition-opacity group-hover:opacity-100" weight="bold" />
               </Link>
             </li>

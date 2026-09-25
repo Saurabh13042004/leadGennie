@@ -117,7 +117,8 @@ export default function RunView({ initial, canControl }: { initial: GennieRunVie
         title={<span className="font-medium">{view.prompt || `Run #${view.id}`}</span>}
         actions={
           <Link href="/dashboard/gennie" className={buttonClasses({ variant: "secondary", size: "xs" })}>
-            <Plus className="h-3.5 w-3.5" weight="bold" /> New chat
+            <Plus className="h-3.5 w-3.5" weight="bold" /> <span className="hidden sm:inline">New chat</span>
+            <span className="sr-only sm:hidden">New chat</span>
           </Link>
         }
       />
@@ -132,9 +133,10 @@ export default function RunView({ initial, canControl }: { initial: GennieRunVie
 
         {/* Gennie's turn */}
         <div className="flex items-start gap-3">
-          <GennieMark size="sm" className="mt-0.5" />
+          <GennieMark size="sm" className="mt-0.5 hidden sm:inline-flex" />
           <div className="min-w-0 flex-1 space-y-4">
             <div className="flex flex-wrap items-center gap-2">
+              <GennieMark size="xs" className="sm:hidden" />
               <span className="text-[13px] font-semibold text-neutral-900">Gennie</span>
               <span role="status">
                 <Badge tone={status.tone} dot pulse={status.pulse}>{status.label}</Badge>
@@ -177,7 +179,7 @@ export default function RunView({ initial, canControl }: { initial: GennieRunVie
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-10 bg-gradient-to-t from-white from-60% to-white/0 pb-4 pt-8">
+      <div className="sticky bottom-0 z-10 bg-gradient-to-t from-white from-75% to-white/0 pb-4 pt-8">
         <div className="mx-auto max-w-3xl px-4 md:px-6">
           <AskGennie variant="followup" canPlan={canControl} />
         </div>
