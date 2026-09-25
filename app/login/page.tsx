@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import AuthShell from "@/components/auth/AuthShell";
 import LoginForm from "@/components/auth/LoginForm";
 
@@ -12,14 +11,6 @@ export default function LoginPage() {
     <AuthShell
       title="Welcome back"
       subtitle="Sign in to your LeadGennie workspace"
-      footer={
-        <>
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-medium text-neutral-900 hover:underline">
-            Create one
-          </Link>
-        </>
-      }
     >
       <Suspense fallback={null}>
         <LoginForm />

@@ -7,12 +7,12 @@ import { CircleNotch, WarningCircle } from "@phosphor-icons/react/ssr";
 import Button from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Field";
 
-export default function SignupForm() {
+export default function SignupForm({ initialEmail = "" }: { initialEmail?: string }) {
   const router = useRouter();
 
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

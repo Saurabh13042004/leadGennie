@@ -14,7 +14,7 @@ export default function LoginForm() {
   const requested = searchParams.get("callbackUrl") || "";
   const callbackUrl = requested.startsWith("/") && !requested.startsWith("//") && !requested.includes("\\") ? requested : "/dashboard";
 
-  const [email, setEmail] = useState("demo@leadgennie.ai");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,6 +53,7 @@ export default function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@company.com"
           className="h-10"
+          autoComplete="email"
         />
       </div>
       <div>
@@ -90,10 +91,6 @@ export default function LoginForm() {
         )}
         Sign in
       </Button>
-
-      <p className="rounded-lg bg-neutral-50 px-3 py-2 text-center text-xs text-neutral-500 ring-1 ring-inset ring-neutral-200/70">
-        Demo account: demo@leadgennie.ai / demo1234
-      </p>
     </form>
   );
 }

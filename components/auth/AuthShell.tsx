@@ -13,7 +13,7 @@ export default function AuthShell({
   title: string;
   subtitle: string;
   children: ReactNode;
-  footer: ReactNode;
+  footer?: ReactNode;
 }) {
   return (
     <div className="grid min-h-screen w-full bg-white lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
@@ -34,7 +34,7 @@ export default function AuthShell({
             </h1>
             <p className="mb-8 mt-1.5 text-sm text-neutral-500">{subtitle}</p>
             {children}
-            <p className="mt-8 text-sm text-neutral-500">{footer}</p>
+            {footer && <p className="mt-8 text-sm text-neutral-500">{footer}</p>}
           </div>
         </div>
 

@@ -37,15 +37,22 @@ export default function MembersPanel({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("member");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ tone: "success" | "warning"; text: string } | null>(null);
   const [inviting, startInvite] = useTransition();
   const [busyId, setBusyId] = useState<number | null>(null);
 
   function handleInvite(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     startInvite(async () => {
       try {
-        await inviteMember(email, role);
+        const { emailed } = await inviteMember(email, role);
+        setNotice(
+          emailed
+            ? { tone: "success", text: `Invitation emailed to ${email.trim().toLowerCase()}.` }
+            : { tone: "warning", text: "The invite is saved, but the email couldn't be sent (email isn't configured or the provider rejected it). Ask them to sign up with this address." },
+        );
         setEmail("");
         setMembers((prev) => [
           ...prev,
@@ -121,6 +128,7 @@ export default function MembersPanel({
       )}
 
       {error && <Callout>{error}</Callout>}
+      {notice && <Callout tone={notice.tone}>{notice.text}</Callout>}
 
       <Card className="overflow-hidden">
         <CardHeader

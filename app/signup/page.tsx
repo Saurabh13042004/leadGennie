@@ -6,7 +6,8 @@ export const metadata = {
   title: "Create account | LeadGennie",
 };
 
-export default function SignupPage() {
+export default async function SignupPage({ searchParams }: { searchParams: Promise<{ email?: string }> }) {
+  const { email } = await searchParams;
   return (
     <AuthShell
       title="Create your workspace"
@@ -20,7 +21,7 @@ export default function SignupPage() {
         </>
       }
     >
-      <SignupForm />
+      <SignupForm initialEmail={typeof email === "string" && email.length <= 254 ? email : ""} />
     </AuthShell>
   );
 }

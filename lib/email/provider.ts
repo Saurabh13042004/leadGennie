@@ -8,6 +8,8 @@ export type MailSendInput = {
   to: string;
   subject: string;
   text: string;
+  /** Optional HTML alternative (transactional mail); `text` stays the plain-text part and is always required. */
+  html?: string;
   headers?: Record<string, string>;
   /** Replaying the same key with the same payload must NOT send a second email. */
   idempotencyKey: string;

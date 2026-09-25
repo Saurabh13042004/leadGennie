@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { AppError, ok, parseJson, withApi } from "@/lib/api";
 import { createUser, findUserByEmail } from "@/lib/users";
+import { appBaseUrl } from "@/lib/campaigns/render";
+import { sendSystemEmail } from "@/lib/email/system-mail";
+import { welcomeEmail } from "@/lib/email/templates/welcome";
 
 const Body = z.object({
   name: z.string({ error: "Name is required." }).trim().min(1, "Name is required.").max(120),
@@ -21,5 +24,7 @@ export const POST = withApi(async (request) => {
   }
 
   const user = await createUser({ name, email, password, company: company || undefined });
+  // Best effort: a failed welcome email never fails sign-up (sendSystemEmail does not throw).
+  await sendSystemEmail({ to: user.email, kind: "welcome", ...welcomeEmail({ name: user.name, baseUrl: appBaseUrl() }) });
   return ok({ id: user.id, email: user.email });
 });

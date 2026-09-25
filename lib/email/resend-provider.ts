@@ -36,7 +36,7 @@ export class ResendProvider implements MailProvider {
     let res;
     try {
       res = await getResendClient().emails.send(
-        { from: input.from, to: input.to, subject: input.subject, text: input.text, headers: input.headers, tags: input.tags },
+        { from: input.from, to: input.to, subject: input.subject, text: input.text, html: input.html, headers: input.headers, tags: input.tags },
         { idempotencyKey: input.idempotencyKey },
       );
     } catch (e) {

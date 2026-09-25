@@ -4,6 +4,9 @@ import { sql } from "@/lib/db/client";
 import { revalidatePath } from "next/cache";
 import { requireRole, requireWorkspace } from "@/lib/auth/workspace-context";
 import { ROLE_RANK, type Role } from "@/lib/workspace";
+import { appBaseUrl } from "@/lib/campaigns/render";
+import { sendSystemEmail } from "@/lib/email/system-mail";
+import { inviteEmail } from "@/lib/email/templates/invite";
 
 export type WorkspaceInfo = {
   id: number;
@@ -51,7 +54,8 @@ export async function listMembers(): Promise<Member[]> {
 
 const INVITABLE_ROLES: Role[] = ["admin", "member", "viewer"];
 
-export async function inviteMember(email: string, role: Role) {
+/** The invite is always saved; `emailed` says whether the notification email went out (false when mail isn't configured or failed). */
+export async function inviteMember(email: string, role: Role): Promise<{ emailed: boolean }> {
   const { workspaceId, userId } = await requireRole("admin");
   const trimmedEmail = email.trim().toLowerCase();
 
@@ -86,7 +90,22 @@ export async function inviteMember(email: string, role: Role) {
     `;
   }
 
+  // Names come from the database, not the session: the session's copy goes stale when the workspace or user is renamed.
+  const [inviter, workspace] = await Promise.all([
+    sql`select name from users where id = ${userId}`,
+    sql`select name from workspaces where id = ${workspaceId}`,
+  ]);
+  const sent = await sendSystemEmail({
+    to: trimmedEmail,
+    kind: "workspace_invite",
+    ...inviteEmail({
+      inviterName: String(inviter[0]?.name ?? ""), workspaceName: String(workspace[0]?.name ?? "your team"), role: role as "admin" | "member" | "viewer",
+      inviteeEmail: trimmedEmail, existingAccount: existingUser.length > 0, baseUrl: appBaseUrl(),
+    }),
+  });
+
   revalidatePath("/dashboard/workspace");
+  return { emailed: sent.sent };
 }
 
 export async function updateMemberRole(memberId: number, newRole: Role) {
