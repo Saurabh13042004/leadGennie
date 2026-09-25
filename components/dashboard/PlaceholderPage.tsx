@@ -1,5 +1,9 @@
-import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { ArrowRight } from "@phosphor-icons/react/ssr";
+import type { NavIcon } from "@/lib/nav-config";
+import PageHeader from "@/components/ui/PageHeader";
+import EmptyState from "@/components/ui/EmptyState";
+import { buttonClasses } from "@/components/ui/Button";
 
 /**
  * An honest empty state for a primary destination whose real feature lands in
@@ -9,46 +13,51 @@ import Link from "next/link";
 export default function PlaceholderPage({
   title,
   description,
-  icon: Icon,
+  icon,
   heading,
   body,
   links,
+  preview,
 }: {
   title: string;
   description: string;
-  icon: LucideIcon;
+  icon: NavIcon;
   heading: string;
   body: string;
   links?: { label: string; href: string }[];
+  /** Optional list of what's coming — plain capability names, never numbers. */
+  preview?: string[];
 }) {
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto">
-      <div className="flex items-start gap-3 mb-8">
-        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-          <Icon className="w-5 h-5 text-indigo-600" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-neutral-900">{title}</h1>
-          <p className="text-sm text-neutral-500">{description}</p>
-        </div>
+    <>
+      <PageHeader title={title} icon={icon} description={description} />
+      <div className="mx-auto max-w-3xl px-6">
+        <EmptyState
+          icon={icon}
+          title={heading}
+          description={body}
+          actions={links?.map((l, i) => (
+            <Link key={l.href} href={l.href} className={buttonClasses({ variant: i === 0 ? "primary" : "secondary" })}>
+              {l.label}
+              {i === 0 && <ArrowRight className="h-3.5 w-3.5" weight="bold" />}
+            </Link>
+          ))}
+        >
+          {preview && preview.length > 0 && (
+            <div className="mt-10 w-full max-w-md rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50 p-4 text-left">
+              <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-neutral-400">Coming here</p>
+              <ul className="space-y-1.5">
+                {preview.map((p) => (
+                  <li key={p} className="flex items-center gap-2 text-[13px] text-neutral-600">
+                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
+                    {p}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </EmptyState>
       </div>
-      <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 flex flex-col items-center text-center py-20 px-6">
-        <p className="text-neutral-900 font-semibold">{heading}</p>
-        <p className="text-sm text-neutral-500 mt-1 max-w-md">{body}</p>
-        {links && links.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-2 mt-6">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="text-sm text-neutral-700 hover:text-neutral-900 bg-white border border-neutral-200 rounded-lg px-3 py-2 transition-colors hover:border-neutral-300"
-              >
-                {l.label}
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    </>
   );
 }

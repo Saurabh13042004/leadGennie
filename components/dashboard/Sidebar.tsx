@@ -2,56 +2,87 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MagnifyingGlass } from "@phosphor-icons/react/ssr";
 import { cn } from "@/lib/utils";
-import { isNavItemActive, navGroups } from "@/lib/nav-config";
+import { isNavItemActive, navGroups, type NavItem } from "@/lib/nav-config";
+import { Kbd } from "@/components/ui/Field";
+import WorkspaceMenu, { UserMenu, type ShellUser } from "./SidebarMenus";
 
-export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+function NavLink({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate?: () => void }) {
+  const Icon = item.icon;
+  if (item.featured) {
+    return (
+      <Link
+        href={item.href}
+        onClick={onNavigate}
+        className={cn(
+          "group flex h-9 items-center gap-2.5 rounded-lg px-2 text-[13px] font-medium transition-all",
+          active
+            ? "bg-white text-neutral-900 shadow-[0_1px_2px_rgba(0,0,0,0.06)] ring-1 ring-neutral-200/80"
+            : "text-neutral-700 hover:bg-white/70",
+        )}
+      >
+        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-[0_2px_6px_-1px_rgba(124,58,237,0.5)]">
+          <Icon className="h-3.5 w-3.5" weight="fill" />
+        </span>
+        <span className="flex-1 truncate">{item.title}</span>
+        <span className="rounded bg-gradient-to-r from-indigo-500/10 to-fuchsia-500/10 px-1.5 py-px text-[10px] font-semibold text-violet-600 ring-1 ring-inset ring-violet-500/15">AI</span>
+      </Link>
+    );
+  }
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      className={cn(
+        "flex h-8 items-center gap-2.5 rounded-lg px-2 text-[13px] font-medium transition-all",
+        active
+          ? "bg-white text-neutral-900 shadow-[0_1px_2px_rgba(0,0,0,0.06)] ring-1 ring-neutral-200/80"
+          : "text-neutral-600 hover:bg-white/70 hover:text-neutral-900",
+      )}
+    >
+      <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-indigo-600" : "text-neutral-400")} weight={active ? "fill" : "duotone"} />
+      <span className="truncate">{item.title}</span>
+    </Link>
+  );
+}
+
+export default function Sidebar({ user, onNavigate, onSearch }: { user: ShellUser; onNavigate?: () => void; onSearch: () => void }) {
   const pathname = usePathname();
+  const main = navGroups.map((g) => ({ ...g, items: g.items.filter((i) => i.placement !== "bottom") }));
+  const bottom = navGroups.flatMap((g) => g.items).filter((i) => i.placement === "bottom");
 
   return (
-    <div className="flex h-full flex-col bg-white border-r border-neutral-200">
-      <Link href="/dashboard" className="flex items-center gap-2.5 px-5 h-16 border-b border-neutral-200 shrink-0">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-neutral-900">
-          <svg className="h-4.5 w-4.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C12 2 12.5 8.5 15.5 11.5C18.5 12.5 22 12 22 12C22 12 18.5 12.5 15.5 15.5C12.5 18.5 12 22 12 22C12 22 11.5 18.5 8.5 15.5C5.5 12.5 2 12 2 12C2 12 5.5 12.5 8.5 11.5C11.5 8.5 12 2 12 2Z" />
-          </svg>
-        </div>
-        <span className="text-[15px] font-extrabold tracking-tight text-neutral-900">LeadGennie</span>
-      </Link>
+    <div className="flex h-full flex-col gap-3 px-2.5 py-3">
+      <WorkspaceMenu user={user} />
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-        {navGroups.map((group) => (
-          <div key={group.label}>
-            {group.label && (
-              <p className="px-3 mb-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-400">
-                {group.label}
-              </p>
-            )}
-            <div className="space-y-0.5">
-              {group.items.map((item) => {
-                const isActive = isNavItemActive(item, pathname);
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onNavigate}
-                    className={cn(
-                      "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                      isActive
-                        ? "bg-indigo-50 text-indigo-700"
-                        : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50"
-                    )}
-                  >
-                    <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-indigo-600" : "text-neutral-400")} />
-                    <span className="truncate">{item.title}</span>
-                  </Link>
-                );
-              })}
-            </div>
+      <button
+        type="button"
+        onClick={onSearch}
+        className="flex h-8 items-center gap-2 rounded-lg bg-white/60 px-2 text-[13px] text-neutral-400 ring-1 ring-inset ring-neutral-200/80 transition-colors hover:bg-white hover:text-neutral-600"
+      >
+        <MagnifyingGlass className="h-4 w-4" weight="bold" />
+        <span className="flex-1 text-left">Search</span>
+        <Kbd>⌘K</Kbd>
+      </button>
+
+      <nav className="flex-1 space-y-5 overflow-y-auto">
+        {main.map((group) => (
+          <div key={group.label || "main"} className="space-y-0.5">
+            {group.label && <p className="px-2 pb-1 text-[11px] font-medium text-neutral-400">{group.label}</p>}
+            {group.items.map((item) => (
+              <NavLink key={item.href} item={item} active={isNavItemActive(item, pathname)} onNavigate={onNavigate} />
+            ))}
           </div>
         ))}
       </nav>
+
+      <div className="space-y-0.5">
+        {bottom.map((item) => (
+          <NavLink key={item.href} item={item} active={isNavItemActive(item, pathname)} onNavigate={onNavigate} />
+        ))}
+      </div>
+      <UserMenu user={user} />
     </div>
   );
 }
