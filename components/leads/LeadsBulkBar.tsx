@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ban, Trash2, Loader2, X, Sparkles, Mail } from "lucide-react";
+import { CircleNotch, EnvelopeSimple, Prohibit, Sparkle, Trash, X } from "@phosphor-icons/react/ssr";
+import { cn } from "@/lib/utils";
 import { bulkAddToDnc, bulkDeleteLeads } from "@/lib/actions/leads-bulk";
 import { researchLeads } from "@/lib/actions/intelligence";
 import { generateEmailDrafts } from "@/lib/actions/personalization";
@@ -96,42 +97,60 @@ export default function LeadsBulkBar({
   };
 
   if (n === 0 && !message && runId === null && draftRunId === null) return null;
+  const action = "inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium transition-colors disabled:opacity-50";
+  const spin = <CircleNotch className="h-3.5 w-3.5 animate-spin" weight="bold" />;
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50/60 px-3 py-2.5 text-sm" role="region" aria-label="Bulk actions">
-      {n > 0 && (
-        <>
-          <span className="text-neutral-900 font-semibold tabular-nums">{n} selected</span>
-          {canResearch && (
-            <button onClick={research} disabled={pending} className="inline-flex items-center gap-1.5 text-indigo-700 hover:text-indigo-900 disabled:opacity-50 font-medium">
-              {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Research selected
+    <div className="pointer-events-none sticky bottom-4 z-30 mt-3 flex justify-center px-4">
+      <div
+        className="pointer-events-auto flex max-w-full flex-wrap items-center gap-1 rounded-xl bg-neutral-900 p-1.5 pl-3 text-white shadow-[0_12px_32px_-8px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.06)_inset]"
+        role="region"
+        aria-label="Bulk actions"
+      >
+        {n > 0 && (
+          <>
+            <span className="mr-1 inline-flex items-center gap-2 text-[13px] font-medium tabular-nums">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded bg-white/15 px-1 text-[11px]">{n}</span>
+              selected
+            </span>
+            <span className="mx-1 h-4 w-px bg-white/15" />
+            {canResearch && (
+              <button onClick={research} disabled={pending} className={cn(action, "text-violet-200 hover:bg-white/10 hover:text-white")}>
+                {pending ? spin : <Sparkle className="h-3.5 w-3.5" weight="fill" />} Research
+              </button>
+            )}
+            {canResearch && (
+              <button onClick={drafts} disabled={pending} className={cn(action, "text-neutral-200 hover:bg-white/10 hover:text-white")}>
+                {pending ? spin : <EnvelopeSimple className="h-3.5 w-3.5" weight="duotone" />} Generate emails
+              </button>
+            )}
+            {canEdit && (
+              <button onClick={addToDnc} disabled={pending} className={cn(action, "text-neutral-200 hover:bg-white/10 hover:text-white")}>
+                {pending ? spin : <Prohibit className="h-3.5 w-3.5" weight="bold" />} Do Not Contact
+              </button>
+            )}
+            {canDelete && (
+              <button onClick={remove} disabled={pending} className={cn(action, "text-rose-300 hover:bg-rose-500/15 hover:text-rose-200")}>
+                <Trash className="h-3.5 w-3.5" /> Delete
+              </button>
+            )}
+            <button onClick={onClear} className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 hover:bg-white/10 hover:text-white" aria-label="Clear selection">
+              <X className="h-3.5 w-3.5" weight="bold" />
             </button>
-          )}
-          {canResearch && (
-            <button onClick={drafts} disabled={pending} className="inline-flex items-center gap-1.5 text-emerald-700 hover:text-emerald-900 disabled:opacity-50 font-medium">
-              {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />} Generate emails
-            </button>
-          )}
-          {canEdit && (
-            <button onClick={addToDnc} disabled={pending} className="inline-flex items-center gap-1.5 text-neutral-600 hover:text-neutral-900 disabled:opacity-50 font-medium">
-              {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />} Add to Do Not Contact
-            </button>
-          )}
-          {canDelete && (
-            <button onClick={remove} disabled={pending} className="inline-flex items-center gap-1.5 text-rose-600 hover:text-rose-700 disabled:opacity-50 font-medium">
-              <Trash2 className="w-4 h-4" /> Delete
-            </button>
-          )}
-          <button onClick={onClear} className="ml-auto text-neutral-400 hover:text-neutral-700" aria-label="Clear selection"><X className="w-4 h-4" /></button>
-        </>
-      )}
-      {runId !== null && <ResearchProgress agentRunId={runId} onFinished={() => router.refresh()} />}
-      {draftRunId !== null && (
-        <span className="inline-flex flex-wrap items-center gap-2">
-          <ResearchProgress agentRunId={draftRunId} kind="drafts" onFinished={() => router.refresh()} />
-          <Link href="/dashboard/leads/drafts?status=needs_review" className="text-xs text-emerald-700 underline hover:text-emerald-900">Review drafts</Link>
-        </span>
-      )}
-      {message && <span className={message.tone === "ok" ? "text-emerald-700 text-xs font-medium" : "text-rose-600 text-xs font-medium"}>{message.text}</span>}
+          </>
+        )}
+        {(runId !== null || draftRunId !== null || message) && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-white px-2.5 py-1.5 text-neutral-800">
+            {runId !== null && <ResearchProgress agentRunId={runId} onFinished={() => router.refresh()} />}
+            {draftRunId !== null && (
+              <span className="inline-flex flex-wrap items-center gap-2">
+                <ResearchProgress agentRunId={draftRunId} kind="drafts" onFinished={() => router.refresh()} />
+                <Link href="/dashboard/leads/drafts?status=needs_review" className="text-xs font-medium text-indigo-600 hover:text-indigo-800">Review drafts →</Link>
+              </span>
+            )}
+            {message && <span className={message.tone === "ok" ? "text-xs font-medium text-emerald-700" : "text-xs font-medium text-rose-600"}>{message.text}</span>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

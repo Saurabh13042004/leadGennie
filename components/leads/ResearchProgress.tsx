@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, X } from "lucide-react";
+import { CircleNotch, X } from "@phosphor-icons/react/ssr";
 import { cancelResearchAction, getResearchProgressAction } from "@/lib/actions/intelligence";
 import { getDraftBatchProgressAction } from "@/lib/actions/personalization";
 import type { ResearchProgress as Progress } from "@/lib/intelligence/service";
@@ -39,12 +39,12 @@ export default function ResearchProgress({ agentRunId, onFinished, kind = "resea
   }, [agentRunId, kind]);
 
   if (error) return <span className="text-xs text-rose-600">{error}</span>;
-  if (!progress) return <span className="inline-flex items-center gap-1.5 text-xs text-neutral-500"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Starting…</span>;
+  if (!progress) return <span className="inline-flex items-center gap-1.5 text-xs text-neutral-500"><CircleNotch className="h-3.5 w-3.5 animate-spin" weight="bold" /> Starting…</span>;
 
   const settled = progress.succeeded + progress.failed + progress.canceled;
   return (
     <span className="inline-flex flex-wrap items-center gap-2 text-xs" role="status" aria-live="polite">
-      {!progress.finished && <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />}
+      {!progress.finished && <CircleNotch className="h-3.5 w-3.5 animate-spin text-indigo-600" weight="bold" />}
       <span className="text-neutral-700 tabular-nums font-medium">
         {kind === "drafts" ? (progress.finished ? "Drafts ready" : "Writing emails") : progress.finished ? "Research finished" : "Researching"} — {settled}/{progress.total} done
       </span>
@@ -54,7 +54,7 @@ export default function ResearchProgress({ agentRunId, onFinished, kind = "resea
           onClick={async () => { await cancelResearchAction(agentRunId); }}
           className="inline-flex items-center gap-1 text-neutral-500 hover:text-neutral-900"
         >
-          <X className="w-3 h-3" /> Cancel
+          <X className="h-3 w-3" weight="bold" /> Cancel
         </button>
       )}
       {progress.finished && progress.errors.length > 0 && (
