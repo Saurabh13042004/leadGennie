@@ -63,5 +63,7 @@ LinkedIn DOM/ToS changes break scraping → raw-text approach already resilient;
 - **Google Sheets / Standalone Mode** is retained but dead-ended and its manifest pieces (OAuth block, Sheets host) removed — restoring them is required to re-enable it.
 - Extension **UI shares the dashboard's tokens** (`ui/lg.css`), icons generated from the dashboard's Phosphor package.
 
+- **Email suggestions (owner request, 2026-09-26)** are a deliberate, user-initiated exception to the rule that discovered emails are never inferred (that rule protects *engine-discovered* prospects): guesses are built from format evidence, always labelled "Auto-generated · may be wrong", shown only in the capture card, saved only if the person picks one, recorded as low-confidence provenance, and never treated as verified or used as evidence. No mailbox is verified (no third-party verifier in V1).
+
 ## Exit
 Tag `phase-7-complete`. Mission: [`missions/phase-07-chrome-extension.md`](../missions/phase-07-chrome-extension.md).

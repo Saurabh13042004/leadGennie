@@ -44,6 +44,7 @@ const expect = (cond, msg) => { if (!cond) throw new Error(msg); };
 // ---- fixture server: a LinkedIn-like profile (strict CSP + Trusted Types) and a company team page --------------------
 const fixtures = {
   "/in/sarah-chen/": [readFileSync(join(HERE, "fixtures/linkedin-profile.html")), "default-src 'self'; style-src 'self'; script-src 'self'; require-trusted-types-for 'script'"],
+  "/in/casey-jones/": [readFileSync(join(HERE, "fixtures/linkedin-vague.html")), "default-src 'self'; style-src 'self'; script-src 'self'; require-trusted-types-for 'script'"],
   "/team/hank": [readFileSync(join(HERE, "fixtures/company-team.html")), null],
 };
 const fixtureServer = http.createServer((req, res) => {
@@ -184,7 +185,7 @@ try {
   });
   await step("nothing is read from the page or sent to the server until the person clicks", async () => {
     const leads = Number((await shim.db.query("select count(*)::int as n from leads")).rows[0].n);
-    expect(leads === 2, `leads changed before any click: ${leads}`);
+    expect(leads === 4, `leads changed before any click: ${leads}`);
   });
   await step("the pill offers 'Add to LeadGennie' for someone not yet a lead", async () => {
     await wd.waitFor({ cls: "w-pill" });
@@ -192,35 +193,57 @@ try {
     expect(/Add to LeadGennie/.test(t), `pill text: ${t}`);
     await shot(li, "05-linkedin-pill");
   });
-  await step("click 1: the card reads the profile and prefills name, title and company (no model call needed)", async () => {
+  await step("click 1: the card reads a modern-style profile ('Name | LinkedIn') and prefills name, title and company from the page itself — no model", async () => {
     await wd.click(await wd.find({ cls: "w-pill" }));
     const name = await wd.waitFor({ id: "lg-f-full_name" }, { timeout: 20000 });
     expect((await wd.value(name)) === "Sarah Chen", `name: ${await wd.value(name)}`);
     expect((await wd.value(await wd.find({ id: "lg-f-job_title" }))) === "VP Sales", "title");
     expect((await wd.value(await wd.find({ id: "lg-f-company" }))) === "Acme", "company");
     expect((await wd.value(await wd.find({ id: "lg-f-linkedin_url" }))) === "https://www.linkedin.com/in/sarah-chen", "linkedin url canonicalised");
+    const t = await wd.widgetText();
+    expect(!/Automatic reading/.test(t), `the model should not have been needed: ${t}`);
     await shot(li, "06-linkedin-card");
   });
-  await step("the person can correct a field, then click 2 (Add lead) saves it", async () => {
-    await wd.type(await wd.find({ id: "lg-f-company_domain" }), "acme.com");
+  await step("typing the company website offers auto-generated email guesses — labelled as guesses, with your own colleagues' format ranked first", async () => {
+    // microsoft.com because its mail records are stable; the seed has two colleagues there whose addresses are first.last@.
+    await wd.type(await wd.find({ id: "lg-f-company_domain" }), "microsoft.com");
+    await wd.waitFor({ cls: "lg-suggest" }, { timeout: 25000 });
+    const t = await wd.widgetText();
+    expect(/Suggested emails/.test(t) && /Auto-generated · may be wrong/.test(t), `guesses must be labelled: ${t}`);
+    expect(/sarah\.chen@microsoft\.com/.test(t) && /matches yours/.test(t) && /2 emails you already have at microsoft\.com/.test(t), `format inference missing: ${t}`);
+    await shot(li, "06b-linkedin-suggestions");
+    const chip = await wd.find({ cls: "lg-chip" });
+    expect((await wd.text(chip)).startsWith("sarah.chen@microsoft.com"), `first suggestion: ${await wd.text(chip)}`);
+    await wd.click(chip);
+    expect((await wd.value(await wd.find({ id: "lg-f-email" }))) === "sarah.chen@microsoft.com", "chip should fill the email");
+    expect(/Auto-generated email\./.test(await wd.widgetText()) && /may not be correct/.test(await wd.widgetText()), "a chosen guess must carry a warning");
+    await shot(li, "06c-linkedin-guess-chosen");
+  });
+  await step("click 2 (Add lead) saves it — and reminds the person the email is a guess", async () => {
     const add = (await wd.find({ tag: "button", cls: "lg-btn-primary" }));
     await wd.click(add);
     await wd.waitFor({ cls: "lg-panel" }, { timeout: 20000 });
     await sleep(500);
     const t = await wd.widgetText();
     expect(/Added to LeadGennie/.test(t) && /Sarah Chen/.test(t) && /VP Sales/.test(t), `saved view: ${t}`);
+    expect(/auto-generated and may not be correct/.test(t), `saved view must repeat the guess warning: ${t}`);
     await shot(li, "07-linkedin-saved");
   });
   await step("the lead is really in the app's database with company, domain, source and provenance", async () => {
     const r = (await shim.db.query(`select l.full_name, l.job_title, l.source, l.source_url, l.email_status, c.name as company, c.domain
       from leads l left join companies c on c.id = l.company_id where l.full_name = 'Sarah Chen'`)).rows;
     expect(r.length === 1, `rows: ${r.length}`);
-    expect(r[0].company === "Acme" && r[0].domain === "acme.com" && r[0].source === "extension", JSON.stringify(r[0]));
+    expect(r[0].company === "Acme" && r[0].domain === "microsoft.com" && r[0].source === "extension", JSON.stringify(r[0]));
     expect(r[0].source_url === "http://www.linkedin.com/in/sarah-chen", `source_url: ${r[0].source_url}`);
     const prov = (await shim.db.query("select field, source from field_provenance where entity_type = 'lead'")).rows;
     expect(prov.some((p) => p.field === "company" && p.source === "extension") && prov.some((p) => p.field === "full_name"), JSON.stringify(prov));
-    const act = (await shim.db.query("select actor_user_id from activities where type = 'lead.captured'")).rows;
+    const act = (await shim.db.query("select actor_user_id, metadata from activities where type = 'lead.captured'")).rows;
     expect(act.length === 1 && Number(act[0].actor_user_id) === 1, "activity should be attributed to the signed-in person");
+    expect(JSON.parse(act[0].metadata).email_guessed === true, `activity should flag the guessed email: ${act[0].metadata}`);
+    const emailProv = (await shim.db.query("select source, confidence from field_provenance where field = 'email'")).rows;
+    expect(emailProv.length === 1 && Number(emailProv[0].confidence) === 0.2, `guessed email must be low-confidence provenance: ${JSON.stringify(emailProv)}`);
+    const lead = (await shim.db.query("select email, email_status from leads where full_name = 'Sarah Chen'")).rows[0];
+    expect(lead.email === "sarah.chen@microsoft.com" && lead.email_status === "unverified", `stored as an ordinary unverified email: ${JSON.stringify(lead)}`);
   });
   await step("reloading the page: the pill now says 'In LeadGennie' — and adding again never duplicates", async () => {
     await li.reload();
@@ -237,6 +260,23 @@ try {
   });
   await step("the widget worked under the page's strict CSP with no Trusted Types / CSP violations", async () => {
     expect(consoleErrors.length === 0, `violations:\n${consoleErrors.slice(0, 3).join("\n")}`);
+  });
+
+  console.log("\nA profile the free readers can't resolve — the model is asked, and if it fails the card says why");
+  await step("no company on the page text → the model is consulted; with no working key the card explains and stays usable", async () => {
+    const vague = await browser.newPage();
+    await vague.goto("http://www.linkedin.com/in/casey-jones/");
+    const vw = new Shadow(vague);
+    await vw.open();
+    await vw.click(await vw.waitFor({ cls: "w-pill" }, { timeout: 20000 }));
+    const name = await vw.waitFor({ id: "lg-f-full_name" }, { timeout: 30000 });
+    expect((await vw.value(name)) === "Casey Jones", "name from the profile");
+    await vw.waitFor({ cls: "lg-callout-warning" }, { timeout: 20000 });
+    const t = await vw.widgetText();
+    expect(/Automatic reading (failed|is unavailable)/.test(t), `expected an explanation of why the company is blank: ${t}`);
+    expect((await vw.value(await vw.find({ id: "lg-f-company" }))) === "", "company must stay blank rather than be invented");
+    await shot(vague, "06d-linkedin-model-unavailable");
+    await vague.close();
   });
 
   console.log("\nPopup capture on a company page (JSON-LD, no model)");
@@ -321,11 +361,19 @@ try {
   });
   await step("a viewer can connect but is only ever granted read scope; capture is refused with a role message", async () => {
     const v = await browser.newPage();
-    // Sign the owner out of this browser profile (drop the app's cookies), then sign in as the viewer.
-    await v.goto(`${APP}/login`);
-    await v.deleteCookie(...(await v.cookies()));
-    await v.goto(`${APP}/login`);
-    await v.waitForSelector("#auth-email", { timeout: 10000 });
+    // Sign the owner out of this browser profile, and PROVE it: keep clearing the cookie jar until /login shows the form
+    // (a logged-in browser is redirected to /dashboard instead).
+    const cdp = await v.createCDPSession();
+    let signedOut = false;
+    for (let attempt = 0; attempt < 5 && !signedOut; attempt++) {
+      await cdp.send("Network.getAllCookies");
+      await cdp.send("Network.clearBrowserCookies");
+      await browser.deleteCookie(...(await browser.cookies()));
+      await v.goto(`${APP}/login`, { waitUntil: "networkidle0" });
+      signedOut = (await v.$("#auth-email")) !== null;
+      if (!signedOut) await sleep(500);
+    }
+    expect(signedOut, `still signed in after clearing cookies (page at ${v.url()})`);
     await v.$eval("#auth-email", (el) => { el.value = ""; });
     await v.type("#auth-email", "viewer@example.com");
     await v.type("#auth-password", PASSWORD);

@@ -92,3 +92,26 @@ export async function listRecentLeads(workspaceId: number, opts: { limit: number
   ]);
   return { leads: rows.map(toRef), total: Number(count[0].n) };
 }
+
+export type EmailAtDomain = { fullName: string; firstName: string | null; lastName: string | null; email: string };
+
+/**
+ * Emails this workspace already has at a domain, with the person's name — the evidence for "how does this company format
+ * its addresses". Excludes emails known to be invalid.
+ */
+export async function listEmailsAtDomain(workspaceId: number, domain: string, limit: number): Promise<EmailAtDomain[]> {
+  const rows = await sql.query(
+    `select full_name, first_name, last_name, email
+     from leads
+     where workspace_id = $1 and email is not null and email_status <> 'invalid'
+       and lower(split_part(email, '@', 2)) = $2
+     order by created_at desc limit $3`,
+    [workspaceId, domain.toLowerCase(), limit],
+  );
+  return rows.map((r) => ({
+    fullName: r.full_name as string,
+    firstName: (r.first_name as string | null) ?? null,
+    lastName: (r.last_name as string | null) ?? null,
+    email: r.email as string,
+  }));
+}

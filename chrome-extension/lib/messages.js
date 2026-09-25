@@ -9,6 +9,7 @@ export const MSG = {
   DISCONNECT: 'lg/disconnect',
   REFRESH: 'lg/refresh',
   EXTRACT: 'lg/extract',
+  SUGGEST: 'lg/suggest',
   CREATE: 'lg/create',
   LOOKUP: 'lg/lookup',
   LIST: 'lg/list',

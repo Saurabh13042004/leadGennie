@@ -7,7 +7,7 @@ import { avatar, badge, button, callout, emailStatusBadge, h, icon, mount, stage
  * "This person is in LeadGennie": a lead's summary, the link to its dashboard page, and "Research with Gennie" with a live
  * status. Used after a capture ("Added"), for a duplicate ("Already in LeadGennie"), and by the on-page widget's lookup.
  */
-export function createLeadSummary({ lead, apiBase, session, headline, openUrl, onChange }) {
+export function createLeadSummary({ lead, apiBase, session, headline, openUrl, onChange, notes = [] }) {
   const root = h('div', { class: 'lg-col lg-gap-3' });
   let current = lead;
   let research = { phase: 'idle', error: null }; // idle | starting | polling | done
@@ -101,6 +101,7 @@ export function createLeadSummary({ lead, apiBase, session, headline, openUrl, o
     mount(
       root,
       headline && h('div', { class: 'lg-row lg-gap-2 lg-strong' }, icon(headline.tone === 'success' ? 'CheckCircle' : 'IdentificationCard', { weight: 'fill', size: 'lg', className: headline.tone === 'success' ? 'lg-icon-ok' : '' }), headline.text),
+      ...notes.map((n) => callout(n.tone, n.text)),
       h('div', { class: 'lg-panel lg-row lg-gap-3' },
         avatar(current.fullName),
         h('div', { class: 'lg-grow' },

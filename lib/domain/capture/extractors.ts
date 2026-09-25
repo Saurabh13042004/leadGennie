@@ -3,6 +3,7 @@ import { normalizeDomain } from "@/lib/domain/companies/normalize";
 import { normalizeLinkedinUrl } from "@/lib/domain/leads/urls";
 import { cleanText } from "@/lib/domain/leads/validate";
 import { linkedinProfilePath, parseLinkedinTitle } from "./linkedin";
+import { extractLinkedinText } from "./linkedin-text";
 import type { FieldName, FieldSource, PageFacts, PageKind } from "./schemas";
 
 /**
@@ -121,6 +122,17 @@ export const linkedinProfileExtractor: Extractor = {
   },
 };
 
+// ---- LinkedIn page text (headline, top card, Experience) -----------------------------------------------------------
+
+export const linkedinTextExtractor: Extractor = {
+  name: "linkedin_text",
+  extract(facts, kind) {
+    if (kind !== "linkedin_profile") return {};
+    const name = facts.headings[0]?.trim() || parseLinkedinTitle(facts.title).name;
+    return extractLinkedinText(facts.text, name, facts.hints);
+  },
+};
+
 // ---- Selection (an explicit user signal) -------------------------------------------------------------------
 
 const EMAIL_IN_TEXT = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
@@ -186,7 +198,7 @@ export const mailtoExtractor: Extractor = {
 };
 
 /** Highest priority first: an explicit selection and structured data beat inference from prose. */
-export const DEFAULT_EXTRACTORS: Extractor[] = [selectionExtractor, jsonLdExtractor, linkedinProfileExtractor, siteExtractor, mailtoExtractor];
+export const DEFAULT_EXTRACTORS: Extractor[] = [selectionExtractor, jsonLdExtractor, linkedinProfileExtractor, linkedinTextExtractor, siteExtractor, mailtoExtractor];
 
 /** Merge proposals: the first extractor to offer a field wins; the source is remembered. */
 export function mergeProposals(

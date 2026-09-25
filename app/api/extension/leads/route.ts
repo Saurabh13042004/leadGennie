@@ -43,13 +43,13 @@ export const POST = extensionRoute({ scope: "leads:create" }, async (request, id
   if (!legacy.success) throw modern.error;
   const { candidate } = await extractCandidate(ctx, {
     url: legacy.data.linkedin_url || "https://www.linkedin.com/in/unknown", title: "", text: legacy.data.pageText,
-    headings: [], jsonld: [], emails: [],
+    headings: [], jsonld: [], emails: [], hints: [],
   });
   if (!candidate.fields.fullName) throw new AppError("VALIDATION_ERROR", "Couldn't read a name from that page — use the capture card to enter it.");
   const r = await captureLead(ctx, {
     full_name: candidate.fields.fullName, job_title: candidate.fields.jobTitle, company: candidate.fields.company,
     company_domain: candidate.fields.companyDomain, email: candidate.fields.email, linkedin_url: candidate.fields.linkedinUrl,
-    source_url: candidate.sourceUrl, edited_fields: [],
+    source_url: candidate.sourceUrl, email_guessed: false, edited_fields: [],
   });
   return ok({ created: r.created, lead: r.lead, full_name: r.lead.fullName }, { status: r.created ? 201 : 200 });
 });

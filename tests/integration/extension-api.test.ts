@@ -1,11 +1,11 @@
 import { randomBytes } from "node:crypto";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetDb, sql } from "../helpers/test-db";
 import { createUser, createWorkspace } from "../helpers/factories";
 import { setSession } from "../helpers/session";
 import { installFakeEngine, seedResearchableLead } from "../helpers/intelligence";
 import { FakeLlm } from "@/lib/ai/fake";
-import { setLlmProvider } from "@/lib/ai/client";
+import { LlmError, setLlmProvider } from "@/lib/ai/client";
 import { setIntelligenceClient } from "@/lib/intelligence/client";
 import { approveConnection, exchangeCode } from "@/lib/domain/extension/auth-service";
 import { OFFICIAL_EXTENSION_ID } from "@/lib/extension/config";
@@ -16,6 +16,9 @@ import { POST as tokenRoute } from "@/app/api/extension/auth/token/route";
 import { POST as revokeRoute } from "@/app/api/extension/auth/revoke/route";
 import { GET as meRoute } from "@/app/api/extension/me/route";
 import { POST as extractRoute } from "@/app/api/extension/capture/extract/route";
+import { POST as suggestRoute } from "@/app/api/extension/capture/suggest/route";
+import { defaultMxResolver } from "@/lib/domain/leads/mx";
+import { suggestForCard } from "@/lib/domain/capture/suggest";
 import { GET as listRoute, POST as createRoute } from "@/app/api/extension/leads/route";
 import { GET as lookupRoute } from "@/app/api/extension/leads/lookup/route";
 import { GET as leadRoute } from "@/app/api/extension/leads/[id]/route";
@@ -542,5 +545,169 @@ describe("Settings → Browser extension", () => {
     const { token } = await connect(ownerOfA());
     const hit = await json(await lookupRoute(request("/api/extension/leads/lookup?email=same@x.com", { token }), undefined));
     expect(hit.lead.fullName).toBe("A Person");
+  });
+});
+
+
+describe("the model reads the page; free readers go first; failures say why", () => {
+  let token: string;
+  beforeEach(async () => {
+    token = (await connect(ownerOfA())).token;
+  });
+  const extract = async (body: unknown) => json(await extractRoute(request("/api/extension/capture/extract", { method: "POST", token, body }), undefined));
+  const profileText = (headline: string) => `Skip to main content\nCasey Jones\n· 2nd\n${headline}\nBerlin, Germany · Contact info\n500+ connections\nMessage\nAbout\nBuilder of things.`;
+
+  it("a modern LinkedIn profile ('Name | LinkedIn') gets title and company from its own headline — no model call", async () => {
+    const llm = new FakeLlm().json(() => {
+      throw new Error("must not be called");
+    });
+    setLlmProvider(llm);
+    const r = await extract({ url: "https://www.linkedin.com/in/casey-jones/", title: "(4) Casey Jones | LinkedIn", headings: ["Casey Jones"], text: profileText("Engineering Manager at Northwind | Ex-Google") });
+    expect(r.candidate.fields).toMatchObject({ fullName: "Casey Jones", jobTitle: "Engineering Manager", company: "Northwind" });
+    expect(r.candidate.sources).toMatchObject({ company: "linkedin_text", jobTitle: "linkedin_text" });
+    expect(r.candidate.usedLlm).toBe(false);
+    expect(llm.calls).toHaveLength(0);
+  });
+
+  it("the top card's 'Current company' label (sent as a hint) wins over a vague headline", async () => {
+    setLlmProvider(new FakeLlm().json(() => {
+      throw new Error("must not be called");
+    }));
+    const r = await extract({
+      url: "https://www.linkedin.com/in/casey-jones/", title: "Casey Jones | LinkedIn", headings: ["Casey Jones"], text: profileText("Engineering Manager | Builder | Coach"),
+      hints: ["Current company: Northwind Traders. Click to skip to experience card"],
+    });
+    expect(r.candidate.fields.company).toBe("Northwind Traders");
+  });
+
+  it("when only prose says where they work, the MODEL reads the page — and 'Acme Inc' is accepted for a page that says 'Acme, Inc.'", async () => {
+    const llm = new FakeLlm().json({ full_name: "Casey Jones", job_title: "Staff Engineer", company: "Acme Inc" });
+    setLlmProvider(llm);
+    const r = await extract({
+      url: "https://www.linkedin.com/in/casey-jones/", title: "Casey Jones | LinkedIn", headings: ["Casey Jones"],
+      text: `${profileText("Making software")}\nAbout\nI am a Staff Engineer at Acme, Inc. and I love my job.\n${"filler ".repeat(30)}`,
+    });
+    expect(llm.calls.length).toBeGreaterThan(0);
+    expect(r.candidate.usedLlm).toBe(true);
+    expect(r.candidate.fields).toMatchObject({ company: "Acme Inc", jobTitle: "Staff Engineer" });
+    expect(r.candidate.sources).toMatchObject({ company: "llm", jobTitle: "llm" });
+  });
+
+  it("a model-supplied company that the page doesn't mention is still dropped, with a note", async () => {
+    setLlmProvider(new FakeLlm().json({ full_name: "Casey Jones", job_title: "Engineer", company: "Totally Invented Corp" }));
+    const r = await extract({ url: "https://www.linkedin.com/in/casey-jones/", title: "Casey Jones | LinkedIn", headings: ["Casey Jones"], text: `${profileText("Making software")}\n${"filler ".repeat(30)}` });
+    expect(r.candidate.fields.company).toBeUndefined();
+    expect(r.candidate.warnings.join(" ")).toMatch(/couldn't be confirmed/);
+  });
+
+  it("says WHY when the model fails (quota, key) instead of a vague message", async () => {
+    setLlmProvider(new FakeLlm().json(() => {
+      throw new LlmError("OpenAI API quota exceeded — check your OpenAI billing and usage limits.");
+    }));
+    const r = await extract({ url: "https://www.linkedin.com/in/casey-jones/", title: "Casey Jones | LinkedIn", headings: ["Casey Jones"], text: `${profileText("Making software")}\n${"filler ".repeat(30)}` });
+    expect(r.candidate.warnings.join(" ")).toMatch(/Automatic reading failed: OpenAI API quota exceeded/);
+    expect(r.candidate.fields.fullName).toBe("Casey Jones"); // the card still opens with what the page gave us
+  });
+
+  it("if the model runs and finds no company, the card says so plainly", async () => {
+    setLlmProvider(new FakeLlm().json({ full_name: "Casey Jones", job_title: null, company: null }));
+    const r = await extract({ url: "https://www.linkedin.com/in/casey-jones/", title: "Casey Jones | LinkedIn", headings: ["Casey Jones"], text: `${profileText("Making software")}\n${"filler ".repeat(30)}` });
+    expect(r.candidate.warnings.join(" ")).toMatch(/couldn't find their company/);
+  });
+});
+
+describe("email suggestions (auto-generated guesses)", () => {
+  let token: string;
+  let mx: ReturnType<typeof vi.spyOn>;
+  beforeEach(async () => {
+    token = (await connect(ownerOfA())).token;
+    mx = vi.spyOn(defaultMxResolver, "resolve").mockResolvedValue("has_mx");
+  });
+  afterEach(() => mx.mockRestore());
+  const suggest = async (body: unknown, t = token) => request("/api/extension/capture/suggest", { method: "POST", token: t, body });
+
+  it("offers common formats for a name at a company domain", async () => {
+    const res = await suggestRoute(await suggest({ full_name: "Sarah Chen", company_domain: "https://www.acme.com/about" }), undefined);
+    const r = await json(res);
+    expect(res.status).toBe(200);
+    expect(r.emails.slice(0, 3).map((e: { email: string }) => e.email)).toEqual(["sarah.chen@acme.com", "sarah@acme.com", "schen@acme.com"]);
+    expect(r.emails.every((e: { basis: string }) => e.basis === "common")).toBe(true);
+    expect(mx).toHaveBeenCalledWith("acme.com");
+  });
+
+  it("ranks the format your own leads use at that domain first — using THIS workspace's emails only", async () => {
+    await sql`insert into leads (workspace_id, full_name, first_name, last_name, email) values
+      (${A.workspaceId}, 'Alex Rivera', 'Alex', 'Rivera', 'arivera@acme.com'), (${A.workspaceId}, 'Maria Gomez', 'Maria', 'Gomez', 'mgomez@acme.com'),
+      (${B.workspaceId}, 'Bo Li', 'Bo', 'Li', 'bo.li@acme.com'), (${B.workspaceId}, 'Cy Ng', 'Cy', 'Ng', 'cy.ng@acme.com'), (${B.workspaceId}, 'Di Wu', 'Di', 'Wu', 'di.wu@acme.com')`;
+    const r = await json(await suggestRoute(await suggest({ full_name: "Sarah Chen", company_domain: "acme.com" }), undefined));
+    expect(r.emails[0]).toEqual({ email: "schen@acme.com", pattern: "flast", basis: "existing", matches: 2 }); // B's three first.last emails are invisible to A
+    expect(JSON.stringify(r)).not.toContain("bo.li");
+  });
+
+  it("suggests nothing for a domain with no mail server, and says so — but an inconclusive lookup does not hide suggestions", async () => {
+    mx.mockResolvedValue("no_mx");
+    const none = await json(await suggestRoute(await suggest({ full_name: "Sarah Chen", company_domain: "dead-domain.example" }), undefined));
+    expect(none.emails).toEqual([]);
+    expect(none.note).toMatch(/no mail server/);
+    mx.mockResolvedValue("unknown");
+    expect((await json(await suggestRoute(await suggest({ full_name: "Sarah Chen", company_domain: "flaky.example" }), undefined))).emails.length).toBeGreaterThan(0);
+  });
+
+  it("never suggests addresses at a personal mail provider", async () => {
+    const r = await json(await suggestRoute(await suggest({ full_name: "Sarah Chen", company_domain: "gmail.com" }), undefined));
+    expect(r.emails).toEqual([]);
+    expect(r.note).toMatch(/personal mail provider/);
+  });
+
+  it("with no website yet, offers website guesses from the company name — only ones that accept mail", async () => {
+    mx.mockImplementation(async (d: string) => (d === "acme.io" ? "has_mx" : "no_mx"));
+    const r = await json(await suggestRoute(await suggest({ full_name: "Sarah Chen", company: "Acme Inc" }), undefined));
+    expect(r.emails).toEqual([]);
+    expect(r.domain_guesses).toEqual(["acme.io"]);
+  });
+
+  it("says what's missing when there is nothing to work with", async () => {
+    expect((await json(await suggestRoute(await suggest({ full_name: "Sarah Chen" }), undefined))).note).toMatch(/company website/);
+    expect((await json(await suggestRoute(await suggest({ company_domain: "acme.com" }), undefined))).note).toMatch(/name/);
+  });
+
+  it("needs the capture scope: a viewer is refused; an unauthenticated call is a 401; bad input is a 422", async () => {
+    const viewer = await addMember(A, "viewer");
+    const v = await connect({ workspaceId: A.workspaceId, userId: viewer.id, role: "viewer" });
+    expect((await suggestRoute(await suggest({ full_name: "Sarah Chen", company_domain: "acme.com" }, v.token), undefined)).status).toBe(403);
+    expect((await suggestRoute(request("/api/extension/capture/suggest", { method: "POST", body: {} }), undefined)).status).toBe(401);
+    expect((await suggestRoute(await suggest({ full_name: "x".repeat(300) }), undefined)).status).toBe(422);
+  });
+
+  it("suggestForCard is injectable (no DNS, no DB) — the seam the route uses", async () => {
+    const r = await suggestForCard(1, { fullName: "Sarah Chen", companyDomain: "acme.com" }, { mx: { resolve: async () => "has_mx" }, known: async () => [{ fullName: "Pat Lee", firstName: "Pat", lastName: "Lee", email: "pat.lee@acme.com" }] });
+    expect(r.emails[0]).toMatchObject({ email: "sarah.chen@acme.com", basis: "existing", matches: 1 });
+  });
+
+  it("a chosen guess is saved as LOW-CONFIDENCE provenance and flagged in the activity; a typed email is not", async () => {
+    const create = (lead: Record<string, unknown>) => createRoute(request("/api/extension/leads", { method: "POST", token, body: { lead } }), undefined);
+    const guessed = (await json(await create({ full_name: "Sarah Chen", company: "Acme", company_domain: "acme.com", email: "sarah.chen@acme.com", email_guessed: true, edited_fields: ["email"] }))).lead;
+    const typed = (await json(await create({ full_name: "Pat Lee", company: "Acme", email: "pat.lee@acme.com", edited_fields: ["email"] }))).lead;
+
+    const prov = async (id: number) => (await sql`select source, confidence, set_by from field_provenance where entity_id = ${id} and field = 'email'`)[0];
+    expect(await prov(guessed.id)).toMatchObject({ source: "extension", set_by: "user" });
+    expect(Number((await prov(guessed.id)).confidence)).toBeCloseTo(0.2);
+    expect((await prov(typed.id)).source).toBe("user");
+    expect((await prov(typed.id)).confidence).toBeNull();
+
+    const acts = await sql`select entity_id, metadata from activities where type = 'lead.captured' order by id`;
+    const flag = (id: number) => (acts.find((a) => Number(a.entity_id) === id)!.metadata as { email_guessed: boolean }).email_guessed;
+    expect(flag(guessed.id)).toBe(true);
+    expect(flag(typed.id)).toBe(false);
+    // The lead itself is an ordinary unverified email — nothing pretends it was checked.
+    expect((await one(sql`select email_status from leads where id = ${guessed.id}`)).email_status).toBe("unverified");
+  });
+
+  it("the guessed flag is meaningless without an email (it can't mark an empty field)", async () => {
+    const res = await createRoute(request("/api/extension/leads", { method: "POST", token, body: { lead: { full_name: "No Email", company: "Acme", email_guessed: true } } }), undefined);
+    expect(res.status).toBe(201);
+    const id = (await json(res)).lead.id;
+    const act = await one(sql`select metadata from activities where type = 'lead.captured' and entity_id = ${id}`);
+    expect((act.metadata as { email_guessed: boolean }).email_guessed).toBe(false);
   });
 });

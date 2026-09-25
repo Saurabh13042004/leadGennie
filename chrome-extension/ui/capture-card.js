@@ -1,6 +1,8 @@
-import { FIELDS, SOURCE_HINT, describeError, formFromCandidate, toLeadDraft, validateForm } from '../lib/capture-model.js';
+import {
+  FIELDS, GUESS_SAVED_NOTE, SOURCE_HINT, SUGGEST_INPUTS, describeError, formFromCandidate, suggestionBasis, toLeadDraft, validateForm,
+} from '../lib/capture-model.js';
 import { MSG, send } from '../lib/messages.js';
-import { button, callout, h, mount, spinner } from './dom.js';
+import { badge, button, callout, h, mount, spinner } from './dom.js';
 import { createLeadSummary } from './lead-summary.js';
 
 /**
@@ -9,25 +11,100 @@ import { createLeadSummary } from './lead-summary.js';
  *
  *   phases: reading → review → saving → saved | existing        (or error → manual entry)
  *
- * The extension only READS the page (getFacts) — deciding what those facts mean is the server's job, and nothing is
- * saved until the person presses Add lead.
+ * The extension only READS the page (getFacts) — deciding what those facts mean is the server's job, and nothing is saved until
+ * the person presses Add lead.
+ *
+ * EMAIL SUGGESTIONS are guesses built from the person's name and the company's website. They are always labelled as guesses,
+ * never filled in on their own, and if the person picks one it is flagged (`email_guessed`) so LeadGennie records it as a
+ * low-confidence guess and reminds them to replace it with the real address.
  */
 export function createCaptureCard({ getFacts, session, apiBase, openUrl, onConnect, onSaved }) {
   const root = h('div', { class: 'lg-col lg-gap-3' });
   let state = { phase: 'reading' };
   let summary = null;
+  let suggestTimer = null;
+  let suggestSeq = 0;
+  // Live containers inside the review form: suggestions arrive asynchronously and must update THESE in place — re-rendering the
+  // whole form would steal focus from whatever the person is typing in.
+  let boxes = { suggest: null, guess: null };
 
   const setState = (next) => {
     state = next;
     render();
   };
-  const destroySummary = () => {
+  const destroy = () => {
+    clearTimeout(suggestTimer);
     if (summary) summary.destroy();
     summary = null;
   };
 
+  // ---- suggestions -----------------------------------------------------------------------------------------------
+  function scheduleSuggest(delay = 450) {
+    clearTimeout(suggestTimer);
+    suggestTimer = setTimeout(refreshSuggestions, delay);
+  }
+
+  async function refreshSuggestions() {
+    if (state.phase !== 'review') return;
+    const seq = ++suggestSeq;
+    const { full_name: fullName, company, company_domain: companyDomain } = state.form;
+    if (!fullName.trim() || (!companyDomain.trim() && !company.trim())) {
+      state.suggest = null;
+      return paintSuggest();
+    }
+    const res = await send(MSG.SUGGEST, { fullName, company, companyDomain });
+    if (seq !== suggestSeq || state.phase !== 'review') return; // a newer request superseded this one
+    state.suggest = res.ok ? { ...res.data, domain: companyDomain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0] } : null;
+    paintSuggest();
+  }
+
+  function pickEmail(email) {
+    state.form.email = email;
+    state.emailGuess = email;
+    const input = root.querySelector('#lg-f-email');
+    if (input) input.value = email;
+    paintSuggest();
+    paintGuess();
+  }
+
+  function pickDomain(domain) {
+    state.form.company_domain = domain;
+    const input = root.querySelector('#lg-f-company_domain');
+    if (input) input.value = domain;
+    refreshSuggestions();
+  }
+
+  function paintGuess() {
+    if (!boxes.guess) return;
+    const active = state.emailGuess && state.form.email === state.emailGuess;
+    mount(boxes.guess, active ? callout('warning', h('strong', {}, 'Auto-generated email. '), 'It may not be correct — replace it with the real address as soon as you have it.') : null);
+  }
+
+  function paintSuggest() {
+    if (!boxes.suggest) return;
+    const s = state.suggest;
+    if (!s) return mount(boxes.suggest);
+    const chip = (text, on, onClick, tag) => h('button', { class: `lg-chip ${on ? 'lg-chip-on' : ''}`, type: 'button', onclick: onClick, 'aria-pressed': String(Boolean(on)) }, text, tag ? h('span', { class: 'lg-chip-tag' }, tag) : null);
+    const blocks = [];
+    if (s.emails && s.emails.length) {
+      blocks.push(h('div', { class: 'lg-suggest' },
+        h('div', { class: 'lg-label-row' }, h('span', { class: 'lg-label' }, 'Suggested emails'), badge('Auto-generated · may be wrong', 'amber')),
+        h('div', { class: 'lg-chips' }, ...s.emails.map((g) => chip(g.email, state.form.email === g.email, () => pickEmail(g.email), g.basis === 'existing' ? 'matches yours' : null))),
+        h('p', { class: 'lg-help', style: 'margin-top:0' }, `${suggestionBasis(s.emails, s.domain)} Pick one to try it, then replace it with the correct address when you have it.`)));
+    } else if (s.domainGuesses && s.domainGuesses.length) {
+      blocks.push(h('div', { class: 'lg-suggest' },
+        h('div', { class: 'lg-label-row' }, h('span', { class: 'lg-label' }, 'Is their website one of these?'), badge('Guess', 'amber')),
+        h('div', { class: 'lg-chips' }, ...s.domainGuesses.map((d) => chip(d, false, () => pickDomain(d)))),
+        h('p', { class: 'lg-help', style: 'margin-top:0' }, 'These domains accept mail, but they may belong to a different company. Pick one only if it is right — then email suggestions appear.')));
+    } else if (s.note) {
+      blocks.push(h('p', { class: 'lg-help', style: 'margin-top:0' }, s.note));
+    }
+    mount(boxes.suggest, ...blocks);
+  }
+
+  // ---- reading + saving ------------------------------------------------------------------------------------------
   async function start() {
-    destroySummary();
+    destroy();
     setState({ phase: 'reading' });
     let facts;
     try {
@@ -41,19 +118,22 @@ export function createCaptureCard({ getFacts, session, apiBase, openUrl, onConne
     const { candidate, existing } = res.data;
     if (existing) return setState({ phase: 'existing', lead: existing });
     const form = formFromCandidate(candidate);
-    setState({ phase: 'review', candidate, form, original: { ...form }, errors: {}, sourceUrl: candidate.sourceUrl, saveError: null });
+    setState({ phase: 'review', candidate, form, original: { ...form }, errors: {}, sourceUrl: candidate.sourceUrl, saveError: null, suggest: null, emailGuess: null });
+    scheduleSuggest(0);
   }
 
   async function save() {
     const errors = validateForm(state.form);
     if (Object.keys(errors).length) return setState({ ...state, errors });
+    const emailGuessed = Boolean(state.emailGuess && state.form.email === state.emailGuess);
     setState({ ...state, phase: 'saving', errors: {}, saveError: null });
-    const res = await send(MSG.CREATE, { lead: toLeadDraft(state.form, { sourceUrl: state.sourceUrl, original: state.original }) });
+    const res = await send(MSG.CREATE, { lead: toLeadDraft(state.form, { sourceUrl: state.sourceUrl, original: state.original, emailGuessed }) });
     if (!res.ok) return setState({ ...state, phase: 'review', saveError: res.error });
     if (onSaved) onSaved(res.data);
-    setState({ phase: res.data.created ? 'saved' : 'existing', lead: res.data.lead });
+    setState({ phase: res.data.created ? 'saved' : 'existing', lead: res.data.lead, emailGuessed: res.data.created && emailGuessed });
   }
 
+  // ---- views -----------------------------------------------------------------------------------------------------
   function fieldRow(f, s) {
     const hint = s.candidate && s.candidate.sources[f.cand] && s.form[f.key] === s.original[f.key] ? SOURCE_HINT[s.candidate.sources[f.cand]] : '';
     const err = s.errors[f.key];
@@ -71,6 +151,11 @@ export function createCaptureCard({ getFacts, session, apiBase, openUrl, onConne
             const m = root.querySelector(`#${id}-err`);
             if (m) m.remove();
           }
+          if (f.key === 'email') {
+            paintGuess(); // typing over a suggestion turns it back into a normal, person-entered email
+            paintSuggest();
+          }
+          if (SUGGEST_INPUTS.includes(f.key)) scheduleSuggest();
         },
         onkeydown: (e) => {
           if (e.key === 'Enter') save();
@@ -88,6 +173,7 @@ export function createCaptureCard({ getFacts, session, apiBase, openUrl, onConne
     const c = s.candidate;
     const rows = Object.fromEntries(FIELDS.map((f) => [f.key, fieldRow(f, s)]));
     const err = s.saveError ? describeError(s.saveError) : null;
+    boxes = { suggest: h('div', {}), guess: h('div', {}) };
     return [
       c && c.warnings.length ? h('div', { class: 'lg-col lg-gap-1' }, c.warnings.map((w) => callout('warning', w))) : null,
       h('form', { class: 'lg-form', onsubmit: (e) => e.preventDefault() },
@@ -95,6 +181,8 @@ export function createCaptureCard({ getFacts, session, apiBase, openUrl, onConne
         h('div', { class: 'lg-form-2' }, rows.job_title, rows.company),
         rows.company_domain,
         h('div', { class: 'lg-form-2' }, rows.email, rows.linkedin_url),
+        boxes.guess,
+        boxes.suggest,
       ),
       c
         ? h('p', { class: 'lg-help' }, c.confidence === 'high' ? 'Read from this page — check the details, then add.' : c.confidence === 'medium' ? 'Some details were read from the page. Please check them.' : "We couldn't read much from this page — fill in what you know.")
@@ -116,18 +204,20 @@ export function createCaptureCard({ getFacts, session, apiBase, openUrl, onConne
         d.retryable ? button({ label: 'Try again', variant: 'secondary', iconName: 'ArrowClockwise', block: true, onClick: start }) : null,
         state.manual ? button({ label: 'Enter details myself', variant: 'secondary', iconName: 'UserPlus', block: true, onClick: () => {
           const form = formFromCandidate(null);
-          setState({ phase: 'review', candidate: null, form, original: { ...form }, errors: {}, sourceUrl: state.manual.sourceUrl, saveError: null });
+          setState({ phase: 'review', candidate: null, form, original: { ...form }, errors: {}, sourceUrl: state.manual.sourceUrl, saveError: null, suggest: null, emailGuess: null });
         } }) : null,
       ),
     ];
   }
 
   function render() {
+    if (state.phase !== 'review' && state.phase !== 'saving') boxes = { suggest: null, guess: null };
     if (state.phase === 'saved' || state.phase === 'existing') {
-      destroySummary();
+      destroy();
       summary = createLeadSummary({
         lead: state.lead, apiBase, session, openUrl,
         headline: state.phase === 'saved' ? { tone: 'success', text: 'Added to LeadGennie' } : { tone: 'info', text: 'Already in LeadGennie' },
+        notes: state.emailGuessed ? [{ tone: 'warning', text: GUESS_SAVED_NOTE }] : [],
       });
       return mount(root, summary.el);
     }
@@ -138,9 +228,11 @@ export function createCaptureCard({ getFacts, session, apiBase, openUrl, onConne
       );
     }
     if (state.phase === 'error') return mount(root, ...errorView());
-    return mount(root, ...reviewView()); // review | saving
+    mount(root, ...reviewView()); // review | saving
+    paintGuess();
+    paintSuggest();
   }
 
   render();
-  return { el: root, start, destroy: destroySummary };
+  return { el: root, start, destroy };
 }

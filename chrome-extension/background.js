@@ -53,6 +53,11 @@ const handlers = {
     return { candidate: r.candidate, existing: r.existing };
   },
 
+  async [MSG.SUGGEST]({ fullName, company, companyDomain }) {
+    const r = await apiFetch('/capture/suggest', { method: 'POST', body: { full_name: fullName, company, company_domain: companyDomain } });
+    return { emails: r.emails, domainGuesses: r.domain_guesses, note: r.note };
+  },
+
   async [MSG.CREATE]({ lead }) {
     const r = await apiFetch('/leads', { method: 'POST', body: { lead } });
     await logEvent(r.created ? `Added ${r.lead.fullName} to LeadGennie` : `${r.lead.fullName} is already in LeadGennie`, r.created ? 'success' : 'info');

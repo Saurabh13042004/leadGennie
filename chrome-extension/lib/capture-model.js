@@ -22,6 +22,7 @@ export const SOURCE_HINT = {
   llm: 'read from the page',
   workspace: 'matches a company you have',
   email_domain: "from their email",
+  linkedin_text: 'from the profile',
 };
 
 /** Form values (strings) from the server's candidate. */
@@ -48,12 +49,14 @@ export function validateForm(form) {
 }
 
 /** The payload for POST /api/extension/leads. Empty strings become null so the server stores "unknown", not "". */
-export function toLeadDraft(form, { sourceUrl, original }) {
+export function toLeadDraft(form, { sourceUrl, original, emailGuessed = false }) {
   const draft = {};
   for (const { key } of FIELDS) draft[key] = blank(form[key]) ? null : form[key].trim();
   draft.full_name = form.full_name.trim();
   draft.source_url = sourceUrl || null;
   draft.edited_fields = editedFields(original || {}, form);
+  // The email came from the auto-generated suggestions: the server records it as a low-confidence GUESS.
+  draft.email_guessed = Boolean(emailGuessed && draft.email);
   return draft;
 }
 
@@ -100,4 +103,20 @@ export function describeError(error) {
     default:
       return { title: 'Something went wrong', message, action: null, retryable: true };
   }
+}
+
+export const GUESS_WARNING = 'This email is auto-generated and may not be correct. Replace it with the real address as soon as you have it.';
+export const GUESS_SAVED_NOTE = "The email on this lead is auto-generated and may not be correct — open the lead and replace it when you have the real address.";
+
+/** Which of the form fields feed the suggestions (a change to any of them refreshes the list). */
+export const SUGGEST_INPUTS = ['full_name', 'company', 'company_domain'];
+
+/** A sentence explaining where the suggested formats came from. */
+export function suggestionBasis(emails, domain) {
+  const existing = emails.find((e) => e.basis === 'existing');
+  if (existing) {
+    const n = existing.matches || 1;
+    return `The first one matches the format of ${n} email${n === 1 ? '' : 's'} you already have at ${domain || 'this company'}.`;
+  }
+  return 'Guessed from common company formats — nobody has confirmed these.';
 }

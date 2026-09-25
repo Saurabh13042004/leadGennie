@@ -23,6 +23,8 @@ export const pageFactsSchema = z.object({
   jsonld: z.array(z.unknown()).max(20).default([]),
   /** Addresses found in mailto: links. */
   emails: z.array(str(320)).max(30).default([]),
+  /** Short accessibility labels from the page (e.g. LinkedIn's "Current company: Acme. Click to skip to experience card"). */
+  hints: z.array(str(300)).max(10).default([]),
 });
 export type PageFacts = z.infer<typeof pageFactsSchema>;
 
@@ -30,7 +32,7 @@ export const FIELD_NAMES = ["fullName", "jobTitle", "company", "companyDomain", 
 export type FieldName = (typeof FIELD_NAMES)[number];
 
 /** Where a proposed value came from — shown to the user and recorded as provenance. */
-export type FieldSource = "jsonld" | "linkedin_title" | "selection" | "site" | "mailto" | "llm" | "workspace" | "email_domain";
+export type FieldSource = "jsonld" | "linkedin_title" | "selection" | "site" | "mailto" | "llm" | "workspace" | "email_domain" | "linkedin_text";
 
 export type PageKind = "linkedin_profile" | "linkedin_other" | "web";
 
@@ -55,6 +57,8 @@ export const leadDraftSchema = z.object({
   phone: z.string().trim().max(50).nullish(),
   linkedin_url: z.string().trim().max(500).nullish(),
   source_url: z.string().trim().max(2000).nullish(),
+  /** The email was chosen from auto-generated suggestions (a guess, not a fact) — recorded as low-confidence provenance. */
+  email_guessed: z.boolean().default(false),
   /** Which fields the user typed or changed vs accepted from the page (provenance: 'user' vs 'extension'). */
   edited_fields: z.array(z.enum(["full_name", "job_title", "company", "company_domain", "email", "phone", "linkedin_url"])).max(7).default([]),
 });

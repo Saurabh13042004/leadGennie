@@ -41,6 +41,15 @@ export function collectPageFacts(textLimit = 12000, doc = document, win = window
     if (emails.length >= 30) break;
   }
 
+  // Accessibility labels that name the person's current employer (LinkedIn's top card exposes "Current company: Acme. …"
+  // on a button, which is far more reliable than any class name). Only these, only a few, only short.
+  const hints = [];
+  for (const el of Array.from(doc.querySelectorAll('[aria-label*="company" i]')).slice(0, 30)) {
+    const label = clean(el.getAttribute('aria-label')).slice(0, 300);
+    if (/current company/i.test(label) && !hints.includes(label)) hints.push(label);
+    if (hints.length >= 5) break;
+  }
+
   const selection = win && win.getSelection ? clean(String(win.getSelection())).slice(0, 5000) : '';
 
   const facts = {
@@ -50,6 +59,7 @@ export function collectPageFacts(textLimit = 12000, doc = document, win = window
     headings,
     jsonld,
     emails,
+    hints,
   };
   const siteName = attr('meta[property="og:site_name"]', 'content') || attr('meta[name="application-name"]', 'content');
   if (siteName) facts.siteName = siteName.slice(0, 200);

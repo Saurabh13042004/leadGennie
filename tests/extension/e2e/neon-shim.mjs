@@ -26,7 +26,10 @@ export async function startShim({ port = 4555 } = {}) {
     insert into companies (workspace_id, name, name_key, domain) values (1, 'Initech', 'initech', 'initech.com');
     insert into leads (workspace_id, full_name, first_name, last_name, email, email_status, company, company_id, job_title, stage, source, created_at) values
       (1, 'Bill Lumbergh', 'Bill', 'Lumbergh', 'bill@initech.com', 'unverified', 'Initech', 1, 'VP Operations', 'new', 'csv', now() - interval '2 days'),
-      (1, 'Peter Gibbons', 'Peter', 'Gibbons', 'peter@initech.com', 'valid', 'Initech', 1, 'Software Engineer', 'engaged', 'manual', now() - interval '1 day');
+      (1, 'Peter Gibbons', 'Peter', 'Gibbons', 'peter@initech.com', 'valid', 'Initech', 1, 'Software Engineer', 'engaged', 'manual', now() - interval '1 day'),
+      -- Two colleagues at one domain, so the extension can infer that company's email format (first.last).
+      (1, 'Alex Rivera', 'Alex', 'Rivera', 'alex.rivera@microsoft.com', 'unverified', null, null, null, 'new', 'csv', now() - interval '4 days'),
+      (1, 'Maria Gomez', 'Maria', 'Gomez', 'maria.gomez@microsoft.com', 'unverified', null, null, null, 'new', 'csv', now() - interval '5 days');
   `);
 
   const lit = (v) => (Array.isArray(v) ? "{" + v.map((x) => (x === null ? "NULL" : Array.isArray(x) ? lit(x) : "\"" + String(x).replace(/(["\\])/g, "\\$1") + "\"")).join(",") + "}" : v);

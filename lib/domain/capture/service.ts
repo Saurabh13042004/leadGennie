@@ -1,4 +1,5 @@
 import { AppError } from "@/lib/api/errors";
+import { LlmError } from "@/lib/ai/client";
 import { logActivity } from "@/lib/activity";
 import { proposeWithLlm, type LlmProposer } from "@/lib/ai/capture-extract";
 import { recordLeadProvenance, type ProvenanceRow } from "@/lib/db/capture";
@@ -53,10 +54,20 @@ export function cleanSourceUrl(url: string): string {
 
 const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ");
 
-/** A model-proposed value counts only if it literally appears on the page (case/whitespace-insensitive). */
-function grounded(value: string, haystack: string): boolean {
-  const v = norm(value).trim();
-  return v.length >= 2 && haystack.includes(v);
+/** Ignore case, accents, punctuation and spacing: "Acme, Inc." on the page matches a model's "Acme Inc". */
+const fold = (s: string) => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").replace(/\s+/g, " ").trim();
+
+/**
+ * A model-proposed value is only shown if the page really says it. The comparison is deliberately forgiving about FORMAT
+ * (case, accents, punctuation, a trailing "Inc"/"LLC") and strict about CONTENT (the words must be on the page), so a
+ * correct answer isn't thrown away for cosmetic differences but an invented one still is.
+ */
+export function grounded(value: string, haystack: string, kind: FieldName = "fullName"): boolean {
+  const hay = ` ${fold(haystack)} `;
+  const candidates = new Set([fold(value)]);
+  if (kind === "company") candidates.add(fold(normalizeCompanyName(value)));
+  for (const c of candidates) if (c.length >= 2 && hay.includes(` ${c} `)) return true;
+  return false;
 }
 
 export async function extractCandidate(
@@ -70,9 +81,12 @@ export async function extractCandidate(
   const warnings: string[] = [];
   let usedLlm = false;
 
-  // ---- LLM only for gaps, and only when there is something to read --------------------------------------
-  const needsModel = (!fields.fullName || !fields.company) && (facts.text.trim().length > 40 || !!facts.selection);
-  if (needsModel && pageKind !== "linkedin_other") {
+  // ---- The model reads the page for whatever the deterministic readers could not find ---------------------------------
+  // Free readers go first (structured data, the LinkedIn title, the LinkedIn headline/top card/Experience text): they cannot
+  // hallucinate and cost nothing. The model then fills the gaps — on a LinkedIn profile that means the company or the title.
+  const hasText = facts.text.trim().length > 40 || !!facts.selection;
+  const missing = pageKind === "linkedin_profile" ? !fields.company || !fields.jobTitle || !fields.fullName : !fields.fullName || !fields.company;
+  if (hasText && missing && pageKind !== "linkedin_other") {
     try {
       const usage: Parameters<typeof recordUsage>[1] = [];
       const proposed = await deps.propose(facts, {
@@ -80,21 +94,22 @@ export async function extractCandidate(
       });
       await recordUsage({ workspaceId: ctx.workspaceId, userId: ctx.userId }, usage, { type: "extension_capture" }).catch(() => {});
       usedLlm = true;
-      const haystack = norm([facts.title, facts.headings.join(" "), facts.selection ?? "", facts.text].join(" "));
+      const haystack = [facts.title, facts.headings.join(" "), facts.selection ?? "", facts.text].join(" ");
       let dropped = false;
       for (const [k, v] of Object.entries(proposed) as [FieldName, string][]) {
         if (fields[k]) continue;
-        if (grounded(v, haystack)) {
+        if (grounded(v, haystack, k)) {
           fields[k] = v;
           sources[k] = "llm";
         } else dropped = true;
       }
       if (dropped) warnings.push("Some details couldn't be confirmed on this page and were left blank.");
-    } catch {
-      // Model unavailable (quota, key, network): the card simply opens with what the page itself gave us.
-      warnings.push("Automatic reading is unavailable right now — fill in the details below.");
+    } catch (e) {
+      // Say WHY when we know (quota, bad key, not configured) instead of a vague "unavailable" — it is fixable.
+      warnings.push(e instanceof LlmError && e.message ? `Automatic reading failed: ${e.message}` : "Automatic reading is unavailable right now — fill in the details below.");
     }
   }
+  if (!fields.company && hasText && !warnings.length) warnings.push("We couldn't find their company on this page — add it below.");
 
   // ---- Company domain: strongest evidence wins -------------------------------------------------------------
   // The page's own host is the WEAKEST signal: a company's team page says "this is their site", but a blog post or
@@ -155,14 +170,18 @@ export async function captureLead(ctx: CaptureCtx, draft: LeadDraft): Promise<Ca
   const provenance: ProvenanceRow[] = [
     ["full_name", draft.full_name], ["job_title", draft.job_title], ["company", draft.company], ["email", draft.email],
     ["linkedin_url", record.linkedin_url],
-  ].flatMap(([field, value]) =>
-    value ? [{ field: field as string, value: value as string, source: edited.has(field as never) ? ("user" as const) : ("extension" as const), confidence: null }] : [],
-  );
+  ].flatMap(([field, value]) => {
+    if (!value) return [];
+    // An email the person picked from auto-generated suggestions is a GUESS: recorded as such (low confidence) so it is never
+    // mistaken for a verified address and can be found and replaced later.
+    const guessed = field === "email" && draft.email_guessed;
+    return [{ field: field as string, value: value as string, source: edited.has(field as never) && !guessed ? ("user" as const) : ("extension" as const), confidence: guessed ? 0.2 : null }];
+  });
   await recordLeadProvenance(ctx.workspaceId, record.id, provenance).catch(() => {});
   await logActivity({
     workspaceId: ctx.workspaceId, actorUserId: ctx.userId, type: "lead.captured", entityType: "lead", entityId: record.id,
     summary: `Captured ${record.full_name} from the browser extension`,
-    metadata: { source_url: draft.source_url ? cleanSourceUrl(draft.source_url) : null, email_status: classifyEmail(draft.email).status },
+    metadata: { source_url: draft.source_url ? cleanSourceUrl(draft.source_url) : null, email_status: classifyEmail(draft.email).status, email_guessed: Boolean(draft.email && draft.email_guessed) },
   });
   return { created: true, lead };
 }

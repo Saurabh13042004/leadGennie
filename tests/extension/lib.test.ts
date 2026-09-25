@@ -5,7 +5,7 @@ import { installChrome, removeChrome, type ChromeMock } from "../helpers/chrome-
 import { ApiError, apiFetch, publicFetch } from "../../chrome-extension/lib/api.js";
 import { buildAuthorizeUrl, connect, describeDevice, disconnect, normalizeApiBase, parseAuthResponse, sha256Base64Url } from "../../chrome-extension/lib/auth.js";
 import { clearSession, getSession, migrateLegacyConnection, setSession, takeSignedOutReason } from "../../chrome-extension/lib/storage.js";
-import { editedFields, describeError, formFromCandidate, leadSubtitle, toLeadDraft, validateForm } from "../../chrome-extension/lib/capture-model.js";
+import { editedFields, describeError, formFromCandidate, leadSubtitle, suggestionBasis, toLeadDraft, validateForm } from "../../chrome-extension/lib/capture-model.js";
 import { collectPageFacts } from "../../chrome-extension/lib/page-facts.js";
 import { challengeFromVerifier } from "@/lib/extension/tokens";
 
@@ -216,6 +216,20 @@ describe("capture model (shared by the popup and the on-page widget)", () => {
     expect(draft).toMatchObject({ full_name: "Sarah Chen", email: null, linkedin_url: null, company: "Acme Inc", source_url: "https://acme.com/team", edited_fields: ["company"] });
   });
 
+  it("flags a chosen suggestion as a guess, but only when there is an email to flag", () => {
+    const original = formFromCandidate(candidate);
+    const withEmail = { ...original, email: "sarah.chen@acme.com" };
+    expect(toLeadDraft(withEmail, { sourceUrl: "u", original, emailGuessed: true })).toMatchObject({ email: "sarah.chen@acme.com", email_guessed: true, edited_fields: ["email"] });
+    expect(toLeadDraft(withEmail, { sourceUrl: "u", original, emailGuessed: false }).email_guessed).toBe(false);
+    expect(toLeadDraft({ ...original, email: "" }, { sourceUrl: "u", original, emailGuessed: true }).email_guessed).toBe(false);
+  });
+
+  it("explains where the suggested format came from — your own emails, or just common formats", () => {
+    expect(suggestionBasis([{ email: "a@x.com", basis: "existing", matches: 2 }], "x.com")).toMatch(/2 emails you already have at x\.com/);
+    expect(suggestionBasis([{ email: "a@x.com", basis: "existing", matches: 1 }], "x.com")).toMatch(/1 email you already have/);
+    expect(suggestionBasis([{ email: "a@x.com", basis: "common" }], "x.com")).toMatch(/nobody has confirmed/);
+  });
+
   it("describes errors in plain language and says whether retrying makes sense", () => {
     expect(describeError({ code: "UNAUTHENTICATED" })).toMatchObject({ action: "connect", retryable: false });
     expect(describeError({ code: "RATE_LIMITED", retryAfter: 9 })).toMatchObject({ retryable: true, message: expect.stringContaining("9s") });
@@ -256,6 +270,15 @@ describe("collectPageFacts", () => {
       url: "https://acme.com/team/sarah?utm=x", title: "Sarah Chen | Acme", text: "Sarah Chen\n\nVP Sales", headings: ["Sarah Chen"],
       jsonld: [{ "@type": "Person", name: "Sarah Chen" }], emails: ["sarah@acme.com"], siteName: "Acme", canonicalUrl: "https://acme.com/team/sarah", selection: "Sarah Chen",
     });
+  });
+
+  it("collects only 'Current company' labels as hints (short, few) — nothing else from aria-labels", () => {
+    const doc = fakeDoc({ text: "x" }) as unknown as { querySelectorAll: (s: string) => unknown[] };
+    const orig = doc.querySelectorAll;
+    doc.querySelectorAll = (sel: string) =>
+      sel.startsWith("[aria-label*") ? ["Current company: Acme. Click to skip to experience card", "Company page", "Current company: Acme. Click to skip to experience card", "Notifications"].map((l) => el({ getAttribute: () => l })) : orig(sel);
+    const f = collectPageFacts(12000, doc as never, win("https://www.linkedin.com/in/x") as never);
+    expect(f.hints).toEqual(["Current company: Acme. Click to skip to experience card"]);
   });
 
   it("caps the text it sends and omits empty optional fields", () => {
