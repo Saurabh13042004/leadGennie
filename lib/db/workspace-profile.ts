@@ -72,8 +72,8 @@ export async function getOnboardingFacts(workspaceId: number): Promise<Onboardin
   const rows = await sql`
     select w.positioning, w.icp, w.onboarding_dismissed_at,
       exists (
-        select 1 from mailboxes m join domains d on d.id = m.domain_id
-        where m.workspace_id = w.id and m.status = 'active' and d.status = 'verified'
+        select 1 from mailboxes m left join domains d on d.id = m.domain_id
+        where m.workspace_id = w.id and m.status = 'active' and (m.provider <> 'resend' or d.status = 'verified')
       ) as has_mailbox,
       exists (select 1 from leads l where l.workspace_id = w.id) as has_leads
     from workspaces w where w.id = ${workspaceId}

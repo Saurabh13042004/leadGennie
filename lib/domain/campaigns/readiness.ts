@@ -1,3 +1,4 @@
+import { isOAuthProvider } from "@/lib/domain/mailboxes/types";
 import { lintEmailCopy } from "@/lib/domain/personalization/validators";
 import { hasSenderIdentity, unknownPlaceholders, type SenderIdentity } from "@/lib/campaigns/render";
 import { loadSenderIdentity } from "@/lib/domain/sending/identity";
@@ -48,7 +49,14 @@ export function evaluateReadiness(
   if (!c.name.trim()) blockers.push({ section: "basics", message: "Give the campaign a name." });
   if (!mailbox) blockers.push({ section: "basics", message: "Pick a sending mailbox." });
   else {
-    if (!mailbox.active || !mailbox.verified) blockers.push({ section: "basics", message: `${mailbox.email} isn't active on a verified domain. Fix it in Email Deliverability or pick another mailbox.` });
+    if (!mailbox.active || !mailbox.verified) {
+      blockers.push({
+        section: "basics",
+        message: isOAuthProvider(mailbox.provider ?? "") && mailbox.blockedReason
+          ? `${mailbox.email} can't send right now. ${mailbox.blockedReason} Fix it in Settings → Mailboxes or pick another mailbox.`
+          : `${mailbox.email} isn't active on a verified domain. Fix it in Email Deliverability or pick another mailbox.`,
+      });
+    }
     if (c.dailyLimit > mailbox.dailyLimit) blockers.push({ section: "basics", message: `The daily limit (${c.dailyLimit}) is higher than ${mailbox.email}'s limit of ${mailbox.dailyLimit}/day.` });
   }
   // Every email must say who sent it and where (CAN-SPAM / GDPR). `undefined` = not checked (pure unit tests); checkReadiness always passes it.

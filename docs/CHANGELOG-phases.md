@@ -2,6 +2,34 @@
 
 Evidence log for each phase. Newest first.
 
+## Mailbox OAuth (D-04) — Gmail / Microsoft 365 as the primary sending path (code complete 2026-09-26; verified hermetically + in the built app against a Google stub; migration 0014 not yet on Neon; no real Google/Microsoft credentials exercised)
+
+Decision taken: **D-04** option A for Google *and* Microsoft, Resend kept (owner, 2026-09-26). Design + setup: [`mailboxes.md`](mailboxes.md).
+
+**What exists**
+- `lib/domain/mailboxes/*` — types + exhaustive status machine, scopes (identity/send/inbox groups; only identity+send requested), OAuth clients (`oauth/google|microsoft`, PKCE, sealed CSRF cookie `flow-state`), `connect-service` (start/complete/reconnect), `token-source` (refresh with compare-and-swap, dead grant ⇒ `reconnect_required`), `lifecycle` (audited transitions, campaign pausing), `service` (`providerForMailbox`, test email, disconnect+revoke), `registry`/`register` (per-mailbox provider resolution), `replies` (provider-independent reply detection).
+- `lib/email/*` — `MailboxProvider` (adds `getProfile`, optional `listMessages`/`getThread`) over the existing `MailProvider`; `GmailMailboxProvider` (raw MIME via `messages.send`), `MicrosoftMailboxProvider` (MIME via `sendMail`), `mime.ts` (header-injection-proof builder), `http.ts` (401 ⇒ refresh once ⇒ retry; ambiguous-vs-safe network failures), Gmail/Graph message normalisers; `ResendProvider` unchanged in behaviour; `FakeMailProvider` can now behave like Gmail (`idempotent: false`).
+- `app/api/mailboxes/[provider]/connect|callback`; UI: `/dashboard/deliverability` = **Mailboxes** (connect cards, per-mailbox capacity "19 / 50 today · 31 left", test/pause/resume/reconnect/disconnect with confirmation), `/dashboard/domains` = **Domains & deliverability** (existing SPF/DKIM UI, moved). Campaign pickers show provider + why a mailbox can't send.
+- **Sending pipeline:** provider resolved per mailbox; `messages.provider` recorded; write-ahead `dispatched_at` gives Gmail/Microsoft the at-most-once guarantee Resend got from its idempotency key; new error class `unknown_outcome`; systemic auth ⇒ campaign pause with a reconnect message, `domain` class ⇒ mailbox `error`.
+- Migration `0014`; env vars `GOOGLE_*`, `MICROSOFT_*`; docs.
+
+**Verification**
+
+| Check | Result | Evidence |
+|---|---|---|
+| Whole suite | ✅ **1,083 passed, 9 skipped** — the 886 that existed all still pass after the pipeline change, plus 197 new | `npx vitest run` |
+| New tests | ✅ MIME, state machine, scopes, OAuth clients, sealed state, both adapters (mocked HTTP), normalisers, reply detection, connect/reconnect, refresh + concurrent refresh, revoke/disconnect, isolation, sending through a Gmail-like provider (crash/lost-response/429/auth/domain/limits/DNC), route handlers, architecture gates | `tests/unit/{mime,mailbox-*}.test.ts`, `tests/integration/mailbox-*.test.ts` |
+| Built app, real routes + adapter code, stub Google | ✅ 20 steps: render, connect redirect (PKCE/scopes/cookie), forged state refused, callback stores ciphertext, test send posts real MIME with the mailbox token, expired-token refresh, 401→refresh→retry, `invalid_grant`⇒Reconnect + campaign paused, reconnect, disconnect+revoke, viewer/signed-out behaviour, no secret in the server log | harness in the session scratchpad (Neon-protocol PGlite shim + fetch stub) |
+| Rendered pages | ✅ screenshots reviewed: found and fixed a clipped table (actions/Reconnect cut off) and truncated stat labels | desktop + mobile + disconnect modal |
+| `tsc`, `eslint` | ✅ 0 errors; `check:tenancy` ✅; `npm run build` ✅ | |
+| `npm run verify` as a whole | ⚠ `check:fake-metrics` fails on `lib/api/rate-limit.ts` (`Math.random`) — **not this change** (last touched by the Phase 7 commit) | |
+
+**Not verified / needs you**
+- **No real Google or Microsoft account was used.** Adapters follow the documented APIs and are proven against mocked/stubbed HTTP only. First real connect + Send-test-email is the acceptance step. Things to watch: Gmail keeping `List-Unsubscribe` from raw MIME; Graph accepting custom headers in MIME `sendMail` (the footer link is always present).
+- Migration `0014` is not applied to Neon; OAuth apps and env vars are not created; Google verification of `gmail.send` not started (testing-mode refresh tokens expire in 7 days).
+- Inbox (sync job, persisting inbound mail, UI, classification) is Phase 6; only the groundwork above exists. Sequence follow-ups aren't threaded onto the first email yet.
+- Deviations from the brief (all deliberate, listed in `mailboxes.md`): `sent_today` is counted not stored; `active` = CONNECTED; `TOKEN_REFRESHED`/`EMAIL_SENT` are logs/`messages` rows, not activity-feed entries; campaign sends go through the `campaign_send` job (which already does every MailboxService step) rather than a second sender; `createDraft`/`syncMessages` not implemented (optional in the brief).
+
 ## Phase 7 — Chrome extension: capture, real authentication, dashboard-consistent UI (code complete 2026-09-26; verified in real Chrome against a throwaway DB; migration 0013 applied on Neon)
 
 **What exists**

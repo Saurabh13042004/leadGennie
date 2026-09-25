@@ -66,6 +66,7 @@ export const primaryNav: NavItem[] = [
     matchPrefixes: [
       "/dashboard/workspace",
       "/dashboard/deliverability",
+      "/dashboard/domains",
       "/dashboard/do-not-contact",
       "/dashboard/ai-prompts",
       "/dashboard/integrations",

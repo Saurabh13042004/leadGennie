@@ -8,7 +8,7 @@ export function welcomeEmail(input: { name: string; baseUrl: string }): EmailCon
   const dashboard = `${input.baseUrl}/dashboard`;
   const steps: [string, string][] = [
     ["Add your leads", "Import a CSV or add people one by one. Duplicates are merged for you."],
-    ["Connect a sending mailbox", "Verify a domain under Mailboxes & domains so emails come from your own address."],
+    ["Connect your work mailbox", "Under Settings → Mailboxes, sign in with the Google or Microsoft mailbox you already use — no DNS setup."],
     ["Research and personalise", "LeadGennie only writes about things it can back with a source it found, and shows you which."],
     ["Review, approve, launch", "Nothing is sent until you approve the campaign, and anyone who unsubscribes is never emailed again."],
   ];

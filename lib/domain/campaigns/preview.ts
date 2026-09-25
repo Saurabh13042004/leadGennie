@@ -3,7 +3,9 @@ import { AppError } from "@/lib/api/errors";
 import { logActivity } from "@/lib/activity";
 import { appBaseUrl, renderStep, unsubscribeFooter } from "@/lib/campaigns/render";
 import "@/lib/email/resend-provider";
-import { getMailProvider, toProviderError } from "@/lib/email/provider";
+import { providerForMailbox } from "@/lib/domain/mailboxes/service";
+import { isOAuthProvider } from "@/lib/domain/mailboxes/types";
+import { toProviderError } from "@/lib/email/provider";
 import { complianceHeaders } from "@/lib/domain/sending/identity";
 import { lintEmailCopy } from "@/lib/domain/personalization/validators";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
@@ -121,14 +123,16 @@ export async function previewCandidates(workspaceId: number, campaignId: number)
 
 /** Sends one step, exactly as rendered for `leadId`, to the signed-in user's own address. Never to the lead. */
 export async function sendTestEmail(actor: Actor & { userId: number }, campaignId: number, leadId: number, stepOrder: number): Promise<{ to: string }> {
-  const provider = getMailProvider();
-  if (!provider.isConfigured()) throw new AppError("NOT_CONFIGURED", "Email sending isn't configured (RESEND_API_KEY).");
   const preview = await previewForLead(actor.workspaceId, campaignId, leadId);
   const step = preview.steps.find((s) => s.order === stepOrder);
   if (!step) throw new AppError("NOT_FOUND", "That step has nothing to send for this lead.");
   if (!preview.from) throw new AppError("VALIDATION_ERROR", "Pick a sending mailbox first.");
   const mailbox = await loadMailbox(actor.workspaceId, (await loadCampaign(actor.workspaceId, campaignId)).mailboxId);
-  if (!mailbox || !mailbox.active || !mailbox.verified) throw new AppError("VALIDATION_ERROR", "The sending mailbox isn't active on a verified domain.");
+  if (!mailbox || !mailbox.active || !mailbox.verified) {
+    throw new AppError("VALIDATION_ERROR", mailbox && isOAuthProvider(mailbox.provider ?? "") && mailbox.blockedReason ? `The sending mailbox can't send: ${mailbox.blockedReason}` : "The sending mailbox isn't active on a verified domain.");
+  }
+  const { provider } = await providerForMailbox(actor.workspaceId, mailbox.id);
+  if (!provider.isConfigured()) throw new AppError("NOT_CONFIGURED", isOAuthProvider(mailbox.provider ?? "") ? "Sending isn't configured for this mailbox's provider on this server." : "Email sending isn't configured (RESEND_API_KEY).");
   const [u] = await sql`select email from users where id = ${actor.userId}`;
   if (!u?.email) throw new AppError("NOT_FOUND", "Your account has no email address.");
   try {

@@ -36,6 +36,8 @@ export type ClaimInput = {
   sendId: number;
   leadId: number;
   mailboxId: number;
+  /** The mailbox's provider key (`resend`, `gmail`, `microsoft`) — stored on the message so events and threads are correlated correctly. */
+  provider: string;
   subject: string;
   body: string;
   headers: Record<string, string>;
@@ -67,7 +69,7 @@ export async function claimMessage(i: ClaimInput): Promise<number | null> {
       `insert into messages (workspace_id, campaign_id, campaign_lead_id, campaign_send_id, lead_id, mailbox_id, subject, body, headers,
                              from_email, to_email, to_domain, provider, idempotency_key, status, attempts, claimed_at)
        select $1::bigint, $2::bigint, $3::bigint, $4::bigint, $5::bigint, $6::bigint, $7::text, $8::text, $9::jsonb,
-              $10::text, $11::text, $12::text, 'resend', $13::text, 'sending', 0, $14::timestamptz
+              $10::text, $11::text, $12::text, $22::text, $13::text, 'sending', 0, $14::timestamptz
        where (select count(*) from messages m where m.campaign_id = $2::bigint and m.status in ${COUNTED} and m.claimed_at >= $15::timestamptz) < $16::int
          and (select count(*) from messages m where m.mailbox_id = $6::bigint and m.status in ${COUNTED} and m.claimed_at >= $17::timestamptz) < $18::int
          and ($19::int is null or (select count(*) from messages m where m.workspace_id = $1::bigint and m.status in ${COUNTED} and m.claimed_at >= $17::timestamptz) < $19::int)
@@ -78,7 +80,7 @@ export async function claimMessage(i: ClaimInput): Promise<number | null> {
       [
         i.workspaceId, i.campaignId, i.campaignLeadId, i.sendId, i.leadId, i.mailboxId, i.subject, i.body, JSON.stringify(i.headers),
         i.fromEmail, i.toEmail, i.toDomain, i.idempotencyKey, i.now.toISOString(), i.campaignDayStart.toISOString(), i.limits.campaign,
-        i.utcDayStart.toISOString(), i.limits.mailbox, i.limits.workspace, i.limits.domainHourly, i.limits.spacingSeconds,
+        i.utcDayStart.toISOString(), i.limits.mailbox, i.limits.workspace, i.limits.domainHourly, i.limits.spacingSeconds, i.provider,
       ],
     ),
   ]);

@@ -1,5 +1,6 @@
 import { getResendClient, isEmailConfigured } from "@/lib/email/resend";
-import { MailProviderError, registerMailProviderFactory, type MailProvider, type MailSendInput, type MailSendResult, type ProviderErrorClass } from "./provider";
+import type { MailboxProfile, MailboxProvider, MailboxRef } from "./mailbox-provider";
+import { MailProviderError, registerMailProviderFactory, type MailSendInput, type MailSendResult, type ProviderErrorClass } from "./provider";
 
 /**
  * Maps a Resend API error onto our classes. Names/status codes are Resend's documented error codes
@@ -24,19 +25,32 @@ export function classifyResendError(err: { name?: string; message?: string; stat
   return { cls: "retryable" };
 }
 
-export class ResendProvider implements MailProvider {
+/**
+ * Resend as a mailbox provider: the platform API key sends on behalf of a verified domain. With no `mailbox` it is the
+ * platform's own transactional sender (invites, welcome mail — see system-mail.ts).
+ */
+export class ResendProvider implements MailboxProvider {
   readonly name = "resend";
-  readonly capabilities = { idempotencyKey: true, oneClickUnsubscribeHeaders: true };
+
+  constructor(private readonly mailbox?: MailboxRef) {}
+
+  readonly capabilities = { idempotencyKey: true, oneClickUnsubscribeHeaders: true, threading: false, inboxSync: false };
 
   isConfigured() {
     return isEmailConfigured();
+  }
+
+  /** There is no account to look up — a Resend "mailbox" is an address on a domain we verified — so the profile is the mailbox itself. */
+  async getProfile(): Promise<MailboxProfile> {
+    if (!this.mailbox) throw new MailProviderError("This Resend sender isn't tied to a mailbox", "permanent", "no_mailbox");
+    return { providerAccountId: `resend:${this.mailbox.email}`, email: this.mailbox.email, displayName: this.mailbox.displayName, emailVerified: true };
   }
 
   async send(input: MailSendInput): Promise<MailSendResult> {
     let res;
     try {
       res = await getResendClient().emails.send(
-        { from: input.from, to: input.to, subject: input.subject, text: input.text, html: input.html, headers: input.headers, tags: input.tags },
+        { from: input.from, to: input.to, cc: input.cc, bcc: input.bcc, replyTo: input.replyTo, subject: input.subject, text: input.text, html: input.html, headers: input.headers, tags: input.tags },
         { idempotencyKey: input.idempotencyKey },
       );
     } catch (e) {

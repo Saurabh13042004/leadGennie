@@ -18,7 +18,7 @@ export type ReadinessView = {
   blockers: Check[];
   warnings: Check[];
   audience: AudienceView;
-  mailbox: { email: string; dailyLimit: number; active: boolean; verified: boolean } | null;
+  mailbox: { email: string; dailyLimit: number; active: boolean; verified: boolean; provider?: string; blockedReason?: string | null } | null;
   drafts: DraftSummary;
   willEnroll: number;
   overTotalLimit: number;
@@ -38,7 +38,7 @@ export function toAudienceView(r: AudienceResolution): AudienceView {
 export function toReadinessView(r: Readiness): ReadinessView {
   return {
     blockers: r.blockers, warnings: r.warnings, audience: toAudienceView(r.audience),
-    mailbox: r.mailbox ? { email: r.mailbox.email, dailyLimit: r.mailbox.dailyLimit, active: r.mailbox.active, verified: r.mailbox.verified } : null,
+    mailbox: r.mailbox ? { email: r.mailbox.email, dailyLimit: r.mailbox.dailyLimit, active: r.mailbox.active, verified: r.mailbox.verified, provider: r.mailbox.provider, blockedReason: r.mailbox.blockedReason } : null,
     drafts: r.drafts, willEnroll: r.willEnroll, overTotalLimit: r.overTotalLimit,
   };
 }

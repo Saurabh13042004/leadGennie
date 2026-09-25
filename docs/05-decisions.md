@@ -37,7 +37,7 @@ Open questions that change what gets built. Each has a **recommendation** so wor
 - B. **Resend + inbound routing** on a reply-to subdomain, forwarding to the app. Cost: DNS/MX setup; verify Resend's current inbound capabilities before committing.
 - C. IMAP polling. Universal but clunky.
 **Recommendation:** Keep Resend as the outbound provider for Phase 5 (already works, approval-gated). For replies, **start with A (Gmail first)** as `MailProvider` implementation #2 in Phase 6, since it satisfies "connect email → send → receive reply" end-to-end for the target user; start Google OAuth verification early because it has lead time. Fall back to B if OAuth review blocks the beta.
-**Decision:** _pending_
+**Decision:** _decided (owner, 2026-09-26): option A for both Google **and** Microsoft, with Resend + verified domains kept as an advanced provider._ Built as a cross-phase migration ahead of Phase 6: OAuth connect/reconnect/disconnect, per-mailbox provider registry, Gmail + Graph send adapters, write-ahead at-most-once for providers with no idempotency key, normalised inbox types + reply detection. **Deviation from the recommendation:** it is not Gmail-first — Microsoft ships at the same time, and *reading* mail (the Google restricted scope) is deliberately not requested until the Inbox phase. Still open from this decision: Google verification of the sensitive `gmail.send` scope and, later, the restricted read scope (lead time — start now); option B stays the fallback if that blocks the beta. See [`mailboxes.md`](mailboxes.md).
 
 ## D-05 — LinkedIn automation vs PLAN §6 (out of scope for V1)
 **Blocking for:** Phase 4 (channels in campaign builder) and Phase 7.

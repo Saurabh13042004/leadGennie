@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db/client";
 import { DEFAULT_SEND_WINDOW, sendWindowSchema, type SendWindow } from "@/lib/domain/campaigns/types";
+import { mailboxBlockedReason } from "@/lib/domain/mailboxes/types";
 
 /** Everything the send handler needs about one scheduled email, loaded in one query and scoped to the job's workspace. */
 export type SendContext = {
@@ -26,8 +27,13 @@ export type SendContext = {
   window: SendWindow | null;
   mailboxId: number | null;
   mailboxEmail: string | null;
-  mailboxActive: boolean;
-  domainVerified: boolean;
+  mailboxDisplayName: string | null;
+  mailboxProvider: string;
+  mailboxStatus: string;
+  mailboxScopes: string[];
+  domainStatus: string | null;
+  /** Why this mailbox can't send right now (null = it can) — one rule shared with the UI (lib/domain/mailboxes/types.ts). */
+  mailboxBlockedReason: string | null;
   mailboxDailyLimit: number;
   mailboxCreatedAt: Date;
   workspaceDailyCap: number | null;
@@ -39,8 +45,8 @@ export async function loadSendContext(workspaceId: number, sendId: number): Prom
            l.id as lead_id, l.full_name, l.company, l.email, l.email_status,
            c.name as campaign_name, c.status as campaign_status, c.send_model, c.daily_email_limit, c.send_window, c.mailbox_id,
            cl.status as sequence_status,
-           m.email as mailbox_email, m.status as mailbox_status, m.daily_limit as mailbox_daily_limit, m.created_at as mailbox_created_at,
-           d.status as domain_status, w.daily_send_cap
+           m.email as mailbox_email, m.display_name as mailbox_display_name, m.provider as mailbox_provider, m.status as mailbox_status, m.scopes as mailbox_scopes,
+           m.daily_limit as mailbox_daily_limit, m.created_at as mailbox_created_at, d.status as domain_status, w.daily_send_cap
     from campaign_sends cs
     join campaign_steps st on st.id = cs.step_id
     join leads l on l.id = cs.lead_id and l.workspace_id = cs.workspace_id
@@ -62,7 +68,9 @@ export async function loadSendContext(workspaceId: number, sendId: number): Prom
     campaignName: String(r.campaign_name), campaignStatus: String(r.campaign_status), sendModel: leads ? "leads" : "legacy",
     campaignDailyLimit: Number(r.daily_email_limit), window: leads ? (parsed.success ? parsed.data : DEFAULT_SEND_WINDOW) : null,
     mailboxId: r.mailbox_id === null ? null : Number(r.mailbox_id), mailboxEmail: (r.mailbox_email as string | null) ?? null,
-    mailboxActive: r.mailbox_status === "active", domainVerified: r.domain_status === "verified",
+    mailboxDisplayName: (r.mailbox_display_name as string | null) ?? null, mailboxProvider: String(r.mailbox_provider ?? "resend"), mailboxStatus: String(r.mailbox_status ?? ""),
+    mailboxScopes: (r.mailbox_scopes as string[] | null) ?? [], domainStatus: (r.domain_status as string | null) ?? null,
+    mailboxBlockedReason: r.mailbox_id === null ? "No mailbox" : mailboxBlockedReason({ provider: String(r.mailbox_provider), status: String(r.mailbox_status), domainStatus: (r.domain_status as string | null) ?? null }),
     mailboxDailyLimit: Number(r.mailbox_daily_limit ?? 50), mailboxCreatedAt: new Date(String(r.mailbox_created_at ?? new Date(0).toISOString())),
     workspaceDailyCap: r.daily_send_cap === null || r.daily_send_cap === undefined ? null : Number(r.daily_send_cap),
   };

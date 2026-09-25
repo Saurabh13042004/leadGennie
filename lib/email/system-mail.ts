@@ -6,7 +6,7 @@ import type { EmailContent } from "@/lib/email/templates/layout";
 
 const log = createLogger({ scope: "email.system" });
 
-export type SystemMailResult = { sent: true; id: string } | { sent: false; reason: "not_configured" | "failed" };
+export type SystemMailResult = { sent: true; id: string | null } | { sent: false; reason: "not_configured" | "failed" };
 
 /**
  * LeadGennie's own transactional mail (invites, welcome) — NOT campaign sending: no mailbox, no limits, no suppression

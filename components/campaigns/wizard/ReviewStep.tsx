@@ -1,5 +1,6 @@
 "use client";
 
+import { PROVIDER_LABEL } from "@/lib/domain/mailboxes/types";
 import Link from "next/link";
 import { CircleNotch, EnvelopeSimple, LinkedinLogo, RocketLaunch, ShieldCheck, WarningCircle } from "@phosphor-icons/react/ssr";
 import { Section } from "@/components/ui/Card";
@@ -93,9 +94,9 @@ export default function ReviewStep({ draft }: { draft: CampaignDraft }) {
                 <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 ring-1 ring-inset ring-amber-200/70">
                   <WarningCircle className="mt-px h-3.5 w-3.5 shrink-0" weight="fill" />
                   <span>
-                    No active, verified mailbox yet.{" "}
+                    No connected mailbox yet.{" "}
                     <Link href="/dashboard/deliverability" className="font-medium underline underline-offset-2 hover:text-amber-900">
-                      Add one in Email Deliverability
+                      Connect one under Mailboxes
                     </Link>
                     .
                   </span>
@@ -104,7 +105,7 @@ export default function ReviewStep({ draft }: { draft: CampaignDraft }) {
                 <Select id="review-mailbox" value={mailboxId ?? ""} onChange={(e) => setMailboxId(Number(e.target.value))}>
                   {mailboxes.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.email}
+                      {m.email} · {PROVIDER_LABEL[m.provider]}
                     </option>
                   ))}
                 </Select>

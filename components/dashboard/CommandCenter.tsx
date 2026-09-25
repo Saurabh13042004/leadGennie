@@ -46,7 +46,7 @@ const SHORTCUTS = [
   { href: "/dashboard/leads", label: "Import leads", sub: "CSV with column mapping", icon: UploadSimple },
   { href: "/dashboard/lead-lists", label: "Build an audience", sub: "Describe it in plain English", icon: UsersThree },
   { href: "/dashboard/leads/drafts", label: "Review email drafts", sub: "Approve before anything sends", icon: PencilSimpleLine },
-  { href: "/dashboard/deliverability", label: "Connect a mailbox", sub: "Domains and daily limits", icon: EnvelopeSimple },
+  { href: "/dashboard/deliverability", label: "Connect a mailbox", sub: "Google or Microsoft, no DNS", icon: EnvelopeSimple },
 ];
 
 export default function CommandCenter({ firstName, data, activities, setup }: { firstName: string | null; data: InsightBoardData; activities: ActivityRow[]; setup?: ReactNode }) {

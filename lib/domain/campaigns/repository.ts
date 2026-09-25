@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db/client";
 import { AppError } from "@/lib/api/errors";
+import { isOAuthProvider, mailboxBlockedReason } from "@/lib/domain/mailboxes/types";
 import { isTone } from "@/lib/domain/personalization/types";
 import {
   audienceDefinitionSchema,
@@ -45,19 +46,26 @@ export async function loadCampaign(workspaceId: number, campaignId: number): Pro
   };
 }
 
-export type MailboxInfo = { id: number; email: string; active: boolean; verified: boolean; dailyLimit: number };
+/**
+ * `verified` means "has whatever domain setup its provider needs": a Resend mailbox needs a verified domain; a Gmail/Microsoft
+ * mailbox has no domain of ours, so it is always true. `blockedReason` is the shared rule (lib/domain/mailboxes/types.ts).
+ */
+export type MailboxInfo = { id: number; email: string; active: boolean; verified: boolean; dailyLimit: number; provider?: string; blockedReason?: string | null };
 
 export async function loadMailbox(workspaceId: number, mailboxId: number | null): Promise<MailboxInfo | null> {
   if (!mailboxId) return null;
   const rows = await sql`
-    select m.id, m.email, m.status, m.daily_limit, d.status as domain_status
-    from mailboxes m join domains d on d.id = m.domain_id and d.workspace_id = m.workspace_id
+    select m.id, m.email, m.provider, m.status, m.daily_limit, d.status as domain_status
+    from mailboxes m left join domains d on d.id = m.domain_id and d.workspace_id = m.workspace_id
     where m.id = ${mailboxId} and m.workspace_id = ${workspaceId}
   `;
   const m = rows[0];
-  return m
-    ? { id: Number(m.id), email: String(m.email), active: m.status === "active", verified: m.domain_status === "verified", dailyLimit: Number(m.daily_limit) }
-    : null;
+  if (!m) return null;
+  const provider = String(m.provider);
+  return {
+    id: Number(m.id), email: String(m.email), active: m.status === "active", verified: isOAuthProvider(provider) || m.domain_status === "verified", dailyLimit: Number(m.daily_limit),
+    provider, blockedReason: mailboxBlockedReason({ provider, status: String(m.status), domainStatus: (m.domain_status as string | null) ?? null }),
+  };
 }
 
 export type LeadDraft = { leadId: number; draftId: number; status: string; subject: string; body: string };

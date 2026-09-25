@@ -5,58 +5,29 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/workspace-context";
 import { logActivity } from "@/lib/activity";
 import { createApprovalRequest } from "@/lib/approvals-core";
+import { AppError, runAction, type ActionResult } from "@/lib/api";
+import { pauseMailbox as pauseMailboxRow, resumeMailbox as resumeMailboxRow } from "@/lib/domain/mailboxes/lifecycle";
+import { getOAuthClient } from "@/lib/domain/mailboxes/oauth/registry";
+import { listMailboxes as listWorkspaceMailboxes } from "@/lib/domain/mailboxes/repository";
+import { disconnectMailbox as disconnectMailboxService, sendTestEmail as sendMailboxTestEmail } from "@/lib/domain/mailboxes/service";
+import type { Mailbox } from "@/lib/domain/mailboxes/types";
 
-export type Mailbox = {
-  id: number;
-  email: string;
-  provider: string;
-  status: string;
-  dailyLimit: number;
-  sentToday: number;
-  domainId: number;
-  domainName: string;
-  domainStatus: string;
-  approvalId: number | null;
-  createdAt: string;
-};
+export type { Mailbox } from "@/lib/domain/mailboxes/types";
 
 export async function listMailboxes(): Promise<Mailbox[]> {
   const { workspaceId } = await requireRole("viewer");
-  const rows = await sql`
-    select
-      m.id, m.email, m.provider, m.status, m.daily_limit, m.domain_id, m.approval_id, m.created_at,
-      d.name as domain_name, d.status as domain_status,
-      (
-        select count(*)::int from campaign_sends cs
-        where cs.workspace_id = m.workspace_id
-          and cs.channel = 'email'
-          and cs.status = 'sent'
-          and cs.sent_at::date = current_date
-      ) as sent_today
-    from mailboxes m
-    join domains d on d.id = m.domain_id
-    where m.workspace_id = ${workspaceId}
-    order by m.created_at desc
-  `;
-  return rows.map((r) => ({
-    id: r.id as number,
-    email: r.email as string,
-    provider: r.provider as string,
-    status: r.status as string,
-    dailyLimit: r.daily_limit as number,
-    sentToday: r.sent_today as number,
-    domainId: r.domain_id as number,
-    domainName: r.domain_name as string,
-    domainStatus: r.domain_status as string,
-    approvalId: r.approval_id as number | null,
-    createdAt: r.created_at as string,
-  }));
+  return listWorkspaceMailboxes(workspaceId);
 }
 
-/** DEL-01: only mailboxes that are active AND on a currently-verified domain can be picked for a campaign. */
+/** Only mailboxes that can send right now can be picked for a campaign (connected/active, and for Resend a verified domain). */
 export async function listSendableMailboxes(): Promise<Mailbox[]> {
-  const all = await listMailboxes();
-  return all.filter((m) => m.status === "active" && m.domainStatus === "verified");
+  return (await listMailboxes()).filter((m) => m.sendable);
+}
+
+/** Which sign-in providers this server has credentials for — so the UI can say "not set up" instead of sending users into an error. */
+export async function getConnectAvailability(): Promise<{ gmail: boolean; microsoft: boolean }> {
+  await requireRole("viewer");
+  return { gmail: getOAuthClient("gmail").isConfigured(), microsoft: getOAuthClient("microsoft").isConfigured() };
 }
 
 /** DEL-02: adding a mailbox always creates an approval request — it never becomes active on its own. */
@@ -143,56 +114,53 @@ export async function requestLimitIncrease(mailboxId: number, newLimit: number) 
   return { approvalId };
 }
 
-export async function pauseMailbox(id: number) {
-  const { workspaceId, userId } = await requireRole("admin");
-  const rows = await sql`
-    update mailboxes set status = 'paused' where id = ${id} and workspace_id = ${workspaceId} and status = 'active'
-    returning email
-  `;
-  if (rows.length === 0) throw new Error("Mailbox not found or not active.");
-
-  await logActivity({
-    workspaceId,
-    actorUserId: userId,
-    type: "mailbox.paused",
-    entityType: "mailbox",
-    entityId: id,
-    summary: `Paused mailbox ${rows[0].email}`,
+export async function pauseMailbox(id: number): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const { workspaceId, userId } = await requireRole("admin");
+    await pauseMailboxRow(workspaceId, id, userId);
+    revalidatePath("/dashboard/deliverability");
+    return null;
   });
-  revalidatePath("/dashboard/deliverability");
 }
 
-export async function resumeMailbox(id: number) {
-  const { workspaceId, userId } = await requireRole("admin");
-  const rows = await sql`
-    update mailboxes set status = 'active' where id = ${id} and workspace_id = ${workspaceId} and status = 'paused'
-    returning email
-  `;
-  if (rows.length === 0) throw new Error("Mailbox not found or not paused.");
-
-  await logActivity({
-    workspaceId,
-    actorUserId: userId,
-    type: "mailbox.resumed",
-    entityType: "mailbox",
-    entityId: id,
-    summary: `Resumed mailbox ${rows[0].email}`,
+export async function resumeMailbox(id: number): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const { workspaceId, userId } = await requireRole("admin");
+    await resumeMailboxRow(workspaceId, id, userId);
+    revalidatePath("/dashboard/deliverability");
+    return null;
   });
-  revalidatePath("/dashboard/deliverability");
 }
 
-export async function removeMailbox(id: number) {
-  const { workspaceId, userId } = await requireRole("admin");
-  const rows = await sql`delete from mailboxes where id = ${id} and workspace_id = ${workspaceId} returning email`;
-  if (rows.length === 0) throw new Error("Mailbox not found");
-
-  await logActivity({
-    workspaceId,
-    actorUserId: userId,
-    type: "mailbox.removed",
-    entityType: "mailbox",
-    entityId: id,
-    summary: `Removed mailbox ${rows[0].email}`,
+/** Resend mailboxes only: an OAuth mailbox is disconnected (history stays), never deleted. */
+export async function removeMailbox(id: number): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const { workspaceId, userId } = await requireRole("admin");
+    const rows = await sql`delete from mailboxes where id = ${id} and workspace_id = ${workspaceId} and provider = 'resend' returning email`;
+    if (rows.length === 0) throw new AppError("NOT_FOUND", "Mailbox not found, or it's a connected account — disconnect it instead.");
+    await logActivity({ workspaceId, actorUserId: userId, type: "mailbox.removed", entityType: "mailbox", entityId: id, summary: `Removed mailbox ${rows[0].email}` });
+    revalidatePath("/dashboard/deliverability");
+    return null;
   });
-  revalidatePath("/dashboard/deliverability");
+}
+
+/** Revoke where the provider supports it, forget the credentials, stop campaigns that use it. History is kept. */
+export async function disconnectMailbox(id: number): Promise<ActionResult<{ email: string; campaignsPaused: number; revoked: boolean }>> {
+  return runAction(async () => {
+    const { workspaceId, userId } = await requireRole("admin");
+    const done = await disconnectMailboxService({ workspaceId, userId }, id);
+    revalidatePath("/dashboard/deliverability");
+    revalidatePath("/dashboard/campaigns");
+    return done;
+  });
+}
+
+/** Sends a test message from the mailbox to the signed-in user. Any member may — it can only ever reach their own address. */
+export async function testMailbox(id: number): Promise<ActionResult<{ to: string }>> {
+  return runAction(async () => {
+    const { workspaceId, userId, email } = await requireRole("member");
+    const done = await sendMailboxTestEmail({ workspaceId, userId, email }, id);
+    revalidatePath("/dashboard/deliverability");
+    return done;
+  });
 }

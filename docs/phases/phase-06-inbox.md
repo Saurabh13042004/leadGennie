@@ -8,6 +8,8 @@ The "Unified Inbox" page currently shows *form submissions* (Unmatched Inbox) an
 
 ## Scope
 
+> **Update 2026-09-26 (D-04 decided):** the Gmail *and* Microsoft OAuth providers, encrypted token storage, refresh/reconnect, per-mailbox provider resolution, normalised `EmailMessage`/`EmailThread`, `listMessages`/`getThread` behind `capabilities.inboxSync`, stored `provider_thread_id`, and provider-independent reply detection (`lib/domain/mailboxes/replies.ts`) already exist — see [`../mailboxes.md`](../mailboxes.md). What remains for this work package: request the inbox scope (`?inbox=1`, Google **restricted** scope review), the `email_sync` job + per-mailbox cursor, persisting inbound `messages`, and the Inbox UI. Sending never needs the read scope.
+
 ### WP6.1 — Mail provider #2: reply ingestion (per D-04)
 - **Recommended:** Gmail API provider — OAuth (scopes minimal: `gmail.send`, `gmail.readonly`/`gmail.modify` as required), tokens encrypted with `lib/crypto.ts`, per-mailbox `history` cursor, push (Pub/Sub watch) or 1–2 min polling via `email_sync` job. Outbound for Gmail-connected mailboxes goes through Gmail (`threadId` preserved) so replies land in-thread.
 - Fallback (D-04 B): inbound webhook from Resend routing on a reply-to subdomain, parsed into the same internal shape.

@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth/workspace-context";
 import { filterCompliantLeads } from "@/lib/compliance";
 import { createApprovalRequest } from "@/lib/approvals-core";
 import { logActivity } from "@/lib/activity";
+import { isOAuthProvider, mailboxBlockedReason } from "@/lib/domain/mailboxes/types";
 import { personalize } from "@/lib/campaigns/personalize";
 import {
   fetchAllLeads,
@@ -164,17 +165,18 @@ export type CreateCampaignInput = {
 export async function createCampaign(input: CreateCampaignInput) {
   const { workspaceId, userId } = await requireRole("member");
 
-  // DEL-01: no email send may be tied to an unverified/unapproved identity —
-  // the mailbox must be active and its domain currently verified.
+  // DEL-01: no email send may be tied to an unverified/unapproved identity — the mailbox must be sendable: connected/active, and
+  // for a Resend mailbox its domain currently verified (an OAuth mailbox has no domain of ours).
   const mailboxRows = await sql`
-    select m.email, m.status as mailbox_status, d.status as domain_status
-    from mailboxes m join domains d on d.id = m.domain_id
+    select m.email, m.provider, m.status as mailbox_status, d.status as domain_status
+    from mailboxes m left join domains d on d.id = m.domain_id and d.workspace_id = m.workspace_id
     where m.id = ${input.mailboxId} and m.workspace_id = ${workspaceId}
   `;
   const mailbox = mailboxRows[0];
   if (!mailbox) throw new Error("Mailbox not found in this workspace.");
-  if (mailbox.mailbox_status !== "active" || mailbox.domain_status !== "verified") {
-    throw new Error("This mailbox isn't active on a verified domain — pick a different one.");
+  const mailboxBlock = mailboxBlockedReason({ provider: String(mailbox.provider), status: String(mailbox.mailbox_status), domainStatus: (mailbox.domain_status as string | null) ?? null });
+  if (mailboxBlock) {
+    throw new Error(isOAuthProvider(String(mailbox.provider)) ? `This mailbox can't send: ${mailboxBlock} Pick a different one.` : "This mailbox isn't active on a verified domain — pick a different one.");
   }
   const fromEmail = mailbox.email as string;
 

@@ -28,7 +28,7 @@ Resolves decision **D-10** (deployment topology was undocumented). This file des
 
 ## Environment variables
 
-See [`.env.example`](../.env.example) for the authoritative, commented list. Required in every environment: `DATABASE_URL`, `AUTH_SECRET`, `CREDENTIALS_ENCRYPTION_KEY`, `CRON_SECRET`. Features degrade without: `OPENAI_API_KEY` (AI), `RESEND_API_KEY`/`RESEND_WEBHOOK_SECRET` (email), `HUBSPOT_*` (integration).
+See [`.env.example`](../.env.example) for the authoritative, commented list. Required in every environment: `DATABASE_URL`, `AUTH_SECRET`, `CREDENTIALS_ENCRYPTION_KEY`, `CRON_SECRET`. Features degrade without: `OPENAI_API_KEY` (AI), `RESEND_API_KEY`/`RESEND_WEBHOOK_SECRET` (Resend/system email), `GOOGLE_*` / `MICROSOFT_*` (connecting mailboxes), `HUBSPOT_*` (integration).
 
 `RESEND_FROM_EMAIL` appears in some `.env.local` files but **is not read by any code** — sender addresses come from `mailboxes`.
 
@@ -128,6 +128,17 @@ Checklist before production: ≥ 2 replicas; TLS + private networking only; **eg
 6. Resend: keep the webhook (`/api/webhooks/resend`, signing secret set) — it now also records delivered/opened/clicked. Open/click *tracking* stays whatever the Resend domain setting is (off by default); nothing shows opens as a rate.
 7. No provider key ⇒ the first due email pauses the campaign with "Email sending isn't configured on this server" — nothing is lost; add `RESEND_API_KEY`, then Resume.
 
+
+## Mailbox OAuth rollout (Gmail / Microsoft 365) — D-04
+
+Full guide: [`mailboxes.md`](mailboxes.md).
+
+1. **Create the OAuth apps** (Google Cloud console / Microsoft Entra) and register the redirect URIs `https://<host>/api/mailboxes/google/callback` and `https://<host>/api/mailboxes/microsoft/callback`. Set `GOOGLE_CLIENT_ID/SECRET` and/or `MICROSOFT_CLIENT_ID/SECRET` (+ optional `*_REDIRECT_URI`, `MICROSOFT_TENANT`). A provider without credentials shows "Not set up on this server" — nothing else changes.
+2. `NEXT_PUBLIC_APP_URL` must be the public origin **at build time** (redirect URIs and post-connect redirects derive from it).
+3. `npm run db:migrate` — applies `0014` (additive). Existing Resend mailboxes/domains keep working untouched.
+4. `CREDENTIALS_ENCRYPTION_KEY` now also protects mailbox tokens: **lose or rotate it and every connected mailbox must be reconnected.**
+5. Google: while the consent screen is in *Testing*, refresh tokens expire after 7 days (mailboxes flip to "Reconnect required"). Publish the app and complete verification of the sensitive `gmail.send` scope before real customers connect.
+6. Sending happens in the worker (`npm run worker`), as in Phase 5 — connect a mailbox, click **Send test email** on its row, then run a small campaign.
 
 ## Phase 7 rollout (browser extension)
 

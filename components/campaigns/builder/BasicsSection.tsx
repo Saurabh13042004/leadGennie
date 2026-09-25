@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CircleNotch, ShieldCheck, WarningCircle } from "@phosphor-icons/react/ssr";
 import { saveCampaignBasics } from "@/lib/actions/campaign-builder";
 import type { Mailbox } from "@/lib/actions/mailboxes";
+import { PROVIDER_LABEL } from "@/lib/domain/mailboxes/types";
 import type { BuilderView } from "@/lib/domain/campaigns/views";
 import { TONES, type Tone } from "@/lib/domain/personalization/types";
 import { cn } from "@/lib/utils";
@@ -66,12 +67,21 @@ export default function BasicsSection({ view, mailboxes, editable, onSaved, nav 
                 {mailboxes.length === 0 ? (
                   <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 ring-1 ring-inset ring-amber-200/70">
                     <WarningCircle className="mt-px h-3.5 w-3.5 shrink-0" weight="fill" />
-                    <span>No active, verified mailbox yet. <Link href="/dashboard/deliverability" className="font-medium underline underline-offset-2">Add one in Email Deliverability</Link>.</span>
+                    <span>No connected mailbox yet. <Link href="/dashboard/deliverability" className="font-medium underline underline-offset-2">Connect one under Mailboxes</Link>.</span>
                   </p>
                 ) : (
                   <Select id="c-mailbox" value={mailboxId ?? ""} onChange={(e) => setMailboxId(Number(e.target.value))}>
-                    {mailboxes.map((m) => <option key={m.id} value={m.id}>{m.email} — up to {m.dailyLimit}/day</option>)}
+                    {c.mailboxId !== null && !mailboxes.some((m) => m.id === c.mailboxId) && (
+                      <option value={c.mailboxId} disabled>{view.readiness.mailbox?.email ?? "Saved mailbox"} — can&apos;t send right now</option>
+                    )}
+                    {mailboxes.map((m) => <option key={m.id} value={m.id}>{m.email} · {PROVIDER_LABEL[m.provider]} — up to {m.dailyLimit}/day</option>)}
                   </Select>
+                )}
+                {view.readiness.mailbox && !view.readiness.mailbox.active && view.readiness.mailbox.blockedReason && (
+                  <p className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-800">
+                    <WarningCircle className="mt-px h-3.5 w-3.5 shrink-0" weight="fill" />
+                    <span>{view.readiness.mailbox.email} can&apos;t send: {view.readiness.mailbox.blockedReason} <Link href="/dashboard/deliverability" className="font-medium underline underline-offset-2">Fix it under Mailboxes</Link> or pick another.</span>
+                  </p>
                 )}
               </Field>
               <div className="grid grid-cols-2 gap-3">

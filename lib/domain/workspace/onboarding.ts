@@ -52,7 +52,7 @@ export function buildChecklist(f: OnboardingFacts): Checklist {
     {
       id: "email",
       title: "Connect email",
-      description: "Verify a sending domain and activate a mailbox.",
+      description: "Connect the Google or Microsoft mailbox you already use for work.",
       href: "/dashboard/deliverability",
       done: f.hasActiveMailbox,
     },

@@ -61,6 +61,8 @@ Update this table as phases land. A phase is only "Done" when every acceptance c
 | 10 | Usage & credits | Not started |
 | 11 | Billing & beta launch | Not started |
 
+**Cross-phase work (not a numbered phase):** *Mailbox OAuth (D-04)* — **code complete 2026-09-26; verified hermetically (unit + PGlite integration) and in the built app against a stub of Google's endpoints, with screenshots. Pending: apply migration 0014 to Neon, create the Google/Microsoft OAuth apps, and a first real connect + send from a real mailbox.** Gmail/Microsoft are the primary way to send; Resend + verified domains moved to Settings → Domains & deliverability. See [`mailboxes.md`](mailboxes.md) and `CHANGELOG-phases.md`.
+
 ## Important: this is not the Next.js you know
 
 `AGENTS.md` at the repo root states this project runs Next.js **16.2.6** with breaking changes. Before writing any Next.js code, read the relevant guide in `node_modules/next/dist/docs/`. Every mission brief repeats this instruction.
