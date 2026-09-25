@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CheckCircle, Megaphone, Plus, ShieldWarning } from "@phosphor-icons/react/ssr";
 import { auth } from "@/auth";
-import { listCampaigns } from "@/lib/actions/campaigns";
+import { listCampaignsView } from "@/lib/actions/campaign-builder";
 import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
 import { buttonClasses } from "@/components/ui/Button";
@@ -19,7 +19,7 @@ export default async function CampaignsPage({
 }) {
   const [session, campaigns, { launched, blocked }] = await Promise.all([
     auth(),
-    listCampaigns(),
+    listCampaignsView(),
     searchParams,
   ]);
   const blockedCount = blocked ? Number(blocked) : 0;
@@ -38,7 +38,7 @@ export default async function CampaignsPage({
         title="Campaigns"
         icon={Megaphone}
         count={campaigns.length}
-        description="Personalized multi-channel sequences"
+        description="Evidence-backed email sequences. Nothing sends without approval."
         actions={
           <>
             {canApprove && <SendNowButton />}
@@ -71,7 +71,7 @@ export default async function CampaignsPage({
         <EmptyState
           icon={Megaphone}
           title="No campaigns yet"
-          description="Launch your first AI-personalized outbound sequence. Nothing sends until an owner or admin approves it."
+          description="Build an email sequence, preview every message per lead, and get it approved before anything sends."
           actions={newCampaign}
         />
       ) : (

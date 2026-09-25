@@ -110,3 +110,10 @@ Checklist before production: ≥ 2 replicas; TLS + private networking only; **eg
 2. No new environment variables: generation uses the same `OPENAI_API_KEY` / `OPENAI_MODEL` as the rest of the app. **Rate limits matter:** bulk drafting runs as `personalization` jobs through the existing worker (same tick as research); a 429 is retried with backoff, a quota error dead-letters that lead only and is shown in the batch's error list. The account used in development had a 30k tokens/minute ceiling — at that limit, plan ≈ 10–15 drafts per minute.
 3. Cost: ≈ 1 model call per draft (2 when the checker forces one rewrite; ~40% did in the eval). Usage is recorded in `usage_records` (`ref_type = 'message_draft'`).
 4. Re-run the eval before changing the default prompt (`prompt.ts`) or `OPENAI_MODEL`: `npm run eval:personalization` (real model, ~3 min, writes `docs/reports/phase-03-personalization-eval.{md,json}`; never part of CI).
+
+## Phase 4 rollout (campaign builder)
+
+1. `npm run db:migrate` — applies `0011`. Additive: existing campaigns become `send_model = 'legacy'` and keep sending unchanged (verified on a populated copy in `tests/integration/migrations-phase1.test.ts`). The new status check accepts every value currently in the live DB (`running`, `paused`; checked read-only on 2026-09-25).
+2. Optional env `FEATURE_LINKEDIN_AUTOMATION=true` re-offers the multi-channel (LinkedIn DM) wizard next to the email-only builder (D-05, default off).
+3. No new scheduler entries: builder campaigns send through the existing `/api/cron/send-campaigns` dispatcher.
+4. Behaviour change worth knowing: the pre-send cooldown no longer counts a campaign's **own** earlier steps. Before this, any follow-up within 14 days of step 1 was blocked as "contacted by another campaign" — existing legacy campaigns' pending follow-ups will now actually send.

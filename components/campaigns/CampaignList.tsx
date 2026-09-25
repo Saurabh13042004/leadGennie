@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Funnel } from "@phosphor-icons/react/ssr";
 import { cn } from "@/lib/utils";
-import type { Campaign, CampaignStatus } from "@/lib/actions/campaigns";
+import type { CampaignListItem } from "@/lib/domain/campaigns/read-model";
+import type { CampaignStatus } from "@/lib/domain/campaigns/types";
 import EmptyState from "@/components/ui/EmptyState";
 import CampaignCard from "./CampaignCard";
 import { CAMPAIGN_ROW_GRID, CAMPAIGN_STATUS, CAMPAIGN_STATUS_ORDER } from "./campaign-status";
@@ -11,7 +12,7 @@ import { CAMPAIGN_ROW_GRID, CAMPAIGN_STATUS, CAMPAIGN_STATUS_ORDER } from "./cam
 type Filter = "all" | CampaignStatus;
 
 /** Status filter pills + the full-bleed campaigns list. Filtering is client-side over the loaded list. */
-export default function CampaignList({ campaigns, canApprove }: { campaigns: Campaign[]; canApprove: boolean }) {
+export default function CampaignList({ campaigns, canApprove }: { campaigns: CampaignListItem[]; canApprove: boolean }) {
   const [filter, setFilter] = useState<Filter>("all");
 
   const counts = campaigns.reduce<Partial<Record<CampaignStatus, number>>>((acc, c) => {
@@ -59,7 +60,7 @@ export default function CampaignList({ campaigns, canApprove }: { campaigns: Cam
         <span className="text-right">Leads</span>
         <span className="text-right">Sent</span>
         <span className="text-right">Replies</span>
-        <span className="text-right">Created</span>
+        <span className="text-right">Next email</span>
         <span className="sr-only">Actions</span>
       </div>
 

@@ -33,7 +33,12 @@ describe("Phase 1 migrations on a populated database", () => {
         (1, 'Joe Bloggs', 'info@acme.com', 'ACME', null, 'manual'),
         (1, 'Sam Solo', 'sam@gmail.com', null, null, 'manual');
       insert into import_jobs (workspace_id, source, file_name, total_rows, created_count) values (1, 'csv', 'old.csv', 3, 3);
+      insert into campaigns (workspace_id, name, status, channels) values (1, 'Old running', 'running', '{email,linkedin_dm}'), (1, 'Old paused', 'paused', '{email}');
+      insert into campaign_steps (campaign_id, step_order, channel, wait_days, subject, body) values (1, 1, 'email', 0, 'Hi', 'Body'), (1, 2, 'linkedin_dm', 2, null, 'DM');
+      insert into campaign_sends (workspace_id, campaign_id, lead_id, step_id, channel, status, scheduled_at, body)
+        values (1, 1, 1, 1, 'email', 'pending', now(), 'Body'), (1, 1, 1, 2, 'linkedin_dm', 'pending', now() + interval '2 days', 'DM');
     `);
+    const sendsBefore = (await db.query(`select id, status, scheduled_at, body, channel from campaign_sends order by id`)).rows;
     const snapshotBefore = (await db.query(`select id, full_name, email, company, job_title, source, stage from leads order by id`)).rows;
 
     const applied = await migrate(driver, all);
@@ -50,6 +55,17 @@ describe("Phase 1 migrations on a populated database", () => {
       `select icp_score, intent_score, qualified, research_status from leads`)).rows;
     expect(intel.every((r) => r.icp_score === null && r.intent_score === null && r.qualified === null && r.research_status === "none")).toBe(true);
     expect((await db.query(`select count(*)::int as n from jobs`)).rows[0]).toEqual({ n: 0 });
+
+    // Phase 4 (0011): campaigns made by the old wizard keep their status, steps and pending sends, and are marked 'legacy'
+    // so the dispatcher keeps sending them exactly as before.
+    const camps = (await db.query<{ status: string; send_model: string; audience_definition: unknown }>(`select status, send_model, audience_definition from campaigns order by id`)).rows;
+    expect(camps).toEqual([
+      { status: "running", send_model: "legacy", audience_definition: null },
+      { status: "paused", send_model: "legacy", audience_definition: null },
+    ]);
+    expect((await db.query(`select id, status, scheduled_at, body, channel from campaign_sends order by id`)).rows).toEqual(sendsBefore);
+    expect((await db.query(`select mode from campaign_steps order by id`)).rows).toEqual([{ mode: "template" }, { mode: "template" }]);
+    expect((await db.query(`select count(*)::int as n from campaign_leads`)).rows[0]).toEqual({ n: 0 });
 
     // Old import job keeps its data; new progress columns default sanely.
     const job = (await db.query<{ status: string; processed_rows: number; chunk_results: unknown }>(`select status, processed_rows, chunk_results from import_jobs`)).rows[0];

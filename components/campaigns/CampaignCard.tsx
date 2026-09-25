@@ -2,126 +2,91 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import {
-  ChartLineUp,
-  Check,
-  CircleNotch,
-  Clock,
-  EnvelopeSimple,
-  LinkedinLogo,
-  Pause,
-  Play,
-  Warning,
-  X,
-} from "@phosphor-icons/react/ssr";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Check, CircleNotch, Clock, EnvelopeSimple, Pause, Play, Warning, X } from "@phosphor-icons/react/ssr";
 import { cn } from "@/lib/utils";
-import { updateCampaignStatus, type Campaign } from "@/lib/actions/campaigns";
-import { decideApproval } from "@/lib/actions/approvals";
+import { changeCampaignState, decideCampaignLaunch } from "@/lib/actions/campaign-builder";
+import type { CampaignListItem } from "@/lib/domain/campaigns/read-model";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import { CAMPAIGN_ROW_GRID, CAMPAIGN_STATUS, channelFamilies } from "./campaign-status";
+import { CAMPAIGN_ROW_GRID, CAMPAIGN_STATUS } from "./campaign-status";
+
+const NOT_LAUNCHED = new Set(["draft", "pending_approval", "ready", "rejected"]);
+
+const when = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : null;
 
 /**
- * One campaign in the campaigns list: status, name + audience/channels, lead/send/reply numbers, and the
- * pause/resume or approve/reject actions. (File name kept from the old card layout.)
+ * One campaign in the campaigns list: status, name, real lead/send counts, next email, and the approve/reject or
+ * pause/resume shortcuts. Only real counts — "—" where nothing has happened yet, and no reply rate (replies aren't
+ * tracked until inbox sync exists). The name opens the campaign page, where everything else lives.
  */
-export default function CampaignCard({ campaign, canApprove }: { campaign: Campaign; canApprove: boolean }) {
-  const [status, setStatus] = useState(campaign.status);
+export default function CampaignCard({ campaign: c, canApprove }: { campaign: CampaignListItem; canApprove: boolean }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [decisionError, setDecisionError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const meta = CAMPAIGN_STATUS[c.status];
+  const launched = !NOT_LAUNCHED.has(c.status);
+  const leads = launched ? c.audienceSize.toLocaleString() : "—";
+  const sent = launched ? c.sent.toLocaleString() : "—";
+  const replied = c.replied === null ? "—" : c.replied.toLocaleString();
+  const next = when(c.nextSendAt);
+  const building = c.status === "draft" || c.status === "rejected";
 
-  function toggleStatus() {
-    const next = status === "running" ? "paused" : "running";
+  function run(work: () => Promise<{ ok: boolean; error?: { message: string } }>) {
+    setError(null);
     startTransition(async () => {
-      await updateCampaignStatus(campaign.id, next);
-      setStatus(next);
+      const res = await work();
+      if (!res.ok) setError(res.error?.message ?? "Something went wrong.");
+      router.refresh();
     });
   }
-
-  function handleDecision(decision: "approved" | "rejected") {
-    if (!campaign.approval_id) return;
-    setDecisionError(null);
-    startTransition(async () => {
-      try {
-        await decideApproval(campaign.approval_id!, decision);
-        setStatus(decision === "approved" ? "running" : "rejected");
-      } catch (e) {
-        setDecisionError(e instanceof Error ? e.message : "Could not record decision");
-      }
-    });
-  }
-
-  const created = new Date(campaign.created_at);
-  const createdLabel = created.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  const meta = CAMPAIGN_STATUS[status];
-  const families = channelFamilies(campaign.channels);
-  const totalLeads = Number(campaign.total_leads);
-  const sent = Number(campaign.sent_count);
-  const replied = Number(campaign.replied_count);
-  const replyRate = Number(campaign.reply_rate);
-  const blocked = Number(campaign.blocked_count);
 
   return (
     <li className={cn("group relative px-4 py-3 transition-colors hover:bg-neutral-50/80 md:px-6", CAMPAIGN_ROW_GRID)}>
-      {/* Name + audience/channels */}
       <div className="flex min-w-0 items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="truncate text-[13px] font-medium text-neutral-900">{campaign.name}</p>
-            <Badge tone={meta.tone} dot pulse={meta.pulse} className="md:hidden">
-              {meta.label}
-            </Badge>
+            <Link href={`/dashboard/campaigns/${c.id}`} className="truncate text-[13px] font-medium text-neutral-900 underline-offset-2 hover:underline">
+              {c.name}
+            </Link>
+            <Badge tone={meta.tone} dot pulse={meta.pulse} className="md:hidden">{meta.label}</Badge>
           </div>
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-neutral-500">
-            <span className="flex shrink-0 items-center gap-1 text-neutral-400">
-              {families.includes("email") && <EnvelopeSimple className="h-3.5 w-3.5" weight="duotone" aria-label="Email" />}
-              {families.includes("linkedin") && <LinkedinLogo className="h-3.5 w-3.5" weight="duotone" aria-label="LinkedIn" />}
-            </span>
-            <span className="truncate">{campaign.audience_label || "No audience label"}</span>
-            {blocked > 0 && (
+            <EnvelopeSimple className="h-3.5 w-3.5 shrink-0 text-neutral-400" weight="duotone" aria-label="Email" />
+            <span className="truncate">{c.steps} email step{c.steps === 1 ? "" : "s"}{c.sendModel === "legacy" ? " · created with the old wizard" : ""}</span>
+            {launched && c.excluded > 0 && (
               <span className="inline-flex shrink-0 items-center gap-1 text-amber-700">
                 <span className="text-neutral-300">·</span>
                 <Warning className="h-3 w-3" weight="fill" />
-                {blocked} lead(s) excluded by compliance rules
+                {c.excluded} excluded
               </span>
             )}
           </div>
-          {decisionError && <p className="mt-1 text-xs text-rose-600">{decisionError}</p>}
-          {/* Compact metrics for small screens */}
+          {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
           <p className="mt-1 text-xs tabular-nums text-neutral-500 md:hidden">
-            {totalLeads.toLocaleString()} leads · {sent.toLocaleString()} sent · {replied.toLocaleString()} replied ({replyRate}%) · {createdLabel}
+            {leads} leads · {sent} sent · {replied} replied{next ? ` · next ${next}` : ""}
           </p>
         </div>
       </div>
 
       <div className="hidden md:block">
-        <Badge tone={meta.tone} dot pulse={meta.pulse}>
-          {meta.label}
-        </Badge>
+        <Badge tone={meta.tone} dot pulse={meta.pulse}>{meta.label}</Badge>
       </div>
+      <Metric value={leads} muted={!launched} />
+      <Metric value={sent} muted={!launched || c.sent === 0} />
+      <Metric value={replied} muted={c.replied === null} />
+      <span className="hidden text-right text-xs tabular-nums text-neutral-500 md:block">{next ?? "—"}</span>
 
-      <Metric value={totalLeads.toLocaleString()} />
-      <Metric value={sent.toLocaleString()} muted={sent === 0} />
-      <div className="hidden text-right md:block">
-        <span className={cn("text-[13px] tabular-nums", replied === 0 ? "text-neutral-400" : "text-neutral-900")}>
-          {replied.toLocaleString()}
-        </span>
-        <span className={cn("ml-1.5 text-xs tabular-nums", replyRate > 0 ? "text-emerald-600" : "text-neutral-400")}>{replyRate}%</span>
-      </div>
-      <time dateTime={created.toISOString()} className="hidden text-right text-xs tabular-nums text-neutral-400 md:block">
-        {createdLabel}
-      </time>
-
-      {/* Actions */}
       <div className="mt-2 flex items-center justify-start gap-1 md:mt-0 md:justify-end">
-        {status === "pending_approval" ? (
+        {c.status === "pending_approval" && c.approvalId ? (
           canApprove ? (
             <>
-              <Button variant="primary" size="xs" onClick={() => handleDecision("approved")} disabled={isPending}>
+              <Button variant="primary" size="xs" onClick={() => run(() => decideCampaignLaunch(c.approvalId, "approved"))} disabled={isPending}>
                 {isPending ? <CircleNotch className="h-3.5 w-3.5 animate-spin" weight="bold" /> : <Check className="h-3.5 w-3.5" weight="bold" />}
                 Approve
               </Button>
-              <Button variant="danger" size="xs" onClick={() => handleDecision("rejected")} disabled={isPending}>
+              <Button variant="danger" size="xs" onClick={() => run(() => decideCampaignLaunch(c.approvalId, "rejected"))} disabled={isPending}>
                 <X className="h-3.5 w-3.5" weight="bold" />
                 Reject
               </Button>
@@ -129,37 +94,30 @@ export default function CampaignCard({ campaign, canApprove }: { campaign: Campa
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs text-neutral-500">
               <Clock className="h-3.5 w-3.5" weight="duotone" />
-              Waiting on owner/admin approval
+              Waiting on owner/admin
             </span>
           )
-        ) : status === "rejected" ? (
-          <span className="text-xs text-neutral-400">This launch request was rejected.</span>
-        ) : (
-          <div
-            className={cn(
-              "flex items-center gap-1 transition-opacity",
-              isPending ? "opacity-100" : "md:opacity-0 md:focus-within:opacity-100 md:group-hover:opacity-100",
-            )}
-          >
-            <Button variant="secondary" size="xs" onClick={toggleStatus} disabled={isPending}>
+        ) : c.status === "running" || c.status === "paused" ? (
+          <div className={cn("flex items-center gap-1 transition-opacity", isPending ? "opacity-100" : "md:opacity-0 md:focus-within:opacity-100 md:group-hover:opacity-100")}>
+            <Button variant="secondary" size="xs" onClick={() => run(() => changeCampaignState(c.id, c.status === "running" ? "pause" : "resume"))} disabled={isPending}>
               {isPending ? (
                 <CircleNotch className="h-3.5 w-3.5 animate-spin" weight="bold" />
-              ) : status === "running" ? (
+              ) : c.status === "running" ? (
                 <Pause className="h-3.5 w-3.5" weight="fill" />
               ) : (
                 <Play className="h-3.5 w-3.5" weight="fill" />
               )}
-              {status === "running" ? "Pause" : "Resume"}
+              {c.status === "running" ? "Pause" : "Resume"}
             </Button>
           </div>
-        )}
+        ) : null}
         <Link
-          href="/dashboard"
-          title="View analytics"
-          aria-label="View analytics"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-neutral-400 transition-all hover:bg-neutral-100 hover:text-neutral-900 md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
+          href={building ? `/dashboard/campaigns/${c.id}/edit` : `/dashboard/campaigns/${c.id}`}
+          title={building ? "Continue building" : "Open campaign"}
+          aria-label={building ? "Continue building" : "Open campaign"}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-neutral-400 transition-all hover:bg-neutral-100 hover:text-neutral-900"
         >
-          <ChartLineUp className="h-4 w-4" weight="duotone" />
+          <ArrowRight className="h-4 w-4" weight="bold" />
         </Link>
       </div>
     </li>

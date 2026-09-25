@@ -43,11 +43,11 @@ Open questions that change what gets built. Each has a **recommendation** so wor
 **Blocking for:** Phase 4 (channels in campaign builder) and Phase 7.
 **Context:** The repo already sends real LinkedIn DMs through the extension (`DRY_RUN=false`, 8 rounds of live bug-fixing). PLAN explicitly excludes automated LinkedIn messaging from V1. Automating LinkedIn risks account restrictions for users.
 **Recommendation:** **Keep the code, switch it off by default.** Add `FEATURE_LINKEDIN_AUTOMATION` (env, and later a per-workspace flag). With the flag off: `linkedin_dm` is not offered in the campaign builder, `/api/extension/queue` returns nothing, and the extension works as **capture-only** (add lead, research with Gennie). No deletion — it can return post-V1 as an opt-in.
-**Decision:** _pending_ (this reverses a previously shipped behaviour — needs explicit confirmation)
+**Decision:** _decided (owner, 2026-09-25): email-only builder, LinkedIn behind `FEATURE_LINKEDIN_AUTOMATION` (default off)._ Phase 4 delivered the builder side: the new builder is email-only; with the flag on, `/dashboard/campaigns/new` also offers the old multi-channel wizard (kept, not deleted). **Not done yet:** the extension queue switch-off (`/api/extension/queue` still serves existing LinkedIn sends) — Phase 7 owns it; existing campaigns with LinkedIn steps are untouched.
 
 ## D-06 — What happens to features outside V1 (Deals, Tasks, Agentic Flows, HubSpot, Forms)
 **Recommendation:** Hide, don't delete. Nav shows six items; a `NEXT_PUBLIC_SHOW_LEGACY_MODULES` flag (default off) exposes the rest for internal use. Forms/Unmatched Inbox move under Leads (inbound lead capture is on-loop). Agentic Flows stays reachable but the Campaign builder is the sequence editor. Tasks get one on-loop use later (follow-up when a reply is `INTERESTED`).
-**Decision:** _pending_
+**Decision:** _decided (owner, 2026-09-25): hidden, not deleted_ — as already implemented in Phase 0. Saved Agentic Flows workflows can still seed a campaign's sequence (email steps only).
 
 ## D-07 — Sender positioning & ICP location
 **Recommendation:** Move `users.pitch/company` to `workspaces.positioning/company_name` and add `workspaces.icp` (jsonb) with a guided onboarding step. Personalization and scoring both read workspace-level config. Dual-write → switch reads → drop old columns.

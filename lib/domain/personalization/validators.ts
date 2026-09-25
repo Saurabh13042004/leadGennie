@@ -375,3 +375,13 @@ export function validateEdit(input: ValidateInput, ctx: PersonalizationContext):
 export function toDraftClaims(claims: { text: string; evidence_id: number }[]): DraftClaim[] {
   return claims.map((c) => ({ text: c.text, evidenceId: c.evidence_id }));
 }
+
+/**
+ * Deliverability/copy lint for TEMPLATE-mode campaign emails (no evidence context): unfilled placeholders, spam and
+ * fake-urgency wording, false familiarity, flattery, links and email addresses. Personalized drafts get the full
+ * validator above; templates can't be checked for claims, so they get this. Results are warnings in the builder.
+ */
+export function lintEmailCopy(text: string, opts: { allowedDomain?: string | null } = {}): ValidationIssue[] {
+  const ctx = { company: { domain: opts.allowedDomain ?? null } } as PersonalizationContext;
+  return [...placeholders(text), ...bannedPhrases(text), ...links(text, ctx)];
+}

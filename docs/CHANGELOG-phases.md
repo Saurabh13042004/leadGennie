@@ -2,6 +2,46 @@
 
 Evidence log for each phase. Newest first.
 
+## Phase 4 — Campaign builder (code complete 2026-09-25; verified hermetically + in the built app against a throwaway DB; migration 0011 not yet on Neon; real browser and real-mailbox send pending)
+
+Decisions taken before starting (owner, 2026-09-25): **D-05** email-only builder, LinkedIn behind `FEATURE_LINKEDIN_AUTOMATION` (default off); **D-06** legacy modules hidden, not deleted; approvals keep today's rule (owner/admin decides; self-approval allowed).
+
+**What exists**
+- `lib/domain/campaigns/`: `types` (statuses, exclusion reasons, zod schemas), `state-machine` (transition table; illegal moves throw), `audience` (resolution with every exclusion counted + samples + ids), `schedule` (send-window planner: timezone/DST-aware, per-day cap across ALL steps), `readiness` (blockers vs warnings, per section), `service` (create/edit with structure- vs copy-editability), `lifecycle` (submit → approval hook → launch → pause/resume/cancel), `preview` (+ test-send to self), `personalization` (Phase 3 drafts for the audience), `read-model`, `views`. `lib/campaigns/render.ts` is the single renderer shared by preview, launch and the dispatcher.
+- Migration `0011`; routes `POST/GET /api/campaigns`, `GET/PATCH /api/campaigns/:id`, `GET …/preview?leadId=`, `POST …/audience/resolve`, `…/submit`, `…/launch`, `…/pause|resume|cancel`.
+- UI: `/dashboard/campaigns/new` (name + optional workflow template), `/dashboard/campaigns/[id]/edit` (Basics · Audience · Sequence · Personalization · Preview · Review, with a live checklist), `/dashboard/campaigns/[id]` (status, approval summary with approve/reject, lifecycle buttons, real counts, per-lead table with filters, activity). List cards show real counts only.
+
+**Acceptance criteria**
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Build a ≥4-step email campaign end-to-end; every step editable | ✅ | Default 4 steps (day 0/3/7/12); add/remove/reorder/edit tested; built a 4-step campaign in the running app over HTTP |
+| Preview shows exactly what a chosen lead receives, every step | ✅ | Same renderer + footer as the sender. Integration: dispatched email (subject/body/footer/from) == preview. Running app: preview before launch == preview after == stored sends |
+| Exclusions (DNC/unsub/bounce/cooldown/invalid) counted and shown before approval | ✅ | 11 reasons, table-tested; integration with real rows for each; builder shows counts + names; approval payload carries them; running app: `unsubscribed 1, no_email 1` |
+| Launch impossible without an approved approval; actor + time recorded | ✅ | Tests: draft/pending/forced-`ready`-without-approval all refused (409/403). Running app: approved via the real `decideCampaignLaunch` server action → `approvals.decided_by_user_id` + `decided_at` set; page shows "Approved by …" |
+| Draft/failed-validation personalization blocks launch (or explicit fallback) | ✅ | Readiness + integration: unapproved drafts block submit; approved → each lead gets their draft, follow-ups thread under it; fallback opt-in → template for the rest |
+| `daily_limit`/`total_limit` stored and validated against the mailbox | ✅ | 150 > mailbox 100 → 422 (test + running app). Planner never exceeds the daily limit per day across all steps (running app, limit 2: max 2/day) |
+| Pause/resume/cancel work and are reflected in `campaign_leads` | ✅ | Pause clears `next_action_at` and dispatch sends nothing; resume shifts pending sends by whole paused days; cancel → leads `stopped`, sends `canceled`, pending approval closed; terminal. Running app: same |
+| No invented metrics in builder or list | ✅ | No reply rate anywhere; replies `—` until Phase 6 tracks them; drafts show `—`, not 0 (render tests) |
+| Existing running campaigns keep working through the migration | ✅ | Populated-DB migration test: statuses, steps, pending sends unchanged, `send_model = legacy`. Legacy approval/dispatch tests still pass. Live DB statuses checked read-only |
+| `npm run verify` green; wizard split < 300 lines | ✅ | 662 tests pass. Builder = 13 components, largest 129 lines. (The old 5-file wizard is kept only behind the D-05 flag) |
+
+**Bugs found and fixed along the way**
+1. **Pre-existing, affects live campaigns:** the pre-send cooldown counted a campaign's own earlier steps, so every follow-up within 14 days of step 1 was blocked as "contacted by another campaign". Now only *other* campaigns count. Legacy campaigns' pending follow-ups will start sending after deploy — see `deployment.md`.
+2. Exclusion precedence: a suppressed address that is also a role account was reported as "risky" rather than "unsubscribed/bounced". Suppressions now win.
+3. `createApprovalRequest` returned the bigint id as a string (typed as number).
+4. Found only by running the built app: `loadCampaign` passed through the session's string `workspaceId`; now normalised.
+
+**Deviations / not done**
+- **Two send models coexist (compat):** launch still pre-renders `campaign_sends` and the existing dispatcher sends them; per-lead state lives in `campaign_leads`. Phase 5 replaces pre-rendering with just-in-time jobs. Editing a running campaign re-renders the pending rows of unsent steps.
+- Personalized mode is first-step only: Phase 3 drafts are single emails. Follow-ups use templates.
+- Daily limit is enforced per campaign at planning time; a *mailbox-wide* limit across campaigns is Phase 5 (send-time).
+- Audience is capped at 1,000 leads and resolved synchronously (not a job); the builder says so when it caps.
+- Resume shifts by whole days and can land sends on a non-window day; Phase 5's send-time window check will close this.
+- Not exercised: a real browser session, and a real send from a verified mailbox (the harness ran with `RESEND_API_KEY` blank — dispatch correctly refused to send).
+
+**How the running-app check was done:** `next start` of the production build with a preload that routes the Neon driver's HTTPS calls to a local in-memory PGlite shim (all migrations applied from empty); real NextAuth sign-in; API routes + one real server action over HTTP; every page loaded after each step. No live DB, no OpenAI key, no Resend key. The first attempt hit a shim bug (timestamps sent as ISO rather than Postgres text → null dates → page 500) — fixed in the shim; it was not an app bug.
+
 ## Phase 8 (basic slice) — "Ask Gennie" on the Command Center (2026-09-25; verified hermetically + live against real OpenAI and the real DB; browser click-through pending)
 
 Prompt bar at the top of `/dashboard` → validated plan → **user approves** → deterministic run with live progress → results counted from the DB. Pulled forward on request; the rest of Phase 8 is untouched.

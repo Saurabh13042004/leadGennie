@@ -35,5 +35,6 @@ export async function createApprovalRequest(input: {
     )
     returning id
   `;
-  return rows[0].id as number;
+  // bigint ids arrive as strings from the driver; callers compare and store numbers.
+  return Number(rows[0].id);
 }

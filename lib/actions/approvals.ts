@@ -4,9 +4,11 @@ import { sql } from "@/lib/db/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/workspace-context";
 import { logActivity } from "@/lib/activity";
+import { AppError } from "@/lib/api/errors";
 import { filterCompliantLeads } from "@/lib/compliance";
 import { getCampaignSteps, scheduleCampaignSends } from "@/lib/campaigns/scheduling";
 import type { ApprovalStatus, ApprovalType } from "@/lib/approvals-core";
+import { applyLaunchDecision } from "@/lib/domain/campaigns/lifecycle";
 
 export type Approval = {
   id: number;
@@ -79,7 +81,7 @@ export async function decideApproval(approvalId: number, decision: "approved" | 
     where id = ${approvalId} and workspace_id = ${workspaceId} and status = 'pending'
   `;
   const approval = rows[0];
-  if (!approval) throw new Error("Approval not found or already decided");
+  if (!approval) throw new AppError("CONFLICT", "Approval not found or already decided");
 
   await sql`
     update approvals
@@ -87,7 +89,15 @@ export async function decideApproval(approvalId: number, decision: "approved" | 
     where id = ${approvalId} and workspace_id = ${workspaceId}
   `;
 
-  if (approval.type === "campaign_launch") {
+  const launchModel =
+    approval.type === "campaign_launch"
+      ? ((await sql`select send_model from campaigns where id = ${approval.entity_id} and workspace_id = ${workspaceId}`)[0]?.send_model as string | undefined)
+      : undefined;
+
+  // Builder campaigns (Phase 4): approval makes the campaign `ready`; launch is a separate, explicit step.
+  if (approval.type === "campaign_launch" && launchModel === "leads") {
+    await applyLaunchDecision(workspaceId, userId, approvalId, Number(approval.entity_id), decision);
+  } else if (approval.type === "campaign_launch") {
     const campaignId = approval.entity_id as number;
 
     if (decision === "rejected") {

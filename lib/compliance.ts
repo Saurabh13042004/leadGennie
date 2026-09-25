@@ -17,11 +17,16 @@ export async function isOnDoNotContact(workspaceId: number, email: string): Prom
   return rows.length > 0;
 }
 
-/** Lead IDs sent to within the cooldown window — regardless of campaign or channel. */
+/**
+ * Lead IDs sent to within the cooldown window — regardless of channel. `excludeCampaignId` leaves out that
+ * campaign's own sends: a sequence's follow-up is not "contact by another campaign" (before this, every follow-up
+ * inside the window was blocked by its own step 1).
+ */
 export async function getLeadsInCooldown(
   workspaceId: number,
   leadIds: number[],
-  cooldownDays: number = CHANNEL_COOLDOWN_DAYS
+  cooldownDays: number = CHANNEL_COOLDOWN_DAYS,
+  opts: { excludeCampaignId?: number } = {}
 ): Promise<Set<number>> {
   if (leadIds.length === 0) return new Set();
 
@@ -31,8 +36,9 @@ export async function getLeadsInCooldown(
      where workspace_id = $1
        and lead_id = any($2::bigint[])
        and status in ('sent', 'queued')
-       and coalesce(sent_at, scheduled_at) >= now() - ($3 || ' days')::interval`,
-    [workspaceId, leadIds, cooldownDays]
+       and coalesce(sent_at, scheduled_at) >= now() - ($3 || ' days')::interval
+       and campaign_id <> $4`,
+    [workspaceId, leadIds, cooldownDays, opts.excludeCampaignId ?? 0]
   );
   // Normalize: Postgres bigint may arrive as a string; callers compare numbers.
   return new Set(rows.map((r) => Number(r.lead_id)));
