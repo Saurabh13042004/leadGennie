@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const WIDTH = { md: "max-w-md", lg: "max-w-lg", xl: "max-w-2xl", "2xl": "max-w-3xl" } as const;
 
 /**
- * Modal shell used by the lead/inbound dialogs: blurred backdrop, rounded-2xl white panel, header with title + close,
+ * Shared dialog shell: blurred backdrop, rounded-2xl white panel, header with title + close,
  * optional sub-header (e.g. a stepper), scrollable body and a right-aligned footer. Escape closes unless `closeDisabled`.
  */
 export default function Modal({
@@ -24,6 +24,7 @@ export default function Modal({
   footer,
   children,
   label,
+  className,
 }: {
   title: ReactNode;
   description?: ReactNode;
@@ -37,6 +38,7 @@ export default function Modal({
   footer?: ReactNode;
   children: ReactNode;
   label?: string;
+  className?: string;
 }) {
   const close = useRef(onClose);
   const disabled = useRef(closeDisabled);
@@ -62,7 +64,7 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={label ?? (typeof title === "string" ? title : undefined)}
-        className={cn("relative flex max-h-[88vh] w-full flex-col rounded-2xl bg-white shadow-2xl ring-1 ring-black/5", WIDTH[size])}
+        className={cn("relative flex max-h-[88vh] w-full flex-col rounded-2xl bg-white shadow-2xl ring-1 ring-black/5", WIDTH[size], className)}
       >
         <div className="flex shrink-0 items-start gap-3 border-b border-neutral-100 px-5 py-4">
           {leading}

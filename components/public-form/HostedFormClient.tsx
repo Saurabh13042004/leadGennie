@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Check, CircleNotch, WarningCircle } from "@phosphor-icons/react/ssr";
 import type { PublicForm } from "@/lib/forms-core";
+import Button from "@/components/ui/Button";
+import Checkbox from "@/components/ui/Checkbox";
+import { Input, Label } from "@/components/ui/Field";
 
 export default function HostedFormClient({ embedKey, form }: { embedKey: string; form: PublicForm }) {
   const [values, setValues] = useState<Record<string, string>>({});
@@ -51,64 +54,70 @@ export default function HostedFormClient({ embedKey, form }: { embedKey: string;
 
   if (done) {
     return (
-      <div className="flex flex-col items-center text-center py-10">
-        <CheckCircle2 className="w-10 h-10 text-green-400 mb-3" />
-        <p className="text-white font-medium">Thanks — we&apos;ve got it.</p>
-        <p className="text-sm text-neutral-500 mt-1">Someone from our team will be in touch.</p>
+      <div className="flex flex-col items-center px-6 py-14 text-center" role="status">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-200/70">
+          <Check className="h-6 w-6" weight="bold" />
+        </span>
+        <p className="mt-4 text-[17px] font-semibold tracking-tight text-neutral-950">Thanks — we&apos;ve got it.</p>
+        <p className="mt-1 text-sm text-neutral-500">Someone from our team will be in touch.</p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h1 className="text-lg font-semibold text-white">{form.name}</h1>
+    <form onSubmit={handleSubmit}>
+      <div className="border-b border-neutral-100 px-6 pb-5 pt-6">
+        <h1 className="text-[19px] font-semibold tracking-[-0.015em] text-neutral-950">{form.name}</h1>
+      </div>
 
-      {/* Honeypot: hidden from real visitors, bots often fill every input. */}
-      <input
-        type="text"
-        name="_hp"
-        tabIndex={-1}
-        autoComplete="off"
-        className="absolute -left-[9999px] w-px h-px opacity-0"
-        onChange={(e) => setHoneypot(e.target.value)}
-      />
-
-      {form.fields.map((f) => (
-        <div key={f.key}>
-          <label className="block text-sm text-neutral-300 mb-1.5">
-            {f.label}
-            {f.required && <span className="text-red-400"> *</span>}
-          </label>
-          <input
-            type={f.type}
-            required={f.required}
-            value={values[f.key] ?? ""}
-            onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-            className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-white/20"
-          />
-        </div>
-      ))}
-
-      <label className="flex items-start gap-2.5 text-xs text-neutral-400">
+      <div className="space-y-4 px-6 py-5">
+        {/* Honeypot: hidden from real visitors, bots often fill every input. */}
         <input
-          type="checkbox"
-          checked={consentGiven}
-          onChange={(e) => setConsentGiven(e.target.checked)}
-          className="mt-0.5 w-4 h-4 accent-blue-500 shrink-0"
+          type="text"
+          name="_hp"
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          className="absolute -left-[9999px] h-px w-px opacity-0"
+          onChange={(e) => setHoneypot(e.target.value)}
         />
-        <span>{form.consentText}</span>
-      </label>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+        {form.fields.map((f) => (
+          <div key={f.key}>
+            <Label htmlFor={`f-${f.key}`}>
+              {f.label}
+              {f.required && <span className="text-rose-500"> *</span>}
+            </Label>
+            <Input
+              id={`f-${f.key}`}
+              type={f.type}
+              required={f.required}
+              value={values[f.key] ?? ""}
+              onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
+              className="h-10 text-sm"
+            />
+          </div>
+        ))}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="w-full flex items-center justify-center gap-2 bg-white text-black font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50"
-      >
-        {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-        Submit
-      </button>
+        <label htmlFor="f-consent" className="flex cursor-pointer items-start gap-2.5 rounded-lg bg-neutral-50 p-3 text-xs leading-relaxed text-neutral-600 ring-1 ring-inset ring-neutral-200/70">
+          <Checkbox id="f-consent" checked={consentGiven} onChange={(e) => setConsentGiven(e.target.checked)} className="mt-px" />
+          <span>{form.consentText}</span>
+        </label>
+
+        {error && (
+          <p role="alert" className="flex items-start gap-2 rounded-lg bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700 ring-1 ring-inset ring-rose-200/70">
+            <WarningCircle className="mt-px h-4 w-4 shrink-0" weight="fill" />
+            {error}
+          </p>
+        )}
+      </div>
+
+      <div className="px-6 pb-6">
+        <Button type="submit" variant="primary" disabled={submitting} className="h-10 w-full text-sm">
+          {submitting && <CircleNotch className="h-4 w-4 animate-spin" weight="bold" />}
+          Submit
+        </Button>
+      </div>
     </form>
   );
 }

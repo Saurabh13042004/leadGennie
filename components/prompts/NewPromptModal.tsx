@@ -6,7 +6,7 @@ import { createPrompt } from "@/lib/actions/prompts";
 import { PROMPT_TYPES, type PromptType } from "@/lib/prompts-constants";
 import Button from "@/components/ui/Button";
 import { Help, Input, Label, Select } from "@/components/ui/Field";
-import Modal from "@/components/settings/Modal";
+import Modal from "@/components/ui/Modal";
 import { Callout, Spinner } from "@/components/settings/bits";
 import { TYPE_LABEL } from "./meta";
 

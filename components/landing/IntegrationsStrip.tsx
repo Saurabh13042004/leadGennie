@@ -1,38 +1,42 @@
-const INTEGRATIONS = [
-  { label: "HubSpot", icon: "H" },
-  { label: "CSV import", icon: "CSV" },
-  { label: "Email", icon: "✉" },
-  { label: "LinkedIn", icon: "in", comingSoon: true },
-  { label: "Salesforce", icon: "SF", comingSoon: true },
-  { label: "Google Sheets", icon: "G", comingSoon: true },
-  { label: "Pipedrive", icon: "P", comingSoon: true },
-  { label: "More tools", icon: "+" },
+import type { ReactNode } from "react";
+import { EnvelopeSimple, FileCsv, LinkedinLogo, Plus, Table } from "@phosphor-icons/react/ssr";
+import { Container, Eyebrow } from "./LandingPrimitives";
+
+/** Brands without a Phosphor glyph get a monochrome letter mark in the same tile, so the row stays uniform. */
+function Letter({ children }: { children: ReactNode }) {
+  return <span className="text-[12px] font-semibold">{children}</span>;
+}
+
+const INTEGRATIONS: { label: string; mark: ReactNode; comingSoon?: boolean }[] = [
+  { label: "HubSpot", mark: <Letter>H</Letter> },
+  { label: "CSV import", mark: <FileCsv className="h-4 w-4" weight="duotone" /> },
+  { label: "Email", mark: <EnvelopeSimple className="h-4 w-4" weight="duotone" /> },
+  { label: "LinkedIn", mark: <LinkedinLogo className="h-4 w-4" weight="duotone" />, comingSoon: true },
+  { label: "Salesforce", mark: <Letter>S</Letter>, comingSoon: true },
+  { label: "Google Sheets", mark: <Table className="h-4 w-4" weight="duotone" />, comingSoon: true },
+  { label: "Pipedrive", mark: <Letter>P</Letter>, comingSoon: true },
+  { label: "More tools", mark: <Plus className="h-4 w-4" weight="bold" /> },
 ];
 
 export default function IntegrationsStrip() {
   return (
-    <section id="integrations" className="border-y border-neutral-200 bg-neutral-50/60 py-12">
-      <div className="mx-auto max-w-6xl px-5">
-        <p className="mb-6 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-neutral-400">
-          Connect the tools you already use
-        </p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+    <section id="integrations" className="scroll-mt-20 border-y border-neutral-200/80 bg-neutral-50/60 py-14 md:py-16">
+      <Container>
+        <Eyebrow className="mb-6 text-center">Connect the tools you already use</Eyebrow>
+        <ul className="mx-auto grid max-w-4xl grid-cols-2 gap-px overflow-hidden rounded-2xl bg-neutral-200/80 ring-1 ring-neutral-200/80 md:grid-cols-4">
           {INTEGRATIONS.map((item) => (
-            <div
-              key={item.label}
-              className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-3"
-            >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-neutral-200 text-[10px] font-bold text-neutral-500">
-                {item.icon}
+            <li key={item.label} className="flex min-h-[64px] items-center gap-3 bg-white px-4 py-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-neutral-600 ring-1 ring-inset ring-neutral-200/80">
+                {item.mark}
               </span>
-              <div className="min-w-0">
-                <div className="truncate text-[12px] font-semibold text-neutral-800">{item.label}</div>
-                {item.comingSoon && <div className="text-[9px] text-neutral-400">Coming soon</div>}
-              </div>
-            </div>
+              <span className="min-w-0">
+                <span className="block truncate text-[13px] font-medium text-neutral-900">{item.label}</span>
+                {item.comingSoon && <span className="block text-[11px] text-neutral-400">Coming soon</span>}
+              </span>
+            </li>
           ))}
-        </div>
-      </div>
+        </ul>
+      </Container>
     </section>
   );
 }

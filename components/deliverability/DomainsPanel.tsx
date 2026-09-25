@@ -135,9 +135,9 @@ export default function DomainsPanel({ domains, canAdd, canManage }: { domains: 
                         {canManage && (
                           <div className="flex items-center justify-end gap-1">
                             {d.status !== "verified" && (
-                              <Button size="xs" onClick={() => handleVerify(d.id)} disabled={isBusy}>
+                              <Button size="xs" onClick={() => handleVerify(d.id)} disabled={isBusy} aria-label="Verify now">
                                 <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" weight="duotone" />
-                                Verify now
+                                <span className="hidden sm:inline">Verify now</span>
                               </Button>
                             )}
                             <div className="flex items-center gap-0.5 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:group-focus-within:opacity-100">

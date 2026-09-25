@@ -7,7 +7,7 @@ import type { LeadListRow } from "@/lib/db/leads-list";
 import Button from "@/components/ui/Button";
 import { Input, Label, Select } from "@/components/ui/Field";
 import CompanyField from "./CompanyField";
-import Modal from "./Modal";
+import Modal from "@/components/ui/Modal";
 
 const STAGES = ["new", "outreached", "engaged"];
 

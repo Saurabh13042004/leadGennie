@@ -1,9 +1,13 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Check } from "lucide-react";
-import { useState, useSyncExternalStore } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeft, ArrowRight, Check, CircleNotch, WarningCircle, X } from "@phosphor-icons/react/ssr";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import Button from "@/components/ui/Button";
+import DemoInfoPane from "@/components/public/demo/DemoInfoPane";
+import { StepIndicator, StepOne, StepTwo } from "@/components/public/demo/DemoFormSteps";
+import { emptyDemoForm, validateDemoStep, type DemoErrors, type DemoField } from "@/components/public/demo/demo-form-core";
 
 interface BookDemoModalProps {
   isOpen: boolean;
@@ -12,16 +16,9 @@ interface BookDemoModalProps {
 }
 
 export default function BookDemoModal({ isOpen, onClose, initialEmail = "" }: BookDemoModalProps) {
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: initialEmail,
-    company: "",
-    companySize: "",
-    outboundVolume: "",
-    challenges: [] as string[],
-    crmUsed: ""
-  });
+  const [step, setStep] = useState<1 | 2>(1);
+  const [formData, setFormData] = useState(() => emptyDemoForm(initialEmail));
+  const [fieldErrors, setFieldErrors] = useState<DemoErrors>({});
   const [submitted, setSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,39 +33,41 @@ export default function BookDemoModal({ isOpen, onClose, initialEmail = "" }: Bo
     }
   }
 
-  const challenges = [
-    "Deliverability",
-    "Personalization",
-    "Reply rates",
-    "Lead management",
-    "Campaign automation"
-  ];
-
-  const crmOptions = [
-    "HubSpot",
-    "Salesforce",
-    "Pipedrive",
-    "Close",
-    "None",
-    "Other"
-  ];
+  // Escape closes, like every other dialog in the app.
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  });
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFieldErrors((prev) => (prev[name as DemoField] ? { ...prev, [name]: undefined } : prev));
   };
 
   const handleChallengeToggle = (challenge: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      challenges: prev.challenges.includes(challenge)
-        ? prev.challenges.filter(c => c !== challenge)
-        : [...prev.challenges, challenge]
+      challenges: prev.challenges.includes(challenge) ? prev.challenges.filter((c) => c !== challenge) : [...prev.challenges, challenge],
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors = validateDemoStep(step, formData);
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      document.getElementById(`demo-${Object.keys(errors)[0]}`)?.focus();
+      return;
+    }
     if (step === 1) {
       setStep(2);
       return;
@@ -94,15 +93,7 @@ export default function BookDemoModal({ isOpen, onClose, initialEmail = "" }: Bo
       setTimeout(() => {
         setSubmitted(false);
         setStep(1);
-        setFormData({
-          name: "",
-          email: "",
-          company: "",
-          companySize: "",
-          outboundVolume: "",
-          challenges: [],
-          crmUsed: ""
-        });
+        setFormData(emptyDemoForm());
         onClose();
       }, 2500);
     } catch (err) {
@@ -111,343 +102,110 @@ export default function BookDemoModal({ isOpen, onClose, initialEmail = "" }: Bo
     }
   };
 
-  const companySize = formData.companySize;
-  const isBestForStartups = companySize === "1-5" || companySize === "5-20";
+  const isBestForStartups = formData.companySize === "1-5" || formData.companySize === "5-20";
 
   // false on the server / first render, true once hydrated — needed for the portal.
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,
-    () => false
+    () => false,
   );
 
   const modalContent = (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <motion.div key="book-demo" className="fixed inset-0 z-[100] flex items-end justify-center p-3 sm:items-center sm:p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+          <div className="absolute inset-0 bg-neutral-900/25 backdrop-blur-[2px]" onClick={onClose} />
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100]"
-          />
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: "spring", duration: 0.4 }}
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 pointer-events-none"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="book-demo-title"
+            initial={{ opacity: 0, y: 12, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.985 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-[880px] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 sm:max-h-[calc(100dvh-2rem)]"
           >
-            <div className="w-full max-w-4xl bg-[#0A0A0A] border border-white/10 rounded-2xl shadow-2xl overflow-hidden pointer-events-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 min-h-[500px] md:min-h-[600px]">
-                {/* LEFT SIDE - Benefits & Branding */}
-                <div className="relative hidden md:flex flex-col justify-between bg-gradient-to-br from-white/5 via-transparent to-transparent p-8 border-r border-white/10">
-                  <div>
-                    <button
-                      onClick={onClose}
-                      className="absolute top-6 right-6 p-1 hover:bg-white/10 rounded-lg transition-colors"
-                    >
-                      <X className="w-5 h-5 text-neutral-400 hover:text-white" />
-                    </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+            >
+              <X className="h-4 w-4" weight="bold" />
+            </button>
 
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
-                      className="mb-2"
-                    >
-                      <span className="inline-block text-xs font-semibold text-white/60 bg-white/10 px-3 py-1 rounded-full">
-                        Early Access • Limited Onboarding
-                      </span>
+            <div className="grid grid-cols-1 md:min-h-[560px] md:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)]">
+              <DemoInfoPane bestForStartups={isBestForStartups} />
+
+              <div className="flex flex-col p-6 md:p-8">
+                {submitted ? (
+                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-1 flex-col items-center justify-center py-12 text-center" role="status">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-200/70">
+                      <Check className="h-6 w-6" weight="bold" />
+                    </span>
+                    <h3 className="mt-4 text-xl font-semibold tracking-tight text-neutral-950">You&apos;re in.</h3>
+                    <p className="mt-1.5 max-w-xs text-sm leading-relaxed text-neutral-500">
+                      We&apos;ll reach out shortly to schedule your personalized LeadGennie walkthrough.
+                    </p>
+                  </motion.div>
+                ) : (
+                  <form onSubmit={handleSubmit} noValidate className="flex flex-1 flex-col">
+                    <div className="pr-8">
+                      <StepIndicator step={step} />
+                    </div>
+
+                    <motion.div key={step} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }} className="mt-6 flex-1">
+                      {step === 1 ? (
+                        <StepOne data={formData} errors={fieldErrors} onChange={handleChange} />
+                      ) : (
+                        <StepTwo data={formData} errors={fieldErrors} onChange={handleChange} onToggle={handleChallengeToggle} />
+                      )}
                     </motion.div>
 
-                    <motion.h2
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.15 }}
-                      className="text-2xl font-bold text-white mt-4 leading-tight"
-                    >
-                      See LeadGennie in action.
-                    </motion.h2>
-
-                    <motion.p
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="text-neutral-400 text-sm mt-3 leading-relaxed"
-                    >
-                      Learn how modern GTM teams automate outbound, improve deliverability, and book more meetings.
-                    </motion.p>
-
-                    {/* Benefits */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.25 }}
-                      className="space-y-3 mt-8"
-                    >
-                      {[
-                        "Personalized onboarding",
-                        "Deliverability guidance",
-                        "Campaign setup walkthrough",
-                        "Early access features",
-                        "AI outbound tips"
-                      ].map((benefit, i) => (
-                        <div key={i} className="flex items-start gap-3">
-                          <Check className="w-5 h-5 text-green-400 mt-0.5 shrink-0" />
-                          <span className="text-sm text-neutral-300">{benefit}</span>
-                        </div>
-                      ))}
-                    </motion.div>
-                  </div>
-
-                  {/* Footer */}
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.35 }}
-                    className="text-xs text-neutral-500"
-                  >
-                    Built for modern GTM teams {isBestForStartups && "• Best for startups"}
-                  </motion.p>
-                </div>
-
-                {/* RIGHT SIDE - Form */}
-                <div className="flex flex-col p-8 md:p-8">
-                  {submitted ? (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex flex-col items-center justify-center h-full text-center py-12"
-                    >
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", delay: 0.2, damping: 15 }}
-                        className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4 border border-green-500/30"
-                      >
-                        <Check className="w-8 h-8 text-green-400" />
-                      </motion.div>
-                      <motion.h3
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                        className="text-2xl font-bold text-white mb-2"
-                      >
-                        You&apos;re in.
-                      </motion.h3>
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.35 }}
-                        className="text-neutral-400 text-sm max-w-xs"
-                      >
-                        We&apos;ll reach out shortly to schedule your personalized LeadGennie walkthrough.
-                      </motion.p>
-                    </motion.div>
-                  ) : (
-                    <form onSubmit={handleSubmit} className="flex flex-col h-full">
-                      {/* Step indicator */}
-                      <div className="mb-6">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-neutral-400">
-                            Step {step} of 2
-                          </span>
-                          <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: step === 1 ? "50%" : "100%" }}
-                              transition={{ duration: 0.3 }}
-                              className="h-full bg-white"
-                            />
-                          </div>
-                        </div>
+                    {error && (
+                      <div role="alert" className="mt-5 flex items-start gap-2 rounded-lg bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700 ring-1 ring-inset ring-rose-200/70">
+                        <WarningCircle className="mt-px h-4 w-4 shrink-0" weight="fill" />
+                        {error}
                       </div>
+                    )}
 
-                      {/* Step 1 */}
-                      {step === 1 && (
-                        <motion.div
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.3 }}
-                          className="space-y-4 flex-1"
-                        >
-                          <div>
-                            <label className="block text-sm font-medium text-white mb-2">Full Name</label>
-                            <input
-                              type="text"
-                              name="name"
-                              value={formData.name}
-                              onChange={handleChange}
-                              placeholder="Jane Chen"
-                              required
-                              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-white mb-2">Work Email</label>
-                            <input
-                              type="email"
-                              name="email"
-                              value={formData.email}
-                              onChange={handleChange}
-                              placeholder="jane@company.com"
-                              required
-                              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-white mb-2">Company Name</label>
-                            <input
-                              type="text"
-                              name="company"
-                              value={formData.company}
-                              onChange={handleChange}
-                              placeholder="Acme Corp"
-                              required
-                              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-white mb-2">Company Size</label>
-                            <select
-                              name="companySize"
-                              value={formData.companySize}
-                              onChange={handleChange}
-                              required
-                              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all [&>option]:bg-[#0A0A0A]"
-                            >
-                              <option value="" disabled>Select size</option>
-                              <option value="1-5">1-5 people</option>
-                              <option value="5-20">5-20 people</option>
-                              <option value="20-50">20-50 people</option>
-                              <option value="50-200">50-200 people</option>
-                              <option value="200+">200+ people</option>
-                            </select>
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {/* Step 2 */}
+                    <div className="mt-8 flex items-center gap-2">
                       {step === 2 && (
-                        <motion.div
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.3 }}
-                          className="space-y-4 flex-1"
-                        >
-                          <div>
-                            <label className="block text-sm font-medium text-white mb-2">Current Outbound Volume</label>
-                            <select
-                              name="outboundVolume"
-                              value={formData.outboundVolume}
-                              onChange={handleChange}
-                              required
-                              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all [&>option]:bg-[#0A0A0A]"
-                            >
-                              <option value="" disabled>Select volume</option>
-                              <option value="<100">&lt;100/month</option>
-                              <option value="100-1k">100-1k/month</option>
-                              <option value="1k-10k">1k-10k/month</option>
-                              <option value="10k+">10k+/month</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-white mb-3">Your biggest challenge</label>
-                            <div className="space-y-2">
-                              {challenges.map(challenge => (
-                                <button
-                                  key={challenge}
-                                  type="button"
-                                  onClick={() => handleChallengeToggle(challenge)}
-                                  className={`w-full text-left px-4 py-2.5 rounded-lg border transition-all text-sm ${
-                                    formData.challenges.includes(challenge)
-                                      ? "bg-white/10 border-white/30 text-white"
-                                      : "bg-white/5 border-white/10 text-neutral-300 hover:border-white/20"
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <div className={`w-4 h-4 rounded border ${formData.challenges.includes(challenge) ? "bg-white border-white" : "border-white/30"}`}>
-                                      {formData.challenges.includes(challenge) && (
-                                        <Check className="w-3 h-3 text-black" />
-                                      )}
-                                    </div>
-                                    {challenge}
-                                  </div>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-white mb-2">CRM Used</label>
-                            <select
-                              name="crmUsed"
-                              value={formData.crmUsed}
-                              onChange={handleChange}
-                              required
-                              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all [&>option]:bg-[#0A0A0A]"
-                            >
-                              <option value="" disabled>Select CRM</option>
-                              {crmOptions.map(crm => (
-                                <option key={crm} value={crm}>{crm}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </motion.div>
+                        <Button variant="secondary" size="md" className="h-10 px-3.5" onClick={() => setStep(1)} disabled={isLoading}>
+                          <ArrowLeft className="h-3.5 w-3.5" weight="bold" />
+                          Back
+                        </Button>
                       )}
-
-                      {/* Error */}
-                      {error && (
-                        <p className="text-sm text-red-400 mt-4 text-center">{error}</p>
-                      )}
-
-                      {/* Button */}
-                      <motion.button
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.2 }}
+                      <Button
                         type="submit"
+                        variant="primary"
+                        size="md"
+                        className="h-10 flex-1"
                         disabled={isLoading || (step === 1 && !formData.name) || (step === 2 && !formData.crmUsed)}
-                        className="w-full bg-white text-black font-semibold py-3 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-8"
                       >
                         {isLoading ? (
-                          <span className="flex items-center justify-center gap-2">
-                            <motion.div
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 1, repeat: Infinity }}
-                              className="w-4 h-4 border-2 border-black border-t-transparent rounded-full"
-                            />
+                          <>
+                            <CircleNotch className="h-4 w-4 animate-spin" weight="bold" />
                             Booking...
-                          </span>
+                          </>
                         ) : step === 1 ? (
-                          "Continue"
+                          <>
+                            Continue
+                            <ArrowRight className="h-3.5 w-3.5" weight="bold" />
+                          </>
                         ) : (
                           "Book My Demo"
                         )}
-                      </motion.button>
-
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.25 }}
-                        className="text-xs text-neutral-500 text-center mt-3"
-                      >
-                        No credit card required
-                      </motion.p>
-                    </form>
-                  )}
-                </div>
+                      </Button>
+                    </div>
+                    <p className="mt-3 text-center text-xs text-neutral-500">No credit card required</p>
+                  </form>
+                )}
               </div>
             </div>
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );

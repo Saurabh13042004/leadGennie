@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
-import { Manrope, DM_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const manrope = Manrope({
-  variable: "--font-manrope",
+const geist = Geist({
+  variable: "--font-geist",
   subsets: ["latin"],
 });
 
-const dmMono = DM_Mono({
-  variable: "--font-dm-mono",
-  weight: ["400", "500"],
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
@@ -26,9 +25,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${manrope.variable} ${dmMono.variable} h-full antialiased dark`}
+      className={`${geist.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground overflow-x-hidden selection:bg-white/20 selection:text-white">
+      <body className={`${geist.className} min-h-full flex flex-col bg-background text-foreground overflow-x-hidden selection:bg-indigo-100 selection:text-indigo-950`}>
         {children}
       </body>
     </html>

@@ -5,7 +5,7 @@ import LeadsPageHeader from "@/components/leads/LeadsPageHeader";
 import Avatar from "@/components/ui/Avatar";
 import EmptyState from "@/components/ui/EmptyState";
 import { cn } from "@/lib/utils";
-import { STATUS_STYLE } from "@/components/leads/draft/DraftPanel";
+import { STATUS_STYLE } from "@/components/leads/draft/status-style";
 import type { DraftStatus } from "@/lib/domain/personalization/types";
 
 export const metadata = {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { addDomain } from "@/lib/actions/domains";
 import Button from "@/components/ui/Button";
 import { Help, Input, Label } from "@/components/ui/Field";
-import Modal from "@/components/settings/Modal";
+import Modal from "@/components/ui/Modal";
 import { Callout, Spinner } from "@/components/settings/bits";
 
 export default function AddDomainModal({ onClose }: { onClose: () => void }) {

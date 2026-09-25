@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Loader2 } from "lucide-react";
+import { CircleNotch, Textbox, WarningOctagon } from "@phosphor-icons/react/ssr";
 import { createForm } from "@/lib/actions/forms";
+import Button from "@/components/ui/Button";
+import { Help, Input, Label, Textarea } from "@/components/ui/Field";
+import Modal from "@/components/ui/Modal";
 
 export default function NewFormModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
@@ -29,52 +32,41 @@ export default function NewFormModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-2xl border border-neutral-200 bg-white shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
-          <h2 className="text-neutral-900 font-semibold">New form</h2>
-          <button onClick={onClose} className="text-neutral-500 hover:text-neutral-900" aria-label="Close">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm text-neutral-700 mb-1.5">Name</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              placeholder="Website contact form"
-              className="w-full rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-neutral-700 mb-1.5">Consent statement</label>
-            <textarea
-              value={consentText}
-              onChange={(e) => setConsentText(e.target.value)}
-              rows={3}
-              className="w-full rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 resize-none"
-            />
-            <p className="text-xs text-neutral-500 mt-1.5">
-              Stored verbatim with every submission, versioned (FORM-01) — captures full name, work email, and
-              company by default.
-            </p>
-          </div>
-          {error && (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</div>
-          )}
-          <button
-            type="submit"
-            disabled={creating}
-            className="w-full flex items-center justify-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
-          >
-            {creating && <Loader2 className="w-4 h-4 animate-spin" />}
+    <Modal
+      title="New form"
+      description="Get a hosted link and embed snippet for inbound leads."
+      icon={Textbox}
+      size="md"
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" type="submit" form="new-form" disabled={creating}>
+            {creating && <CircleNotch className="h-4 w-4 animate-spin" weight="bold" />}
             Create form
-          </button>
-        </form>
-      </div>
-    </div>
+          </Button>
+        </>
+      }
+    >
+      <form id="new-form" onSubmit={handleSubmit} className="space-y-4 px-5 py-5">
+        <div>
+          <Label htmlFor="form-name">Name</Label>
+          <Input id="form-name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Website contact form" autoFocus />
+        </div>
+        <div>
+          <Label htmlFor="form-consent">Consent statement</Label>
+          <Textarea id="form-consent" value={consentText} onChange={(e) => setConsentText(e.target.value)} rows={3} className="resize-none" />
+          <Help>
+            Stored verbatim with every submission, versioned (FORM-01) — captures full name, work email, and company by default.
+          </Help>
+        </div>
+        {error && (
+          <p className="flex items-start gap-2 rounded-lg bg-rose-50 px-3 py-2 text-[13px] text-rose-700 ring-1 ring-inset ring-rose-200">
+            <WarningOctagon className="mt-0.5 h-4 w-4 shrink-0" weight="fill" />
+            {error}
+          </p>
+        )}
+      </form>
+    </Modal>
   );
 }
