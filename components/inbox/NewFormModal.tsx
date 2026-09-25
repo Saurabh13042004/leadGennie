@@ -6,7 +6,7 @@ import { CircleNotch, Textbox, WarningOctagon } from "@phosphor-icons/react/ssr"
 import { createForm } from "@/lib/actions/forms";
 import Button from "@/components/ui/Button";
 import { Help, Input, Label, Textarea } from "@/components/ui/Field";
-import Modal from "@/components/leads/Modal";
+import Modal from "@/components/ui/Modal";
 
 export default function NewFormModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();

@@ -4,11 +4,11 @@ import { useState, useTransition } from "react";
 import { ArrowClockwise, CheckCircle, CircleNotch, Info, PencilSimple, PencilSimpleLine, Sparkle, X, XCircle } from "@phosphor-icons/react/ssr";
 import { approveEmailDraft, generateEmailDraft, rejectEmailDraft, saveDraftEdit } from "@/lib/actions/personalization";
 import type { DraftView } from "@/lib/domain/personalization/drafts";
-import { TONES, type DraftStatus, type Tone } from "@/lib/domain/personalization/types";
+import { TONES, type Tone } from "@/lib/domain/personalization/types";
 import Button, { buttonClasses } from "@/components/ui/Button";
 import Checkbox from "@/components/ui/Checkbox";
 import { Select } from "@/components/ui/Field";
-import { TONE as BADGE_TONE } from "@/components/ui/Badge";
+import { STATUS_STYLE } from "./status-style";
 import { cn } from "@/lib/utils";
 import Callout from "../intel/Callout";
 import { AI_BUTTON } from "../ai-styles";
@@ -17,13 +17,7 @@ import { DraftChecks, DraftEditor } from "./DraftParts";
 
 const TONE_LABEL: Record<Tone, string> = { concise: "Concise", friendly: "Friendly", formal: "Formal", direct: "Direct" };
 
-export const STATUS_STYLE: Record<DraftStatus, { label: string; cls: string }> = {
-  draft: { label: "Needs review", cls: `ring-1 ring-inset ${BADGE_TONE.indigo.badge}` },
-  edited: { label: "Edited", cls: `ring-1 ring-inset ${BADGE_TONE.violet.badge}` },
-  approved: { label: "Approved", cls: `ring-1 ring-inset ${BADGE_TONE.emerald.badge}` },
-  rejected: { label: "Rejected", cls: `ring-1 ring-inset ${BADGE_TONE.neutral.badge}` },
-  failed_validation: { label: "Failed checks", cls: `ring-1 ring-inset ${BADGE_TONE.rose.badge}` },
-};
+export { STATUS_STYLE };
 
 export default function DraftPanel({
   leadId, initial, defaultTone, canEdit, hasEvidence,

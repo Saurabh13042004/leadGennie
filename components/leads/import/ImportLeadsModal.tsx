@@ -9,7 +9,7 @@ import { ChooseStep, UploadStep } from "./ChooseUploadSteps";
 import MapStep from "./MapStep";
 import ReviewStep from "./ReviewStep";
 import { ProgressStep, SummaryStep } from "./ProgressSummarySteps";
-import Modal from "../Modal";
+import Modal from "@/components/ui/Modal";
 
 const STEPS: { key: ImportStep[]; label: string }[] = [
   { key: ["choose", "upload"], label: "Upload" },

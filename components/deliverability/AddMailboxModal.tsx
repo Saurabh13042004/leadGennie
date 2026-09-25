@@ -7,7 +7,7 @@ import { requestAddMailbox } from "@/lib/actions/mailboxes";
 import type { Domain } from "@/lib/actions/domains";
 import Button from "@/components/ui/Button";
 import { Help, Input, Label, inputClasses } from "@/components/ui/Field";
-import Modal from "@/components/settings/Modal";
+import Modal from "@/components/ui/Modal";
 import { Callout, Spinner } from "@/components/settings/bits";
 import { cn } from "@/lib/utils";
 
