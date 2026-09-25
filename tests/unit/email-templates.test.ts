@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { welcomeEmail } from "@/lib/email/templates/welcome";
 import { inviteEmail } from "@/lib/email/templates/invite";
 import { esc } from "@/lib/email/templates/layout";
+import { appBaseUrl } from "@/lib/campaigns/render";
 
 const BASE = "https://app.leadgennie.test";
 
@@ -66,5 +67,21 @@ describe("invite email", () => {
 describe("esc", () => {
   it("escapes the five HTML-significant characters", () => {
     expect(esc(`&<>"'`)).toBe("&amp;&lt;&gt;&quot;&#39;");
+  });
+});
+
+describe("appBaseUrl", () => {
+  it("has no trailing slash, so links never contain '//'", () => {
+    const prev = process.env.NEXT_PUBLIC_APP_URL;
+    try {
+      for (const v of ["https://leadgennie.com/", "https://leadgennie.com", " https://leadgennie.com// "]) {
+        process.env.NEXT_PUBLIC_APP_URL = v;
+        expect(appBaseUrl()).toBe("https://leadgennie.com");
+      }
+      expect(welcomeEmail({ name: "A", baseUrl: appBaseUrl() }).html).toContain('href="https://leadgennie.com/dashboard"');
+    } finally {
+      if (prev === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+      else process.env.NEXT_PUBLIC_APP_URL = prev;
+    }
   });
 });

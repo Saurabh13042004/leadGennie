@@ -9,7 +9,8 @@ import { firstNameOf } from "@/lib/domain/personalization/context";
 export const SUPPORTED_PLACEHOLDERS = ["first_name", "company"] as const;
 
 export function appBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  const url = process.env.NEXT_PUBLIC_APP_URL?.trim() || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  return url.replace(/\/+$/, ""); // "https://leadgennie.com/" must not produce "//dashboard" links
 }
 
 export type RenderLead = { fullName: string; company: string | null };
