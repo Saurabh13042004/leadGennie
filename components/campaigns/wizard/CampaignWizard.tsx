@@ -17,13 +17,15 @@ export default function CampaignWizard({
   initialPitch,
   mailboxes,
   workflows,
+  multichannel = false,
 }: {
   audiences: AudienceOption[];
   initialPitch: string;
   mailboxes: Mailbox[];
   workflows: WorkflowSummary[];
+  multichannel?: boolean;
 }) {
-  const draft = useCampaignDraft({ audiences, initialPitch, mailboxes, workflows });
+  const draft = useCampaignDraft({ audiences, initialPitch, mailboxes, workflows, multichannel });
 
   return (
     <div className="flex min-h-full flex-col">
@@ -31,7 +33,7 @@ export default function CampaignWizard({
         title="New campaign"
         icon={Megaphone}
         crumbs={[{ label: "Campaigns", href: "/dashboard/campaigns" }]}
-        description="Multi-channel sequence builder"
+        description={multichannel ? "Multi-channel sequence builder" : "Email sequence builder"}
       />
 
       <div className="flex flex-1 flex-col lg:flex-row">

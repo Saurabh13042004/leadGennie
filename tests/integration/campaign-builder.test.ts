@@ -25,6 +25,7 @@ import { POST as launchRoute } from "@/app/api/campaigns/[id]/launch/route";
 import { POST as actionRoute } from "@/app/api/campaigns/[id]/[action]/route";
 import { GET as previewRoute } from "@/app/api/campaigns/[id]/preview/route";
 import { POST as resolveRoute } from "@/app/api/campaigns/[id]/audience/resolve/route";
+import { createCampaignFromWizard } from "@/lib/actions/campaign-builder";
 
 type W = Awaited<ReturnType<typeof setup>>;
 const one = async <T>(q: PromiseLike<T[]>) => (await q)[0];
@@ -123,6 +124,45 @@ describe("building a campaign", () => {
     const id = await createDraftCampaign(w.actor, { name: "From flow", workflowId: Number(wf.id) });
     const c = await loadCampaign(w.workspaceId, id);
     expect(c.steps.map((s) => [s.waitDays, s.body])).toEqual([[0, "Body 1"], [5, "Body 2"]]);
+  });
+});
+
+describe("the New campaign wizard (email-only)", () => {
+  const wizardSteps = [
+    { waitDays: 0, subject: "Question for {{company}}", body: "Hi {{first_name}}, how does {{company}} book meetings?" },
+    { waitDays: 3, subject: "ignored for follow-ups", body: "Following up, {{first_name}}." },
+  ];
+
+  it("creates an email campaign in the Phase 4 model and submits it for approval in one click", async () => {
+    const res = await createCampaignFromWizard({ name: "From wizard", audienceSegmentId: null, mailboxId: w.mailboxId, dailyLimit: 40, steps: wizardSteps });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.data).toMatchObject({ submitted: true, blockers: [] });
+    const c = await loadCampaign(w.workspaceId, res.data.id);
+    expect(c).toMatchObject({ status: "pending_approval", sendModel: "leads", dailyLimit: 40, mailboxId: w.mailboxId });
+    expect(c.steps.map((s) => [s.waitDays, s.subject])).toEqual([[0, "Question for {{company}}"], [3, ""]]);
+    expect(await n(sql`select count(*)::int as n from campaign_sends where campaign_id = ${res.data.id}`)).toBe(0);
+  });
+
+  it("keeps the campaign as a draft and returns the blockers when it can't be submitted yet", async () => {
+    const res = await createCampaignFromWizard({ name: "No copy", audienceSegmentId: null, mailboxId: w.mailboxId, dailyLimit: 40, steps: [{ waitDays: 0, subject: "", body: "" }] });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.data.submitted).toBe(false);
+    expect(res.data.blockers.join(" | ")).toMatch(/needs a subject/);
+    expect((await loadCampaign(w.workspaceId, res.data.id)).status).toBe("draft");
+  });
+
+  it("accepts ids as strings (bigints from the list actions arrive that way in the browser)", async () => {
+    const res = await createCampaignFromWizard({ name: "Str ids", audienceSegmentId: null, mailboxId: String(w.mailboxId), dailyLimit: 40, steps: wizardSteps });
+    expect(res).toMatchObject({ ok: true, data: { submitted: true } });
+  });
+
+  it("clamps the daily limit to the mailbox's and rejects invalid input", async () => {
+    const res = await createCampaignFromWizard({ name: "Fast", audienceSegmentId: null, mailboxId: w.mailboxId, dailyLimit: 500, steps: wizardSteps });
+    expect(res.ok && (await loadCampaign(w.workspaceId, res.data.id)).dailyLimit).toBe(100);
+    const bad = await createCampaignFromWizard({ name: "x", audienceSegmentId: null, mailboxId: w.mailboxId, dailyLimit: 40, steps: [] });
+    expect(bad).toMatchObject({ ok: false, error: { code: "VALIDATION_ERROR" } });
   });
 });
 

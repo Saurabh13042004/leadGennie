@@ -20,6 +20,7 @@ export default function ReviewStep({ draft }: { draft: CampaignDraft }) {
     setDailyEmailLimit,
     dailyDmLimit,
     setDailyDmLimit,
+    multichannel,
     mailboxes,
     mailboxId,
     setMailboxId,
@@ -36,7 +37,7 @@ export default function ReviewStep({ draft }: { draft: CampaignDraft }) {
     ["Audience", `${audience.name} (${audience.leadCount.toLocaleString()})`],
     ["Channels", channels],
     ["Steps", `${steps.length} touchpoints over ${totalDays} days`],
-    ["Daily limit", `${dailyEmailLimit} emails / ${dailyDmLimit} DMs`],
+    ["Daily limit", multichannel ? `${dailyEmailLimit} emails / ${dailyDmLimit} DMs` : `${dailyEmailLimit} emails`],
   ];
 
   return (
@@ -109,7 +110,7 @@ export default function ReviewStep({ draft }: { draft: CampaignDraft }) {
                 </Select>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className={multichannel ? "grid grid-cols-2 gap-3" : "grid grid-cols-1 gap-3"}>
               <div>
                 <Label htmlFor="review-email-limit">Emails/day</Label>
                 <Input
@@ -120,6 +121,7 @@ export default function ReviewStep({ draft }: { draft: CampaignDraft }) {
                   className="tabular-nums"
                 />
               </div>
+              {multichannel && (
               <div>
                 <Label htmlFor="review-dm-limit">DMs/day</Label>
                 <Input
@@ -130,6 +132,7 @@ export default function ReviewStep({ draft }: { draft: CampaignDraft }) {
                   className="tabular-nums"
                 />
               </div>
+              )}
             </div>
           </div>
         </Section>

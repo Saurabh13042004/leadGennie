@@ -209,3 +209,34 @@ async function rerenderPendingSends(workspaceId: number, campaignId: number, ch:
     [ids, templated.map((r) => threadedSubject(fillPlaceholders(ch.subject, lead(r)))), workspaceId],
   );
 }
+
+export type WizardInput = {
+  name: string;
+  audienceSegmentId: number | null;
+  mailboxId: number | null;
+  dailyLimit: number;
+  steps: { waitDays: number; subject?: string; body: string }[];
+  workflowId?: number | null;
+};
+
+/**
+ * The "New campaign" wizard (email-only, D-05) creates a builder campaign in one go: draft → settings → audience →
+ * emails. Submitting for approval is done by the caller, so a campaign that isn't ready yet still exists and the user
+ * lands in the builder with the checklist instead of losing their work.
+ */
+export async function createFromWizard(actor: Actor, input: WizardInput): Promise<number> {
+  const name = input.name.trim() || "Untitled campaign";
+  const id = await createDraftCampaign(actor, { name, workflowId: input.workflowId ?? null });
+  const c = await loadCampaign(actor.workspaceId, id);
+  const mb = input.mailboxId ? await loadMailbox(actor.workspaceId, input.mailboxId) : null;
+  await updateBasics(actor, id, {
+    name, mailboxId: mb ? mb.id : null, tone: c.tone,
+    dailyLimit: Math.min(Math.max(1, Math.round(input.dailyLimit) || 80), mb?.dailyLimit ?? 1000),
+    totalLimit: null, sendWindow: c.sendWindow, allowTemplateFallback: false,
+  });
+  await updateAudience(actor, id, input.audienceSegmentId ? { source: "segment", segmentId: input.audienceSegmentId } : { source: "all" });
+  if (input.steps.length > 0) {
+    await updateSteps(actor, id, input.steps.map((s, i) => ({ waitDays: i === 0 ? 0 : s.waitDays, subject: i === 0 ? s.subject ?? "" : "", body: s.body, mode: "template" })));
+  }
+  return id;
+}

@@ -12,7 +12,7 @@ import { previewCandidates, previewForLead, sendTestEmail, type CampaignPreview 
 import { getCampaignDetail, listCampaignItems, type CampaignDetail, type CampaignListItem } from "@/lib/domain/campaigns/read-model";
 import { checkReadiness } from "@/lib/domain/campaigns/readiness";
 import { loadCampaign, loadSentStepIds } from "@/lib/domain/campaigns/repository";
-import { createDraftCampaign, updateAudience, updateBasics, updateSteps } from "@/lib/domain/campaigns/service";
+import { createDraftCampaign, createFromWizard, updateAudience, updateBasics, updateSteps } from "@/lib/domain/campaigns/service";
 import { audienceDefinitionSchema } from "@/lib/domain/campaigns/types";
 import { toAudienceView, toReadinessView, type AudienceView, type BuilderView } from "@/lib/domain/campaigns/views";
 
@@ -58,6 +58,38 @@ export async function createCampaignDraft(input: unknown): Promise<ActionResult<
     const id = await createDraftCampaign({ workspaceId, userId }, { name, workflowId });
     refresh();
     return { id };
+  });
+}
+
+const wizardSchema = z.object({
+  name: z.string().max(200),
+  // Ids come from list actions where Postgres bigints arrive as strings — coerce, don't reject.
+  audienceSegmentId: z.coerce.number().int().positive().nullable(),
+  mailboxId: z.coerce.number().int().positive().nullable(),
+  dailyLimit: z.number().int().min(1).max(1000),
+  steps: z.array(z.object({ waitDays: z.number().int().min(0).max(90), subject: z.string().max(200).optional(), body: z.string().max(8000) })).min(1).max(10),
+  workflowId: z.coerce.number().int().positive().nullable().optional(),
+});
+
+/**
+ * "New campaign" wizard → an email campaign, submitted for approval in the same click. If something still blocks it
+ * (no mailbox, empty audience, …) the campaign is kept as a draft and the blockers come back so the UI can open the
+ * builder where they're fixed.
+ */
+export async function createCampaignFromWizard(input: unknown): Promise<ActionResult<{ id: number; submitted: boolean; blockers: string[] }>> {
+  return runAction(async () => {
+    const { workspaceId, userId } = await requireRole("member");
+    const actor = { workspaceId, userId };
+    const id = await createFromWizard(actor, wizardSchema.parse(input));
+    const readiness = await checkReadiness(workspaceId, await loadCampaign(workspaceId, id));
+    if (readiness.blockers.length > 0) {
+      refresh(id);
+      return { id, submitted: false, blockers: readiness.blockers.map((b) => b.message) };
+    }
+    await submitForApproval(actor, id);
+    refresh(id);
+    revalidatePath("/dashboard/brief");
+    return { id, submitted: true, blockers: [] };
   });
 }
 

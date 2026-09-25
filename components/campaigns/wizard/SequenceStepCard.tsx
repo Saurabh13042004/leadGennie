@@ -14,6 +14,7 @@ export default function SequenceStepCard({
   day,
   aiLoading,
   canRemove,
+  multichannel = false,
   onChange,
   onWrite,
   onRemove,
@@ -23,6 +24,8 @@ export default function SequenceStepCard({
   day: number;
   aiLoading: boolean;
   canRemove: boolean;
+  /** D-05: LinkedIn DM steps only when LinkedIn automation is enabled. Email-only follow-ups reply in the first email's thread. */
+  multichannel?: boolean;
   onChange: (patch: Partial<SequenceStep>) => void;
   onWrite: () => void;
   onRemove: () => void;
@@ -36,6 +39,7 @@ export default function SequenceStepCard({
         <span className={cn("flex h-7 w-7 items-center justify-center rounded-lg ring-1 ring-inset", isEmail ? "bg-sky-50 text-sky-600 ring-sky-200/70" : "bg-indigo-50 text-indigo-600 ring-indigo-200/70")}>
           <ChannelIcon className="h-4 w-4" weight="duotone" />
         </span>
+        {multichannel ? (
         <div className="relative">
           <select
             aria-label={`Step ${idx + 1} channel`}
@@ -48,7 +52,10 @@ export default function SequenceStepCard({
           </select>
           <CaretDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-neutral-400" weight="bold" />
         </div>
-        <span className="text-xs text-neutral-400">{idx === 0 ? "Send immediately" : `Day ${day}`}</span>
+        ) : (
+          <span className="text-xs font-medium text-neutral-700">{idx === 0 ? "Email" : "Follow-up email"}</span>
+        )}
+        <span className="text-xs text-neutral-400">{idx === 0 ? "Send immediately" : `Day ${day}${multichannel ? "" : " · reply in the same thread"}`}</span>
 
         <div className="ml-auto flex items-center gap-1">
           <button
@@ -74,7 +81,7 @@ export default function SequenceStepCard({
       </div>
 
       <div className="space-y-2.5 p-4">
-        {isEmail && (
+        {isEmail && (multichannel || idx === 0) && (
           <Input
             aria-label={`Step ${idx + 1} subject`}
             value={step.subject ?? ""}

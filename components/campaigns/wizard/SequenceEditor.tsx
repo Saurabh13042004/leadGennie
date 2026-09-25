@@ -11,7 +11,7 @@ import type { CampaignDraft } from "./useCampaignDraft";
 
 /** Vertical timeline of touchpoints: numbered nodes, "wait N days" connectors, an editor card per step. */
 export default function SequenceEditor({ draft }: { draft: CampaignDraft }) {
-  const { steps, aiLoadingIdx, addStep, removeStep, updateStep, writeStep, setStep, totalDays } = draft;
+  const { steps, aiLoadingIdx, addStep, removeStep, updateStep, writeStep, setStep, totalDays, multichannel } = draft;
 
   const days = steps.map((_, i) => steps.slice(0, i + 1).reduce((acc, x) => acc + x.waitDays, 0));
 
@@ -55,6 +55,7 @@ export default function SequenceEditor({ draft }: { draft: CampaignDraft }) {
                     day={days[idx]}
                     aiLoading={aiLoadingIdx.has(idx)}
                     canRemove={steps.length > 1}
+                    multichannel={multichannel}
                     onChange={(patch) => updateStep(idx, patch)}
                     onWrite={() => writeStep(idx, s.channel)}
                     onRemove={() => removeStep(idx)}
