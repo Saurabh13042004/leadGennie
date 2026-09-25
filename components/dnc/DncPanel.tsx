@@ -1,8 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { UserX, Loader2, Trash2 } from "lucide-react";
+import { Prohibit, Trash, UserMinus } from "@phosphor-icons/react/ssr";
 import { addDncEntry, removeDncEntry, type DncEntry } from "@/lib/actions/dnc";
+import Card, { CardHeader, Section } from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import EmptyState from "@/components/ui/EmptyState";
+import { Input, Label } from "@/components/ui/Field";
+import { Callout, IconButton, Spinner, TD, TH, THEAD_ROW, shortDate } from "@/components/settings/bits";
+import { cn } from "@/lib/utils";
 
 export default function DncPanel({
   initialEntries,
@@ -49,94 +56,77 @@ export default function DncPanel({
     }
   }
 
+  const unsubCount = entries.filter((e) => e.source === "unsubscribe_link").length;
+
   return (
-    <div className="space-y-6">
-      <form
-        onSubmit={handleAdd}
-        className="rounded-2xl border border-neutral-200 bg-white p-5 flex flex-col sm:flex-row gap-3 items-start sm:items-end"
-      >
-        <div className="flex-1 w-full">
-          <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="person@company.com"
-            className="w-full rounded-lg bg-neutral-50 border border-neutral-200 px-4 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
-          />
-        </div>
-        <div className="flex-1 w-full">
-          <label className="block text-sm font-medium text-neutral-700 mb-1.5">Reason (optional)</label>
-          <input
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Asked not to be contacted"
-            className="w-full rounded-lg bg-neutral-50 border border-neutral-200 px-4 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={adding}
-          className="flex items-center justify-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50 shrink-0"
-        >
-          {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
-          Add
-        </button>
-      </form>
+    <div className="space-y-5">
+      <Section title="Add an address" description="They're excluded from every campaign — checked at enrollment and again right before each send.">
+        <form onSubmit={handleAdd} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="min-w-0 flex-1">
+            <Label htmlFor="dnc-email">Email</Label>
+            <Input id="dnc-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="person@company.com" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <Label htmlFor="dnc-reason" hint="Optional">Reason</Label>
+            <Input id="dnc-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Asked not to be contacted" />
+          </div>
+          <Button type="submit" variant="primary" size="md" disabled={adding}>
+            {adding ? <Spinner /> : <UserMinus className="h-4 w-4" weight="bold" />}
+            Add
+          </Button>
+        </form>
+      </Section>
 
-      {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{error}</p>
-      )}
+      {error && <Callout>{error}</Callout>}
 
-      {entries.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 flex flex-col items-center justify-center text-center py-16 px-6">
-          <p className="text-neutral-900 font-semibold">No suppressions yet</p>
-          <p className="text-sm text-neutral-500 mt-1 max-w-sm">
-            Anyone added here is excluded from every campaign — checked at enrollment and again immediately before
-            each send.
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
+      <Card className="overflow-hidden">
+        <CardHeader
+          title="Suppression list"
+          description={
+            entries.length === 0
+              ? "Nobody is suppressed yet."
+              : `${entries.length} address${entries.length === 1 ? "" : "es"}${unsubCount ? ` · ${unsubCount} from unsubscribe links` : ""}`
+          }
+        />
+        {entries.length === 0 ? (
+          <EmptyState
+            compact
+            icon={Prohibit}
+            title="No suppressions yet"
+            description="Anyone added here — or who clicks an unsubscribe link — is excluded from every campaign."
+          />
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-neutral-50">
-                <tr className="text-left text-xs font-bold uppercase tracking-wide text-neutral-500">
-                  <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Reason</th>
-                  <th className="px-4 py-3">Source</th>
-                  <th className="px-4 py-3">Added</th>
-                  {canManage && <th className="px-4 py-3 text-right">Actions</th>}
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr className={THEAD_ROW}>
+                  <th className={TH}>Email</th>
+                  <th className={cn(TH, "hidden sm:table-cell")}>Reason</th>
+                  <th className={TH}>Source</th>
+                  <th className={cn(TH, "hidden md:table-cell")}>Added</th>
+                  {canManage && <th className={cn(TH, "w-12")}><span className="sr-only">Actions</span></th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {entries.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-neutral-50 transition-colors">
-                    <td className="px-4 py-3 text-neutral-900 font-medium">{entry.email}</td>
-                    <td className="px-4 py-3 text-neutral-500">{entry.reason ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className="text-xs font-medium text-neutral-600 bg-neutral-100 ring-1 ring-inset ring-neutral-200 rounded-full px-2.5 py-1">
-                        {entry.source === "unsubscribe_link" ? "Unsubscribe link" : "Manual"}
-                      </span>
+                  <tr key={entry.id} className="group transition-colors hover:bg-neutral-50/70">
+                    <td className={cn(TD, "font-medium text-neutral-900")}>{entry.email}</td>
+                    <td className={cn(TD, "hidden text-neutral-500 sm:table-cell")}>{entry.reason ?? <span className="text-neutral-300">—</span>}</td>
+                    <td className={TD}>
+                      {entry.source === "unsubscribe_link" ? <Badge tone="sky">Unsubscribe link</Badge> : <Badge>Manual</Badge>}
                     </td>
-                    <td className="px-4 py-3 text-neutral-500">
-                      {new Date(entry.createdAt).toLocaleDateString()}
-                    </td>
+                    <td className={cn(TD, "hidden text-xs text-neutral-500 md:table-cell")}>{shortDate(entry.createdAt)}</td>
                     {canManage && (
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => handleRemove(entry.id)}
+                      <td className={cn(TD, "text-right")}>
+                        <IconButton
+                          icon={Trash}
+                          label="Remove"
+                          tone="danger"
+                          busy={busyId === entry.id}
                           disabled={busyId === entry.id}
-                          className="text-neutral-400 hover:text-rose-600 transition-colors disabled:opacity-50"
-                          aria-label="Remove"
-                        >
-                          {busyId === entry.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-4 h-4" />
-                          )}
-                        </button>
+                          onClick={() => handleRemove(entry.id)}
+                          className={cn("ml-auto md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100", busyId === entry.id && "md:opacity-100")}
+                        />
                       </td>
                     )}
                   </tr>
@@ -144,8 +134,8 @@ export default function DncPanel({
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </Card>
     </div>
   );
 }

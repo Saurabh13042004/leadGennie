@@ -1,15 +1,35 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Copy, Code, ExternalLink, Pause, Play, Loader2 } from "lucide-react";
+import { ArrowSquareOut, CaretDown, Check, CircleNotch, Code, Copy, Pause, Play, Plus, ShareNetwork, Textbox } from "@phosphor-icons/react/ssr";
 import { cn } from "@/lib/utils";
 import { toggleFormStatus, type FormDefinition } from "@/lib/actions/forms";
-import NewFormModal from "./NewFormModal";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import EmptyState from "@/components/ui/EmptyState";
+import type { NavIcon } from "@/lib/nav-config";
 
-export default function FormsPanel({ forms, canManage }: { forms: FormDefinition[]; canManage: boolean }) {
+function CopyRow({ icon: Icon, label, value, copied, onCopy }: { icon: NavIcon; label: string; value: string; copied: boolean; onCopy: () => void }) {
+  return (
+    <div>
+      <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-neutral-500">
+        <Icon className="h-3.5 w-3.5" weight="duotone" />
+        {label}
+      </p>
+      <div className="flex items-center gap-2">
+        <code className="min-w-0 flex-1 truncate rounded-lg bg-white px-3 py-2 font-mono text-xs text-neutral-700 ring-1 ring-inset ring-neutral-200">{value}</code>
+        <Button variant="secondary" size="xs" onClick={onCopy} aria-label={`Copy ${label.toLowerCase()}`}>
+          {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" weight="bold" /> : <Copy className="h-3.5 w-3.5" weight="bold" />}
+          {copied ? "Copied" : "Copy"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export default function FormsPanel({ forms, canManage, onNew }: { forms: FormDefinition[]; canManage: boolean; onNew: () => void }) {
   const router = useRouter();
-  const [modalOpen, setModalOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -32,125 +52,97 @@ export default function FormsPanel({ forms, canManage }: { forms: FormDefinition
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
-  return (
-    <div>
-      <div className="flex justify-end mb-4">
-        {canManage && (
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-800 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            New form
-          </button>
-        )}
-      </div>
+  if (forms.length === 0) {
+    return (
+      <EmptyState
+        icon={Textbox}
+        title="No forms yet"
+        description="Create a form to get a hosted link and embed snippet — submissions land in the Unmatched Inbox."
+        actions={
+          canManage ? (
+            <Button variant="primary" onClick={onNew}>
+              <Plus className="h-4 w-4" weight="bold" />
+              New form
+            </Button>
+          ) : undefined
+        }
+      />
+    );
+  }
 
-      {forms.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 flex flex-col items-center justify-center text-center py-20 px-6">
-          <p className="text-neutral-900 font-semibold">No forms yet</p>
-          <p className="text-sm text-neutral-500 mt-1 max-w-sm">
-            Create a form to get a hosted link and embed snippet — submissions land in the Unmatched Inbox.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-[13px]">
+        <thead>
+          <tr className="border-b border-neutral-200/80 bg-neutral-50/60 text-left text-xs text-neutral-500">
+            <th className="px-3 py-2 pl-4 font-medium md:pl-6">Form</th>
+            <th className="px-3 py-2 font-medium">Status</th>
+            <th className="px-3 py-2 text-right font-medium">Submissions</th>
+            <th className="px-3 py-2 font-medium">Created</th>
+            <th className="w-40 pr-4 md:pr-6"><span className="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-neutral-100">
           {forms.map((f) => {
             const hostedUrl = `${origin}/f/${f.embedKey}`;
             const embedSnippet = `<iframe src="${hostedUrl}" width="100%" height="480" style="border:none;"></iframe>`;
             const isBusy = busyId === f.id && isPending;
+            const open = expandedId === f.id;
             return (
-              <div key={f.id} className="rounded-2xl border border-neutral-200 bg-white p-5">
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div>
-                    <p className="text-sm font-medium text-neutral-900">{f.name}</p>
-                    <p className="text-xs text-neutral-500">
-                      {f.submissionCount} submission{f.submissionCount === 1 ? "" : "s"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "text-xs font-medium rounded-full px-2.5 py-1",
-                        f.status === "active"
-                          ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
-                          : "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200"
+              <Fragment key={f.id}>
+                <tr className={cn("group transition-colors", open ? "bg-neutral-50/80" : "hover:bg-neutral-50/80")}>
+                  <td className="min-w-[220px] py-2.5 pl-4 pr-3 md:pl-6">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-600 ring-1 ring-inset ring-sky-100">
+                        <Textbox className="h-4 w-4" weight="duotone" />
+                      </span>
+                      <span className="truncate font-medium text-neutral-900">{f.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <Badge tone={f.status === "active" ? "emerald" : "amber"} dot pulse={f.status === "active"} className="capitalize">{f.status}</Badge>
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-neutral-700">
+                    {f.submissionCount} <span className="text-neutral-400">submission{f.submissionCount === 1 ? "" : "s"}</span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-xs text-neutral-500">{new Date(f.createdAt).toLocaleDateString()}</td>
+                  <td className="py-2.5 pl-2 pr-4 md:pr-6">
+                    <div className="flex items-center justify-end gap-1">
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={() => toggle(f)}
+                          disabled={isBusy}
+                          className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 opacity-0 transition-all hover:bg-neutral-100 hover:text-neutral-900 focus-visible:opacity-100 disabled:opacity-50 group-hover:opacity-100"
+                          aria-label={f.status === "active" ? "Pause" : "Activate"}
+                          title={f.status === "active" ? "Pause" : "Activate"}
+                        >
+                          {isBusy ? <CircleNotch className="h-4 w-4 animate-spin" weight="bold" /> : f.status === "active" ? <Pause className="h-4 w-4" weight="fill" /> : <Play className="h-4 w-4" weight="fill" />}
+                        </button>
                       )}
-                    >
-                      {f.status}
-                    </span>
-                    {canManage && (
-                      <button
-                        onClick={() => toggle(f)}
-                        disabled={isBusy}
-                        className="text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50"
-                        aria-label={f.status === "active" ? "Pause" : "Activate"}
-                      >
-                        {isBusy ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : f.status === "active" ? (
-                          <Pause className="w-4 h-4" />
-                        ) : (
-                          <Play className="w-4 h-4" />
-                        )}
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setExpandedId(expandedId === f.id ? null : f.id)}
-                      className="text-xs text-indigo-600 hover:text-indigo-700 transition-colors"
-                    >
-                      {expandedId === f.id ? "Hide" : "Share"}
-                    </button>
-                  </div>
-                </div>
-
-                {expandedId === f.id && (
-                  <div className="mt-3 pt-3 border-t border-neutral-100 space-y-3">
-                    <div>
-                      <p className="text-xs text-neutral-500 mb-1 flex items-center gap-1.5">
-                        <ExternalLink className="w-3 h-3" />
-                        Hosted link
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 text-xs text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2 truncate">
-                          {hostedUrl}
-                        </code>
-                        <button
-                          onClick={() => copy(hostedUrl, f.id * 2)}
-                          className="text-neutral-500 hover:text-neutral-900 transition-colors shrink-0"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                        {copiedId === f.id * 2 && <span className="text-xs text-emerald-600 shrink-0">Copied</span>}
-                      </div>
+                      <Button variant={open ? "secondary" : "ghost"} size="xs" onClick={() => setExpandedId(open ? null : f.id)}>
+                        <ShareNetwork className="h-3.5 w-3.5" weight="bold" />
+                        {open ? "Hide" : "Share"}
+                        <CaretDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} weight="bold" />
+                      </Button>
                     </div>
-                    <div>
-                      <p className="text-xs text-neutral-500 mb-1 flex items-center gap-1.5">
-                        <Code className="w-3 h-3" />
-                        Embed snippet
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 text-xs text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2 truncate">
-                          {embedSnippet}
-                        </code>
-                        <button
-                          onClick={() => copy(embedSnippet, f.id * 2 + 1)}
-                          className="text-neutral-500 hover:text-neutral-900 transition-colors shrink-0"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                        {copiedId === f.id * 2 + 1 && <span className="text-xs text-emerald-600 shrink-0">Copied</span>}
+                  </td>
+                </tr>
+                {open && (
+                  <tr className="bg-neutral-50/80">
+                    <td colSpan={5} className="px-4 pb-4 pt-1 md:px-6">
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <CopyRow icon={ArrowSquareOut} label="Hosted link" value={hostedUrl} copied={copiedId === f.id * 2} onCopy={() => copy(hostedUrl, f.id * 2)} />
+                        <CopyRow icon={Code} label="Embed snippet" value={embedSnippet} copied={copiedId === f.id * 2 + 1} onCopy={() => copy(embedSnippet, f.id * 2 + 1)} />
                       </div>
-                    </div>
-                  </div>
+                    </td>
+                  </tr>
                 )}
-              </div>
+              </Fragment>
             );
           })}
-        </div>
-      )}
-
-      {modalOpen && <NewFormModal onClose={() => setModalOpen(false)} />}
+        </tbody>
+      </table>
     </div>
   );
 }

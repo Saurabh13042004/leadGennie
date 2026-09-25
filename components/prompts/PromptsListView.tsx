@@ -1,88 +1,77 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import { Plus, BadgeCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { CaretRight, Robot, SealCheck } from "@phosphor-icons/react/ssr";
 import type { PromptSummary } from "@/lib/actions/prompts";
-import NewPromptModal from "./NewPromptModal";
+import Card from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
+import EmptyState from "@/components/ui/EmptyState";
+import { IconTile, shortDate } from "@/components/settings/bits";
+import NewPromptButton from "./NewPromptButton";
+import { statusMeta, typeIcon, typeLabel } from "./meta";
 
-const STATUS_STYLES: Record<string, string> = {
-  draft: "bg-neutral-100 text-neutral-500 ring-1 ring-inset ring-neutral-200",
-  pending_approval: "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200",
-  published: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
-  deprecated: "bg-neutral-100 text-neutral-400 ring-1 ring-inset ring-neutral-200",
-  rejected: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Draft",
-  pending_approval: "Pending approval",
-  published: "Published",
-  deprecated: "Deprecated",
-  rejected: "Rejected",
-};
+const COLS = "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 md:grid-cols-[minmax(0,1fr)_120px_190px_110px_16px]";
 
 export default function PromptsListView({ prompts, canCreate }: { prompts: PromptSummary[]; canCreate: boolean }) {
-  const [modalOpen, setModalOpen] = useState(false);
+  if (prompts.length === 0) {
+    return (
+      <Card>
+        <EmptyState
+          icon={Robot}
+          title="No prompts yet"
+          description="Build a reusable, versioned prompt — draft it, test it against the model, then submit for approval before it can be published."
+          actions={canCreate && <NewPromptButton />}
+        />
+      </Card>
+    );
+  }
 
   return (
-    <div>
-      <div className="flex justify-end mb-4">
-        {canCreate && (
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-800 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            New prompt
-          </button>
-        )}
+    <Card className="overflow-hidden">
+      <div className={`${COLS} border-b border-neutral-200/80 bg-neutral-50/60 px-4 py-2 text-xs font-medium text-neutral-500 md:px-5`}>
+        <span>Prompt</span>
+        <span className="hidden md:block">Live version</span>
+        <span className="hidden md:block">Latest version</span>
+        <span className="hidden md:block">Created</span>
+        <span />
       </div>
-
-      {prompts.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 flex flex-col items-center justify-center text-center py-20 px-6">
-          <p className="text-neutral-900 font-semibold">No prompts yet</p>
-          <p className="text-sm text-neutral-500 mt-1 max-w-sm">
-            Build a reusable, versioned prompt — draft it, test it against the model, then submit for approval
-            before it can be published.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {prompts.map((p) => (
-            <Link
-              key={p.id}
-              href={`/dashboard/ai-prompts/${p.id}`}
-              className="rounded-2xl border border-neutral-200 bg-white p-5 hover:border-neutral-300 hover:shadow-sm transition-all flex flex-col gap-3"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-neutral-900 font-semibold truncate">{p.name}</p>
-                  <p className="text-xs text-neutral-500 capitalize mt-0.5">{p.type.replace("_", " ")}</p>
-                </div>
-                {p.publishedVersion && (
-                  <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-700 shrink-0">
-                    <BadgeCheck className="w-3.5 h-3.5" />v{p.publishedVersion}
+      <ul className="divide-y divide-neutral-100">
+        {prompts.map((p) => {
+          const latest = p.latestStatus ? statusMeta(p.latestStatus) : null;
+          return (
+            <li key={p.id}>
+              <Link href={`/dashboard/ai-prompts/${p.id}`} className={`group ${COLS} px-4 py-3 transition-colors hover:bg-neutral-50/70 md:px-5`}>
+                <span className="flex min-w-0 items-center gap-3">
+                  <IconTile icon={typeIcon(p.type)} className="group-hover:text-indigo-600" />
+                  <span className="min-w-0">
+                    <span className="block truncate text-[13px] font-medium text-neutral-900">{p.name}</span>
+                    <span className="block truncate text-xs text-neutral-500">
+                      {typeLabel(p.type)}
+                      {p.channel ? ` · ${p.channel}` : ""}
+                    </span>
                   </span>
-                )}
-              </div>
-              {p.latestStatus && (
-                <span
-                  className={cn(
-                    "self-start text-xs font-medium rounded-full px-2.5 py-1",
-                    STATUS_STYLES[p.latestStatus]
-                  )}
-                >
-                  Latest: v{p.latestVersion} · {STATUS_LABEL[p.latestStatus]}
                 </span>
-              )}
-            </Link>
-          ))}
-        </div>
-      )}
-
-      {modalOpen && <NewPromptModal onClose={() => setModalOpen(false)} />}
-    </div>
+                <span className="hidden md:block">
+                  {p.publishedVersion ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                      <SealCheck className="h-3.5 w-3.5" weight="fill" />v{p.publishedVersion}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-neutral-400">Not published</span>
+                  )}
+                </span>
+                <span className="hidden md:block">
+                  {latest && (
+                    <Badge tone={latest.tone} dot>
+                      v{p.latestVersion} · {latest.label}
+                    </Badge>
+                  )}
+                </span>
+                <span className="hidden text-xs text-neutral-500 md:block">{shortDate(p.createdAt)}</span>
+                <CaretRight className="h-3.5 w-3.5 text-neutral-300 transition-transform group-hover:translate-x-0.5 group-hover:text-neutral-500" weight="bold" />
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
   );
 }

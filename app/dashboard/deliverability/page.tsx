@@ -1,8 +1,8 @@
-import { Mail } from "lucide-react";
 import { auth } from "@/auth";
 import { listDomains } from "@/lib/actions/domains";
 import { listMailboxes } from "@/lib/actions/mailboxes";
 import DeliverabilityView from "@/components/deliverability/DeliverabilityView";
+import SettingsFrame from "@/components/settings/SettingsFrame";
 
 export const metadata = {
   title: "Email Deliverability | LeadGennie",
@@ -17,17 +17,7 @@ export default async function Page() {
   const canAddMailbox = role !== "viewer";
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto">
-      <div className="flex items-start gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-          <Mail className="w-5 h-5 text-indigo-600" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-neutral-900">Email Deliverability</h1>
-          <p className="text-sm text-neutral-500">Mailboxes, domains & warmup</p>
-        </div>
-      </div>
-
+    <SettingsFrame wide title="Mailboxes & domains" description="Sending domains, the mailboxes on them, and how much each can send per day.">
       <DeliverabilityView
         domains={domains}
         mailboxes={mailboxes}
@@ -36,6 +26,6 @@ export default async function Page() {
         canManage={canManage}
         canApprove={canManage}
       />
-    </div>
+    </SettingsFrame>
   );
 }

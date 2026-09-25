@@ -1,20 +1,38 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Globe, Plus, RefreshCw, ShieldCheck, Trash2, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { ArrowsClockwise, CaretRight, Globe, Plus, SealCheck, ShieldCheck, Trash } from "@phosphor-icons/react/ssr";
 import { cn } from "@/lib/utils";
 import { refreshDomain, triggerVerify, removeDomain, type Domain } from "@/lib/actions/domains";
+import Card, { CardHeader } from "@/components/ui/Card";
+import Badge, { TONE } from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import EmptyState from "@/components/ui/EmptyState";
+import { Callout, IconButton, TD, TH, THEAD_ROW, timeAgo } from "@/components/settings/bits";
 import AddDomainModal from "./AddDomainModal";
+import DnsRecordsTable from "./DnsRecordsTable";
+import { statusMeta, worstTone } from "./status";
 
-const STATUS_STYLES: Record<string, string> = {
-  verified: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
-  pending: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
-  not_started: "bg-neutral-100 text-neutral-500 ring-1 ring-inset ring-neutral-200",
-  failed: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
-  partially_verified: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
-  partially_failed: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
-};
+/** SPF / DKIM / DMARC chips: one per record group, coloured by its worst record status. */
+function RecordChips({ domain }: { domain: Domain }) {
+  const groups = new Map<string, string[]>();
+  for (const r of domain.records) groups.set(r.record, [...(groups.get(r.record) ?? []), r.status]);
+  if (groups.size === 0) return <span className="text-xs text-neutral-400">—</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {[...groups].map(([name, statuses]) => {
+        const tone = worstTone(statuses);
+        return (
+          <span key={name} className="inline-flex h-5 items-center gap-1 rounded-md bg-white px-1.5 text-[11px] font-medium text-neutral-600 ring-1 ring-inset ring-neutral-200">
+            <span className={cn("h-1.5 w-1.5 rounded-full", TONE[tone].dot)} />
+            {name}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function DomainsPanel({ domains, canAdd, canManage }: { domains: Domain[]; canAdd: boolean; canManage: boolean }) {
   const router = useRouter();
@@ -24,178 +42,131 @@ export default function DomainsPanel({ domains, canAdd, canManage }: { domains: 
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  function handleRefresh(id: number) {
+  function run(id: number, fn: () => Promise<unknown>, fallback: string) {
     setBusyId(id);
     setError(null);
     startTransition(async () => {
       try {
-        await refreshDomain(id);
+        await fn();
         router.refresh();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not refresh");
+        setError(e instanceof Error ? e.message : fallback);
       } finally {
         setBusyId(null);
       }
     });
   }
 
-  function handleVerify(id: number) {
-    setBusyId(id);
-    setError(null);
-    startTransition(async () => {
-      try {
-        await triggerVerify(id);
-        router.refresh();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not trigger verification");
-      } finally {
-        setBusyId(null);
-      }
-    });
-  }
-
-  function handleRemove(id: number) {
-    setBusyId(id);
-    setError(null);
-    startTransition(async () => {
-      try {
-        await removeDomain(id);
-        router.refresh();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not remove domain");
-      } finally {
-        setBusyId(null);
-      }
-    });
-  }
+  const handleRefresh = (id: number) => run(id, () => refreshDomain(id), "Could not refresh");
+  const handleVerify = (id: number) => run(id, () => triggerVerify(id), "Could not trigger verification");
+  const handleRemove = (id: number) => run(id, () => removeDomain(id), "Could not remove domain");
 
   return (
-    <div>
-      <div className="flex justify-end mb-4">
-        {canAdd && (
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-800 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add domain
-          </button>
-        )}
-      </div>
+    <Card className="overflow-hidden">
+      <CardHeader
+        title="Sending domains"
+        description="No email sends until its domain passes SPF and DKIM verification."
+        action={
+          canAdd && (
+            <Button size="xs" onClick={() => setModalOpen(true)}>
+              <Plus className="h-3.5 w-3.5" weight="bold" />
+              Add domain
+            </Button>
+          )
+        }
+      />
 
-      {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-3">{error}</p>
-      )}
+      {error && <Callout className="mx-4 mt-3">{error}</Callout>}
 
       {domains.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 flex flex-col items-center justify-center text-center py-20 px-6">
-          <ShieldCheck className="w-10 h-10 text-neutral-300 mb-3" />
-          <p className="text-neutral-900 font-semibold">No sending domains yet</p>
-          <p className="text-sm text-neutral-500 mt-1 max-w-sm">
-            Add a domain to get real SPF/DKIM/DMARC records from Resend — no email can send until its domain is
-            verified.
-          </p>
-        </div>
+        <EmptyState
+          compact
+          icon={ShieldCheck}
+          title="No sending domains yet"
+          description="Add a domain to get real SPF/DKIM/DMARC records from Resend — no email can send until its domain is verified."
+          actions={
+            canAdd && (
+              <Button variant="primary" onClick={() => setModalOpen(true)}>
+                <Plus className="h-4 w-4" weight="bold" /> Add domain
+              </Button>
+            )
+          }
+        />
       ) : (
-        <div className="space-y-3">
-          {domains.map((d) => {
-            const isBusy = busyId === d.id && isPending;
-            return (
-              <div key={d.id} className="rounded-2xl border border-neutral-200 bg-white overflow-hidden">
-                <div className="flex items-center justify-between gap-3 px-4 py-3">
-                  <button
-                    onClick={() => setExpanded(expanded === d.id ? null : d.id)}
-                    className="flex items-center gap-2 min-w-0 text-left"
-                  >
-                    {expanded === d.id ? (
-                      <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-neutral-400 shrink-0" />
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className={THEAD_ROW}>
+                <th className={TH}>Domain</th>
+                <th className={TH}>Status</th>
+                <th className={cn(TH, "hidden sm:table-cell")}>DNS records</th>
+                <th className={cn(TH, "hidden md:table-cell")}>Last checked</th>
+                <th className={TH}><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {domains.map((d) => {
+                const isBusy = busyId === d.id && isPending;
+                const open = expanded === d.id;
+                const s = statusMeta(d.status);
+                return (
+                  <Fragment key={d.id}>
+                    <tr className={cn("group transition-colors hover:bg-neutral-50/70", open && "bg-neutral-50/70")}>
+                      <td className={TD}>
+                        <button
+                          type="button"
+                          onClick={() => setExpanded(open ? null : d.id)}
+                          aria-expanded={open}
+                          className="flex min-w-0 items-center gap-2 text-left"
+                        >
+                          <CaretRight className={cn("h-3 w-3 shrink-0 text-neutral-400 transition-transform", open && "rotate-90")} weight="bold" />
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-neutral-100 text-neutral-500">
+                            {d.status === "verified" ? <SealCheck className="h-3.5 w-3.5 text-emerald-600" weight="fill" /> : <Globe className="h-3.5 w-3.5" weight="duotone" />}
+                          </span>
+                          <span className="truncate font-medium text-neutral-900">{d.name}</span>
+                        </button>
+                      </td>
+                      <td className={TD}><Badge tone={s.tone} dot pulse={d.status === "pending"}>{s.label}</Badge></td>
+                      <td className={cn(TD, "hidden sm:table-cell")}><RecordChips domain={d} /></td>
+                      <td className={cn(TD, "hidden text-xs text-neutral-500 md:table-cell")}>
+                        {d.lastCheckedAt ? <span suppressHydrationWarning>{timeAgo(d.lastCheckedAt)}</span> : "—"}
+                      </td>
+                      <td className={TD}>
+                        {canManage && (
+                          <div className="flex items-center justify-end gap-1">
+                            {d.status !== "verified" && (
+                              <Button size="xs" onClick={() => handleVerify(d.id)} disabled={isBusy}>
+                                <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" weight="duotone" />
+                                Verify now
+                              </Button>
+                            )}
+                            <div className="flex items-center gap-0.5 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                              <IconButton icon={ArrowsClockwise} label="Refresh status" busy={isBusy} disabled={isBusy} onClick={() => handleRefresh(d.id)} />
+                              {d.status === "verified" && (
+                                <IconButton icon={ShieldCheck} label="Verify now" disabled={isBusy} onClick={() => handleVerify(d.id)} />
+                              )}
+                              <IconButton icon={Trash} label="Remove domain" tone="danger" disabled={isBusy} onClick={() => handleRemove(d.id)} />
+                            </div>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                    {open && (
+                      <tr className="bg-neutral-50/70">
+                        <td colSpan={5} className="border-t border-neutral-100 p-0">
+                          <DnsRecordsTable records={d.records} />
+                        </td>
+                      </tr>
                     )}
-                    <Globe className="w-4 h-4 text-indigo-600 shrink-0" />
-                    <span className="text-sm font-medium text-neutral-900 truncate">{d.name}</span>
-                  </button>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span
-                      className={cn(
-                        "text-xs font-medium rounded-full px-2.5 py-1",
-                        STATUS_STYLES[d.status] ?? STATUS_STYLES.not_started
-                      )}
-                    >
-                      {d.status.replace(/_/g, " ")}
-                    </span>
-                    {canManage && (
-                      <>
-                        <button
-                          onClick={() => handleRefresh(d.id)}
-                          disabled={isBusy}
-                          className="text-neutral-400 hover:text-neutral-900 transition-colors disabled:opacity-50"
-                          aria-label="Refresh status"
-                        >
-                          {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                        </button>
-                        <button
-                          onClick={() => handleVerify(d.id)}
-                          disabled={isBusy}
-                          className="text-xs font-medium text-indigo-600 hover:text-indigo-700 border border-indigo-200 bg-indigo-50 rounded-lg px-2.5 py-1 transition-colors disabled:opacity-50"
-                        >
-                          Verify now
-                        </button>
-                        <button
-                          onClick={() => handleRemove(d.id)}
-                          disabled={isBusy}
-                          className="text-neutral-400 hover:text-rose-600 transition-colors disabled:opacity-50"
-                          aria-label="Remove domain"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {expanded === d.id && (
-                  <div className="border-t border-neutral-100 overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead className="bg-neutral-50">
-                        <tr className="text-left text-neutral-500 uppercase tracking-wide font-bold">
-                          <th className="px-4 py-2 font-bold">Record</th>
-                          <th className="px-4 py-2 font-bold">Type</th>
-                          <th className="px-4 py-2 font-bold">Name</th>
-                          <th className="px-4 py-2 font-bold">Value</th>
-                          <th className="px-4 py-2 font-bold">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-neutral-100">
-                        {d.records.map((r, i) => (
-                          <tr key={i}>
-                            <td className="px-4 py-2 text-neutral-900 font-medium">{r.record}</td>
-                            <td className="px-4 py-2 text-neutral-500">{r.type}</td>
-                            <td className="px-4 py-2 text-neutral-500 font-mono break-all">{r.name}</td>
-                            <td className="px-4 py-2 text-neutral-500 font-mono break-all max-w-xs">{r.value}</td>
-                            <td className="px-4 py-2">
-                              <span
-                                className={cn(
-                                  "rounded-full px-2 py-0.5 font-medium",
-                                  STATUS_STYLES[r.status] ?? STATUS_STYLES.not_started
-                                )}
-                              >
-                                {r.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
       {modalOpen && <AddDomainModal onClose={() => setModalOpen(false)} />}
-    </div>
+    </Card>
   );
 }

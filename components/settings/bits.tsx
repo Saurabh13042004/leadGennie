@@ -69,7 +69,8 @@ export function timeAgo(iso: string) {
 }
 
 export function shortDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  // Fixed locale + UTC so server and client render the same text (no hydration mismatch).
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 /** Icon tile used in lists (settings index, integrations, prompts). */

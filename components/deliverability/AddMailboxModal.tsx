@@ -2,9 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Loader2 } from "lucide-react";
 import { requestAddMailbox } from "@/lib/actions/mailboxes";
 import type { Domain } from "@/lib/actions/domains";
+import Button from "@/components/ui/Button";
+import { Help, Input, Label, inputClasses } from "@/components/ui/Field";
+import Modal from "@/components/settings/Modal";
+import { Callout, Spinner } from "@/components/settings/bits";
+import { cn } from "@/lib/utils";
 
 export default function AddMailboxModal({ domains, onClose }: { domains: Domain[]; onClose: () => void }) {
   const router = useRouter();
@@ -32,79 +36,73 @@ export default function AddMailboxModal({ domains, onClose }: { domains: Domain[
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-2xl border border-neutral-200 bg-white shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
-          <h2 className="text-neutral-900 font-semibold">Add mailbox</h2>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-900" aria-label="Close">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {domains.length === 0 ? (
-          <div className="p-6">
-            <p className="text-sm text-neutral-500">Add a sending domain first before adding a mailbox.</p>
-          </div>
+    <Modal
+      title="Add mailbox"
+      description="Adding a mailbox always requires owner/admin approval before it can send (DEL-02)."
+      onClose={onClose}
+      footer={
+        domains.length === 0 ? (
+          <Button onClick={onClose}>Close</Button>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Address</label>
-              <div className="flex items-center gap-2">
-                <input
-                  value={localPart}
-                  onChange={(e) => setLocalPart(e.target.value.replace(/[^a-zA-Z0-9._-]/g, ""))}
-                  required
-                  placeholder="jane"
-                  className="flex-1 rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
-                />
-                <span className="text-sm text-neutral-400">@</span>
-                <select
-                  value={domainId ?? ""}
-                  onChange={(e) => setDomainId(Number(e.target.value))}
-                  className="flex-1 bg-neutral-50 border border-neutral-200 rounded-lg text-sm text-neutral-900 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
-                >
-                  {domains.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {selectedDomain && selectedDomain.status !== "verified" && (
-                <p className="text-xs text-amber-600 mt-1.5">
-                  This domain isn&apos;t verified yet — the mailbox can be approved, but won&apos;t be sendable until
-                  the domain verifies.
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Daily send limit</label>
-              <input
-                type="number"
-                min={1}
-                value={dailyLimit}
-                onChange={(e) => setDailyLimit(Number(e.target.value))}
-                className="w-full rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
-              />
-            </div>
-            <p className="text-xs text-neutral-500">
-              Adding a mailbox always requires owner/admin approval before it can send (DEL-02).
-            </p>
-            {error && (
-              <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{error}</p>
-            )}
-            <button
-              type="submit"
-              disabled={creating}
-              className="w-full flex items-center justify-center gap-2 bg-neutral-900 text-white font-semibold text-sm px-4 py-2.5 rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50"
-            >
-              {creating && <Loader2 className="w-4 h-4 animate-spin" />}
+          <>
+            <Button onClick={onClose}>Cancel</Button>
+            <Button type="submit" form="add-mailbox-form" variant="primary" disabled={creating}>
+              {creating && <Spinner className="h-3.5 w-3.5" />}
               Request mailbox
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+            </Button>
+          </>
+        )
+      }
+    >
+      {domains.length === 0 ? (
+        <div className="px-5 pb-5 pt-3">
+          <Callout tone="info">Add a sending domain first before adding a mailbox.</Callout>
+        </div>
+      ) : (
+        <form id="add-mailbox-form" onSubmit={handleSubmit} className="space-y-4 px-5 pb-5 pt-3">
+          <div>
+            <Label htmlFor="mailbox-local">Address</Label>
+            <div className="flex h-9 items-stretch overflow-hidden rounded-lg ring-1 ring-inset ring-neutral-200 shadow-[0_1px_2px_rgba(0,0,0,0.03)] focus-within:ring-2 focus-within:ring-indigo-500/50">
+              <input
+                id="mailbox-local"
+                autoFocus
+                value={localPart}
+                onChange={(e) => setLocalPart(e.target.value.replace(/[^a-zA-Z0-9._-]/g, ""))}
+                required
+                placeholder="jane"
+                className="min-w-0 flex-1 bg-white px-3 text-[13px] text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+              />
+              <span className="flex items-center border-x border-neutral-200 bg-neutral-50 px-2 text-[13px] text-neutral-400">@</span>
+              <select
+                aria-label="Domain"
+                value={domainId ?? ""}
+                onChange={(e) => setDomainId(Number(e.target.value))}
+                className={cn(inputClasses, "h-full w-auto max-w-[55%] cursor-pointer rounded-none shadow-none ring-0 hover:ring-0 focus:ring-0")}
+              >
+                {domains.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {selectedDomain && selectedDomain.status !== "verified" && (
+              <Callout tone="warning" className="mt-2 text-xs">
+                This domain isn&apos;t verified yet — the mailbox can be approved, but won&apos;t be sendable until the domain verifies.
+              </Callout>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="mailbox-limit">Daily send limit</Label>
+            <div className="flex items-center gap-2">
+              <Input id="mailbox-limit" type="number" min={1} value={dailyLimit} onChange={(e) => setDailyLimit(Number(e.target.value))} className="w-28 tabular-nums" />
+              <span className="text-xs text-neutral-400">emails / day</span>
+            </div>
+            <Help>Start low while the mailbox warms up; you can request an increase later.</Help>
+          </div>
+          {error && <Callout>{error}</Callout>}
+        </form>
+      )}
+    </Modal>
   );
 }

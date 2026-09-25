@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Send, Copy, Ban, Check, X } from "lucide-react";
+import { FloppyDisk, LockKey } from "@phosphor-icons/react/ssr";
 import {
   updateDraftVersion,
   submitForApproval,
@@ -12,27 +12,23 @@ import {
   type SchemaField,
 } from "@/lib/actions/prompts";
 import { decideApproval } from "@/lib/actions/approvals";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import { Label, Textarea } from "@/components/ui/Field";
+import { Callout, Spinner } from "@/components/settings/bits";
 import SchemaFieldEditor from "./SchemaFieldEditor";
+import VersionSidebar from "./VersionSidebar";
 import VersionTestPanel from "./VersionTestPanel";
 
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Draft",
-  pending_approval: "Pending approval",
-  published: "Published",
-  deprecated: "Deprecated",
-  rejected: "Rejected",
-};
-
-const STATUS_BADGE: Record<string, string> = {
-  draft: "bg-neutral-100 text-neutral-500 ring-1 ring-inset ring-neutral-200",
-  pending_approval: "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200",
-  published: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
-  deprecated: "bg-neutral-100 text-neutral-400 ring-1 ring-inset ring-neutral-200",
-  rejected: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
-};
-
-const textareaClass =
-  "w-full rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 disabled:opacity-60 resize-none";
+function Block({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="px-4 py-4 md:px-5">
+      <h3 className="text-[13px] font-semibold text-neutral-900">{title}</h3>
+      {description && <p className="mt-0.5 text-xs text-neutral-500">{description}</p>}
+      <div className="mt-3">{children}</div>
+    </div>
+  );
+}
 
 export default function VersionEditor({
   version,
@@ -84,233 +80,115 @@ export default function VersionEditor({
     }
   }
 
-  async function handleSubmit() {
+  /** Runs a lifecycle action with the shared busy/error handling, then refreshes the page data. */
+  async function act(fn: () => Promise<unknown>, fallback: string) {
     setBusy(true);
     setError(null);
     try {
-      await submitForApproval(version.id);
+      await fn();
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not submit for approval");
+      setError(e instanceof Error ? e.message : fallback);
     } finally {
       setBusy(false);
     }
   }
 
-  async function handleDecide(decision: "approved" | "rejected") {
+  const handleSubmit = () => act(() => submitForApproval(version.id), "Could not submit for approval");
+  const handleDecide = (decision: "approved" | "rejected") => {
     if (!version.approvalId) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await decideApproval(version.approvalId, decision);
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not record decision");
-    } finally {
-      setBusy(false);
-    }
-  }
+    const approvalId = version.approvalId;
+    return act(() => decideApproval(approvalId, decision), "Could not record decision");
+  };
+  const handleDeprecate = () => act(() => deprecateVersion(version.id), "Could not deprecate");
+  const handleClone = () => act(() => cloneVersion(version.id), "Could not clone");
 
-  async function handleDeprecate() {
-    setBusy(true);
-    setError(null);
-    try {
-      await deprecateVersion(version.id);
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not deprecate");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleClone() {
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await cloneVersion(version.id);
-      router.refresh();
-      return result;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not clone");
-    } finally {
-      setBusy(false);
-    }
-  }
+  const guardrails: [string, string, (v: string) => void, string][] = [
+    ["Tone / localization rules", toneRules, setToneRules, "pv-tone"],
+    ["Prohibited claims", prohibitedClaims, setProhibitedClaims, "pv-prohibited"],
+    ["Required sources", requiredSources, setRequiredSources, "pv-sources"],
+    ["Evaluation notes", evalNotes, setEvalNotes, "pv-eval"],
+  ];
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <h2 className="text-neutral-900 font-semibold">Version {version.versionNumber}</h2>
-          <span className={`text-xs font-medium rounded-full px-2.5 py-1 ${STATUS_BADGE[version.status]}`}>
-            {STATUS_LABEL[version.status]}
-          </span>
-          <span className="text-xs text-neutral-400">{version.model}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {version.status === "pending_approval" && canApprove && (
-            <>
-              <button
-                onClick={() => handleDecide("approved")}
-                disabled={busy}
-                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
-              >
-                <Check className="w-3.5 h-3.5" />
-                Approve & publish
-              </button>
-              <button
-                onClick={() => handleDecide("rejected")}
-                disabled={busy}
-                className="flex items-center gap-1.5 text-xs font-medium text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
-              >
-                <X className="w-3.5 h-3.5" />
-                Reject
-              </button>
-            </>
-          )}
-          {version.status === "published" && canApprove && (
-            <button
-              onClick={handleDeprecate}
-              disabled={busy}
-              className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-rose-600 border border-neutral-200 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
-            >
-              <Ban className="w-3.5 h-3.5" />
-              Deprecate
-            </button>
-          )}
-          {!isDraft && canManage && (
-            <button
-              onClick={handleClone}
-              disabled={busy}
-              className="flex items-center gap-1.5 text-xs font-medium text-neutral-700 bg-white hover:bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
-            >
-              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
-              Clone to edit
-            </button>
-          )}
-        </div>
-      </div>
-
-      {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{error}</p>
-      )}
-
-      {version.status === "pending_approval" && !canApprove && (
-        <p className="text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2">
-          Waiting on an owner/admin to review this version.
-        </p>
-      )}
-      {version.status === "rejected" && (
-        <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
-          This version was rejected. Clone it to make changes and resubmit.
-        </p>
-      )}
-
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-            Template <span className="text-neutral-400 font-normal">— use {"{{"} field_key {"}}"} placeholders</span>
-          </label>
-          <textarea
-            value={template}
-            onChange={(e) => setTemplate(e.target.value)}
-            disabled={!isEditable}
-            rows={8}
-            className="w-full rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 disabled:opacity-60 resize-none font-mono"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Input fields</label>
-            <SchemaFieldEditor fields={inputSchema} onChange={setInputSchema} showType={false} disabled={!isEditable} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-              Output schema <span className="text-neutral-400 font-normal">(validated on test)</span>
-            </label>
-            <SchemaFieldEditor fields={outputSchema} onChange={setOutputSchema} showType disabled={!isEditable} />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-neutral-100">
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Tone / localization rules</label>
-            <textarea
-              value={toneRules}
-              onChange={(e) => setToneRules(e.target.value)}
-              disabled={!isEditable}
-              rows={2}
-              className={textareaClass}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Prohibited claims</label>
-            <textarea
-              value={prohibitedClaims}
-              onChange={(e) => setProhibitedClaims(e.target.value)}
-              disabled={!isEditable}
-              rows={2}
-              className={textareaClass}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Required sources</label>
-            <textarea
-              value={requiredSources}
-              onChange={(e) => setRequiredSources(e.target.value)}
-              disabled={!isEditable}
-              rows={2}
-              className={textareaClass}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Evaluation notes</label>
-            <textarea
-              value={evalNotes}
-              onChange={(e) => setEvalNotes(e.target.value)}
-              disabled={!isEditable}
-              rows={2}
-              className={textareaClass}
-            />
-          </div>
-        </div>
-
-        {isEditable && (
-          <div className="flex items-center gap-2 pt-1">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 text-sm font-medium text-neutral-700 bg-white hover:bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
-            >
-              {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Save draft
-            </button>
-          </div>
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="min-w-0 space-y-4">
+        {error && <Callout>{error}</Callout>}
+        {version.status === "pending_approval" && !canApprove && (
+          <Callout tone="info" role="status">Waiting on an owner/admin to review this version.</Callout>
         )}
+        {version.status === "rejected" && <Callout>This version was rejected. Clone it to make changes and resubmit.</Callout>}
+        {!isDraft && version.status !== "rejected" && (
+          <p className="inline-flex items-center gap-1.5 text-xs text-neutral-500">
+            <LockKey className="h-3.5 w-3.5 text-neutral-400" weight="duotone" /> Only drafts can be edited — clone this version to change it.
+          </p>
+        )}
+
+        <Card className="divide-y divide-neutral-100">
+          <Block title="Template" description={<>Use <code className="rounded bg-neutral-100 px-1 font-mono text-[11px] text-neutral-700">{"{{field_key}}"}</code> placeholders for input fields.</>}>
+            <Textarea
+              aria-label="Template"
+              value={template}
+              onChange={(e) => setTemplate(e.target.value)}
+              disabled={!isEditable}
+              rows={9}
+              className="resize-y font-mono text-[12.5px]"
+            />
+          </Block>
+
+          <div className="grid divide-y divide-neutral-100 lg:grid-cols-2 lg:divide-x lg:divide-y-0 xl:grid-cols-1 xl:divide-x-0 xl:divide-y">
+            <Block title="Input fields" description="Values filled in for each lead.">
+              <SchemaFieldEditor fields={inputSchema} onChange={setInputSchema} showType={false} disabled={!isEditable} />
+            </Block>
+            <Block title="Output schema" description="The model's answer is validated against this on test.">
+              <SchemaFieldEditor fields={outputSchema} onChange={setOutputSchema} showType disabled={!isEditable} />
+            </Block>
+          </div>
+
+          <Block title="Guardrails" description="Rules the generated message must follow.">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {guardrails.map(([label, value, set, id]) => (
+                <div key={id}>
+                  <Label htmlFor={id}>{label}</Label>
+                  <Textarea id={id} value={value} onChange={(e) => set(e.target.value)} disabled={!isEditable} rows={2} className="resize-none text-xs" />
+                </div>
+              ))}
+            </div>
+          </Block>
+
+          {isEditable && (
+            <div className="flex items-center justify-end gap-2 rounded-b-xl bg-neutral-50/60 px-4 py-3 md:px-5">
+              <span className="mr-auto text-xs text-neutral-500">Running a test also saves your changes.</span>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? <Spinner className="h-3.5 w-3.5" /> : <FloppyDisk className="h-3.5 w-3.5" weight="bold" />}
+                Save draft
+              </Button>
+            </div>
+          )}
+        </Card>
       </div>
 
-      <VersionTestPanel
-        versionId={version.id}
-        inputSchema={inputSchema}
-        isEditable={isEditable}
-        isDraft={isDraft}
-        lastTestPassed={version.lastTestPassed}
-        beforeTest={saveDraft}
-        onTested={() => router.refresh()}
-      />
-
-      {isDraft && canManage && (
-        <button
-          onClick={handleSubmit}
-          disabled={busy || !version.lastTestPassed}
-          className="flex items-center gap-2 text-sm bg-neutral-900 text-white font-semibold px-4 py-2 rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-40"
-        >
-          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-          Submit for approval
-        </button>
-      )}
+      <div className="space-y-4 xl:sticky xl:top-20 xl:self-start">
+        <VersionSidebar
+          version={version}
+          canManage={canManage}
+          canApprove={canApprove}
+          busy={busy}
+          onDecide={handleDecide}
+          onDeprecate={handleDeprecate}
+          onClone={handleClone}
+          onSubmit={handleSubmit}
+        />
+        <VersionTestPanel
+          versionId={version.id}
+          inputSchema={inputSchema}
+          isEditable={isEditable}
+          isDraft={isDraft}
+          lastTestPassed={version.lastTestPassed}
+          beforeTest={saveDraft}
+          onTested={() => router.refresh()}
+        />
+      </div>
     </div>
   );
 }

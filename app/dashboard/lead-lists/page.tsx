@@ -15,10 +15,12 @@ export default async function AudiencePage() {
   return (
     <>
       <LeadsPageHeader description="Saved audiences, built in plain English" />
-      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-6">
-        <AiFilterBuilder />
-        <AudienceList segments={segments} canManage={canManage} />
+      <div className="border-b border-neutral-200/80 bg-gradient-to-b from-violet-50/50 via-white to-white px-4 py-8 md:px-6">
+        <div className="mx-auto max-w-3xl">
+          <AiFilterBuilder />
+        </div>
       </div>
+      <AudienceList segments={segments} canManage={canManage} />
     </>
   );
 }
