@@ -1,43 +1,83 @@
 {
   "manifest_version": 3,
-  "name": "LeadGennie Automation Engine",
-  "version": "4.2",
-  "description": "Autonomous GTM agent for profile context extraction and campaign execution.",
+  "name": "LeadGennie",
+  "version": "5.0.0",
+  "description": "Capture prospects from any page into LeadGennie and start research — connected to your own workspace, in two clicks.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArFa4liEhr+VBmwIjwzLxHDnv92hhNukQWe4VeTMZMfgy0w1TTMCpuuDTnm0nLvtSRCaWOXQMQgWkjWbS4jt9PjILS1HxinUoyC7pM3yVjHHkZCO7/GPuxQrZ3tOzqvksf3YkChI1x6w9pey8QGxjmM1iU/HGGtfhizMNNaazolydLNQjRW7Et5NFAe5mNl4Md7cRSXOHBXyb+O4djTEF8Wkqozl3NQAKB6eGRiprMwEGQQ3c3I9ScUX1YNlH3GQKvIhLSH+WlLSUieZD/JUg+uN4bL4hIOONxVwzkhGiWu/IO9EiAUB/8jeIHBoYZuH/dxlohY7131v9tJqj+VYLwwIDAQAB",
+  "minimum_chrome_version": "116",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "permissions": [
     "storage",
     "activeTab",
     "scripting",
-    "alarms",
-    "identity",
-    "debugger"
+    "identity"
+  ],
+  "optional_permissions": [
+    "debugger",
+    "alarms"
   ],
   "host_permissions": [
-    "*://*.linkedin.com/*",
     "http://localhost:3000/*",
     "https://leadgennie.com/*",
-    "https://*.vercel.app/*",
-    "https://sheets.googleapis.com/*"
+    "*://*.linkedin.com/*"
   ],
-  "oauth2": {
-    "client_id": "887235773122-vo8pvcvm40gasip93s30m475vo3uvhbc.apps.googleusercontent.com",
-    "scopes": ["https://www.googleapis.com/auth/spreadsheets"]
-  },
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["*://*.linkedin.com/*"],
-      "js": ["content.js"]
+      "matches": [
+        "*://*.linkedin.com/*"
+      ],
+      "js": [
+        "content/widget-loader.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "content/widget.mjs",
+        "ui/dom.js",
+        "ui/icons.js",
+        "ui/capture-card.js",
+        "ui/lead-summary.js",
+        "lib/capture-model.js",
+        "lib/messages.js",
+        "lib/config.js",
+        "lib/page-facts.js",
+        "ui/lg.css",
+        "fonts/Geist-Variable.woff2"
+      ],
+      "matches": [
+        "*://*.linkedin.com/*"
+      ]
     }
   ],
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "LeadGennie Agent"
+    "default_popup": "ui/popup.html",
+    "default_title": "LeadGennie",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "options_ui": {
-    "page": "options.html",
+    "page": "ui/options.html",
     "open_in_tab": true
   }
 }

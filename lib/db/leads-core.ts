@@ -88,11 +88,12 @@ function toLeadRecord(row: Record<string, unknown>): LeadRecord {
 const isUniqueViolation = (err: unknown) => (err as { code?: string } | null)?.code === "23505";
 
 function companySourceFor(leadSource: string): CompanySource {
-  return leadSource === "linkedin_extension" ? "extension" : "manual";
+  return leadSource === "linkedin_extension" || leadSource === "extension" ? "extension" : "manual";
 }
 
 export async function insertLead(workspaceId: number, input: LeadFields, source: string): Promise<LeadRecord> {
-  const v = validateOrThrow(input, source === "manual");
+  // A person reviews both manual entries and extension captures before saving, so anything we'd silently drop is an error.
+  const v = validateOrThrow(input, source === "manual" || source === "extension");
   const stage = input.stage?.trim() || "new";
   await assertLeadEmailAvailable(workspaceId, v.email);
 

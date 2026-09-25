@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { AppError, mapAiError, ok, parseJson, withApi } from "@/lib/api";
-import { extensionAuthFromRequest } from "@/lib/auth/extension-token";
+import { mapAiError, ok, parseJson } from "@/lib/api";
+import { extensionRoute } from "@/lib/extension/route";
 import { generatePersonalizedLinkedinMessage } from "@/lib/ai/linkedin-personalize";
 
 export const dynamic = "force-dynamic";
@@ -12,9 +12,8 @@ const Body = z.object({
   customPrompt: z.string().max(5_000).optional(),
 });
 
-export const POST = withApi(async (request) => {
-  const auth = await extensionAuthFromRequest(request);
-  if (!auth) throw new AppError("UNAUTHENTICATED", "Unauthorized");
+/** LinkedIn connection-note drafting is part of the LinkedIn automation feature (D-05): needs the `automation` scope. */
+export const POST = extensionRoute({ scope: "automation", expensivePerMinute: 20 }, async (request) => {
 
   const { profileUrl, pageText, sdrContext, customPrompt } = await parseJson(request, Body);
 

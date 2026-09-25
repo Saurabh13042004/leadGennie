@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { AppError, mapAiError, ok, parseJson, withApi } from "@/lib/api";
-import { extensionAuthFromRequest } from "@/lib/auth/extension-token";
+import { mapAiError, ok, parseJson } from "@/lib/api";
+import { extensionRoute } from "@/lib/extension/route";
 import { pickLinkedInElement } from "@/lib/ai/linkedin-element-picker";
 
 export const dynamic = "force-dynamic";
@@ -22,9 +22,8 @@ const Body = z.object({
   taskDescription: z.string({ error: "taskDescription is required" }).trim().min(1, "taskDescription is required").max(1_000),
 });
 
-export const POST = withApi(async (request) => {
-  const auth = await extensionAuthFromRequest(request);
-  if (!auth) throw new AppError("UNAUTHENTICATED", "Unauthorized");
+/** Only used by the LinkedIn send path (D-05): needs the `automation` scope, which exists only while the flag is on. */
+export const POST = extensionRoute({ scope: "automation", expensivePerMinute: 30 }, async (request) => {
 
   const { candidates, taskDescription } = await parseJson(request, Body);
 

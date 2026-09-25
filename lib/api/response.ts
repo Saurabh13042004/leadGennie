@@ -46,7 +46,9 @@ export function toResponse(
 ): Response {
   const app = err instanceof AppError ? err : err instanceof ZodError ? fromZodError(err) : null;
   if (app) {
-    return fail(app.code, app.message, { details: app.details, requestId: ctx.requestId, headers: ctx.headers });
+    const headers = new Headers(ctx.headers);
+    if (app.retryAfterSeconds !== undefined) headers.set("retry-after", String(app.retryAfterSeconds));
+    return fail(app.code, app.message, { details: app.details, requestId: ctx.requestId, headers });
   }
   ctx.log?.error("api.unhandled_error", { err });
   return fail("INTERNAL_ERROR", "Something went wrong. Please try again.", {

@@ -13,7 +13,7 @@ export const metadata = {
 export default async function Page() {
   const session = await auth();
   const canManage = session?.user?.role === "owner" || session?.user?.role === "admin";
-  const description = "Authenticate the LeadGennie LinkedIn Chrome extension with a workspace token.";
+  const description = "A shared workspace token for older extension installs. New installs connect with your account instead — see Browser extension.";
 
   if (!canManage) {
     return (

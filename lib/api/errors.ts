@@ -27,12 +27,15 @@ export class AppError extends Error {
   readonly code: ErrorCode;
   readonly status: number;
   readonly details?: ErrorDetail[];
+  /** Set for RATE_LIMITED: surfaced as a `Retry-After` header so clients can back off correctly. */
+  readonly retryAfterSeconds?: number;
 
-  constructor(code: ErrorCode, message: string, details?: ErrorDetail[]) {
+  constructor(code: ErrorCode, message: string, details?: ErrorDetail[], opts: { retryAfterSeconds?: number } = {}) {
     super(message);
     this.name = "AppError";
     this.code = code;
     this.status = ERROR_STATUS[code];
     this.details = details;
+    this.retryAfterSeconds = opts.retryAfterSeconds;
   }
 }

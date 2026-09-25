@@ -10,7 +10,9 @@ import { Input, Label } from "@/components/ui/Field";
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  // Only ever return to a path on this site — never an absolute or protocol-relative URL (open-redirect guard).
+  const requested = searchParams.get("callbackUrl") || "";
+  const callbackUrl = requested.startsWith("/") && !requested.startsWith("//") && !requested.includes("\\") ? requested : "/dashboard";
 
   const [email, setEmail] = useState("demo@leadgennie.ai");
   const [password, setPassword] = useState("");

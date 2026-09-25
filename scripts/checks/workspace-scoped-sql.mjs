@@ -28,6 +28,8 @@ const WS_TABLES = [
   // Phase 2B
   "jobs", "usage_records", "agent_runs", "agent_run_steps", "lead_research", "signals", "evidence",
   "field_provenance", "prospect_candidates", "companies",
+  // Phase 7
+  "extension_sessions", "extension_auth_codes",
 ];
 
 function* walk(dir) {

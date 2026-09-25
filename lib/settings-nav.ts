@@ -1,4 +1,4 @@
-import { ClockCounterClockwise, EnvelopeSimple, Key, Plugs, Prohibit, Robot, Target, UsersThree } from "@phosphor-icons/react/ssr";
+import { ClockCounterClockwise, EnvelopeSimple, Key, Plugs, Prohibit, PuzzlePiece, Robot, Target, UsersThree } from "@phosphor-icons/react/ssr";
 import type { NavIcon } from "@/lib/nav-config";
 
 export type SettingsNavItem = { title: string; description: string; href: string; icon: NavIcon };
@@ -11,7 +11,8 @@ export const settingsNav: SettingsNavGroup[] = [
     items: [
       { title: "Positioning & ICP", description: "What you sell and who you sell to", href: "/dashboard/settings/positioning", icon: Target },
       { title: "Members", description: "Members, roles and invitations", href: "/dashboard/workspace", icon: UsersThree },
-      { title: "API credentials", description: "Workspace token for the Chrome extension", href: "/dashboard/api-credentials", icon: Key },
+      { title: "Browser extension", description: "Connect the Chrome extension and manage connected browsers", href: "/dashboard/settings/extension", icon: PuzzlePiece },
+      { title: "API credentials", description: "Legacy workspace token for older extension installs", href: "/dashboard/api-credentials", icon: Key },
       { title: "Activity log", description: "Who did what, and when", href: "/dashboard/activities", icon: ClockCounterClockwise },
     ],
   },

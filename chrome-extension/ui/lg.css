@@ -1,0 +1,157 @@
+/*
+ * LeadGennie extension design system — the dashboard's own tokens, translated 1:1 from its Tailwind classes
+ * (components/ui/{Card,Button,Badge,Field}.tsx): neutral palette, hairline borders, indigo accent, 13px Geist,
+ * 8/12px radii. Shared by the popup, the options page and the on-page widget (which loads it into a shadow root).
+ */
+
+:root,
+:host {
+  --lg-font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --n-50: #fafafa; --n-100: #f5f5f5; --n-200: #e5e5e5; --n-300: #d4d4d4; --n-400: #a3a3a3;
+  --n-500: #737373; --n-600: #525252; --n-700: #404040; --n-800: #262626; --n-900: #171717; --n-950: #0a0a0a;
+  --indigo-50: #eef2ff; --indigo-200: #c7d2fe; --indigo-500: #6366f1; --indigo-600: #4f46e5; --indigo-700: #4338ca;
+  --emerald-50: #ecfdf5; --emerald-200: #a7f3d0; --emerald-500: #10b981; --emerald-700: #047857;
+  --amber-50: #fffbeb; --amber-200: #fde68a; --amber-500: #f59e0b; --amber-700: #b45309; --amber-800: #92400e;
+  --rose-50: #fff1f2; --rose-200: #fecdd3; --rose-500: #f43f5e; --rose-600: #e11d48; --rose-700: #be123c;
+  --sky-50: #f0f9ff; --sky-200: #bae6fd; --sky-700: #0369a1;
+  --violet-50: #f5f3ff; --violet-200: #ddd6fe; --violet-700: #6d28d9;
+  --shell: #f4f4f3;
+  --ring: 0 0 0 1px rgba(229, 229, 229, 0.8);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.lg-root {
+  font-family: var(--lg-font);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--n-900);
+  -webkit-font-smoothing: antialiased;
+  text-align: left;
+}
+.lg-root *, .lg-root *::before, .lg-root *::after { box-sizing: border-box; }
+.lg-root button, .lg-root input, .lg-root select, .lg-root textarea { font-family: inherit; font-size: inherit; color: inherit; }
+.lg-root h1, .lg-root h2, .lg-root h3, .lg-root p, .lg-root ul, .lg-root ol { margin: 0; padding: 0; }
+.lg-root ul, .lg-root ol { list-style: none; }
+.lg-root a { color: inherit; text-decoration: none; }
+.lg-hidden { display: none !important; }
+
+/* ---- Surfaces ------------------------------------------------------------------------------------------------ */
+.lg-card { background: #fff; border-radius: 12px; box-shadow: var(--ring), var(--shadow-sm); }
+.lg-card-pad { padding: 14px; }
+.lg-sep { height: 1px; background: var(--n-100); border: 0; margin: 0; }
+.lg-panel { background: var(--n-50); border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(229, 229, 229, 0.8); padding: 10px 12px; }
+
+/* ---- Buttons ------------------------------------------------------------------------------------------------- */
+.lg-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px;
+  border: 0; border-radius: 8px; font-weight: 500; font-size: 13px; white-space: nowrap; cursor: pointer;
+  transition: background-color 0.12s, box-shadow 0.12s, color 0.12s; background: transparent;
+}
+.lg-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4); }
+.lg-btn[disabled] { opacity: 0.5; pointer-events: none; }
+.lg-btn-xs { height: 28px; padding: 0 10px; border-radius: 6px; font-size: 12px; }
+.lg-btn-md { height: 36px; padding: 0 14px; font-size: 14px; }
+.lg-btn-block { width: 100%; }
+.lg-btn-primary { background: var(--n-900); color: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+.lg-btn-primary:hover { background: var(--n-800); }
+.lg-btn-accent { background: var(--indigo-600); color: #fff; box-shadow: 0 1px 2px rgba(79, 70, 229, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.18); }
+.lg-btn-accent:hover { background: var(--indigo-500); }
+.lg-btn-secondary { background: #fff; color: var(--n-800); box-shadow: inset 0 0 0 1px var(--n-200), 0 1px 2px rgba(0, 0, 0, 0.04); }
+.lg-btn-secondary:hover { background: var(--n-50); box-shadow: inset 0 0 0 1px var(--n-300), 0 1px 2px rgba(0, 0, 0, 0.04); }
+.lg-btn-ghost { color: var(--n-600); }
+.lg-btn-ghost:hover { background: var(--n-100); color: var(--n-900); }
+.lg-btn-danger { background: #fff; color: var(--rose-600); box-shadow: inset 0 0 0 1px var(--rose-200); }
+.lg-btn-danger:hover { background: var(--rose-50); }
+.lg-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: var(--n-400); cursor: pointer; }
+.lg-icon-btn:hover { background: var(--n-100); color: var(--n-900); }
+.lg-icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4); }
+
+/* ---- Fields -------------------------------------------------------------------------------------------------- */
+.lg-field { display: block; }
+.lg-label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.lg-label { font-size: 12px; font-weight: 500; color: var(--n-800); }
+.lg-hint { font-size: 11px; color: var(--n-400); }
+.lg-input {
+  width: 100%; height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: #fff; font-size: 13px; color: var(--n-900);
+  box-shadow: inset 0 0 0 1px var(--n-200), 0 1px 2px rgba(0, 0, 0, 0.03); transition: box-shadow 0.12s;
+}
+.lg-input::placeholder { color: var(--n-400); }
+.lg-input:hover { box-shadow: inset 0 0 0 1px var(--n-300), 0 1px 2px rgba(0, 0, 0, 0.03); }
+.lg-input:focus { outline: none; box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.5); }
+.lg-input[aria-invalid="true"] { box-shadow: inset 0 0 0 1px var(--rose-500); }
+.lg-input[disabled] { background: var(--n-50); color: var(--n-400); cursor: not-allowed; }
+.lg-help { margin-top: 4px; font-size: 12px; line-height: 1.5; color: var(--n-500); }
+.lg-error { margin-top: 4px; font-size: 12px; color: var(--rose-600); }
+.lg-form { display: flex; flex-direction: column; gap: 10px; }
+.lg-form-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ---- Badges / callouts --------------------------------------------------------------------------------------- */
+.lg-badge { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 6px; border-radius: 6px; font-size: 11px; font-weight: 500; white-space: nowrap; box-shadow: inset 0 0 0 1px var(--n-200); background: var(--n-100); color: var(--n-600); }
+.lg-badge-dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.85; }
+.lg-badge-indigo { background: var(--indigo-50); color: var(--indigo-700); box-shadow: inset 0 0 0 1px rgba(199, 210, 254, 0.7); }
+.lg-badge-emerald { background: var(--emerald-50); color: var(--emerald-700); box-shadow: inset 0 0 0 1px rgba(167, 243, 208, 0.7); }
+.lg-badge-amber { background: var(--amber-50); color: var(--amber-700); box-shadow: inset 0 0 0 1px rgba(253, 230, 138, 0.7); }
+.lg-badge-rose { background: var(--rose-50); color: var(--rose-700); box-shadow: inset 0 0 0 1px rgba(254, 205, 211, 0.7); }
+.lg-badge-sky { background: var(--sky-50); color: var(--sky-700); box-shadow: inset 0 0 0 1px rgba(186, 230, 253, 0.7); }
+.lg-badge-violet { background: var(--violet-50); color: var(--violet-700); box-shadow: inset 0 0 0 1px rgba(221, 214, 254, 0.7); }
+
+.lg-callout { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 8px; font-size: 13px; }
+.lg-callout svg { flex: none; margin-top: 2px; }
+.lg-callout-error { background: var(--rose-50); color: var(--rose-700); box-shadow: inset 0 0 0 1px rgba(254, 205, 211, 0.7); }
+.lg-callout-warning { background: var(--amber-50); color: var(--amber-800); box-shadow: inset 0 0 0 1px rgba(253, 230, 138, 0.7); }
+.lg-callout-success { background: var(--emerald-50); color: var(--emerald-700); box-shadow: inset 0 0 0 1px rgba(167, 243, 208, 0.7); }
+.lg-callout-info { background: var(--indigo-50); color: var(--indigo-700); box-shadow: inset 0 0 0 1px rgba(199, 210, 254, 0.7); }
+
+/* ---- Layout helpers ------------------------------------------------------------------------------------------ */
+.lg-row { display: flex; align-items: center; gap: 8px; }
+.lg-col { display: flex; flex-direction: column; }
+.lg-gap-1 { gap: 4px; } .lg-gap-2 { gap: 8px; } .lg-gap-3 { gap: 12px; } .lg-gap-4 { gap: 16px; }
+.lg-grow { flex: 1 1 auto; min-width: 0; }
+.lg-between { justify-content: space-between; }
+.lg-wrap { flex-wrap: wrap; }
+.lg-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-muted { color: var(--n-500); }
+.lg-faint { color: var(--n-400); }
+.lg-strong { font-weight: 600; color: var(--n-900); }
+.lg-small { font-size: 12px; }
+.lg-tiny { font-size: 11px; }
+.lg-mono { font-family: ui-monospace, "Geist Mono", SFMono-Regular, Menlo, monospace; }
+.lg-tabnum { font-variant-numeric: tabular-nums; }
+.lg-icon { flex: none; width: 16px; height: 16px; fill: currentColor; }
+.lg-icon-sm { width: 14px; height: 14px; }
+.lg-icon-lg { width: 20px; height: 20px; }
+.lg-icon-ok { color: var(--emerald-500); }
+.lg-spin { animation: lg-spin 0.8s linear infinite; }
+@keyframes lg-spin { to { transform: rotate(360deg); } }
+.lg-skeleton { border-radius: 6px; background: linear-gradient(90deg, var(--n-100), var(--n-50), var(--n-100)); background-size: 200% 100%; animation: lg-shimmer 1.4s ease-in-out infinite; }
+@keyframes lg-shimmer { to { background-position: -200% 0; } }
+
+/* ---- Brand mark (same as the dashboard's workspace menu) ------------------------------------------------------ */
+.lg-logo { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 28px; height: 28px; border-radius: 8px; color: #fff;
+  background: linear-gradient(to bottom, var(--n-800), var(--n-950)); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15); }
+.lg-logo svg { width: 14px; height: 14px; fill: currentColor; }
+
+/* ---- Avatar (initials tile) ---------------------------------------------------------------------------------- */
+.lg-avatar { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 28px; height: 28px; border-radius: 8px; font-size: 11px; font-weight: 600;
+  background: var(--indigo-50); color: var(--indigo-700); box-shadow: inset 0 0 0 1px #e0e7ff; }
+.lg-avatar-sky { background: var(--sky-50); color: var(--sky-700); box-shadow: inset 0 0 0 1px #e0f2fe; }
+.lg-avatar-emerald { background: var(--emerald-50); color: var(--emerald-700); box-shadow: inset 0 0 0 1px #d1fae5; }
+.lg-avatar-amber { background: var(--amber-50); color: var(--amber-700); box-shadow: inset 0 0 0 1px #fef3c7; }
+.lg-avatar-rose { background: var(--rose-50); color: var(--rose-700); box-shadow: inset 0 0 0 1px #ffe4e6; }
+.lg-avatar-violet { background: var(--violet-50); color: var(--violet-700); box-shadow: inset 0 0 0 1px #ede9fe; }
+
+/* ---- Tabs (the dashboard's underline NavTabs) ------------------------------------------------------------------ */
+.lg-tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--n-200); padding: 0 14px; }
+.lg-tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 0 9px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: transparent;
+  font-size: 13px; font-weight: 500; color: var(--n-500); cursor: pointer; }
+.lg-tab:hover { color: var(--n-800); }
+.lg-tab[aria-selected="true"] { color: var(--n-900); border-bottom-color: var(--n-900); }
+.lg-tab:focus-visible { outline: none; box-shadow: 0 2px 0 0 rgba(99, 102, 241, 0.5); }
+
+/* ---- Lead rows ----------------------------------------------------------------------------------------------- */
+.lg-lead { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 14px; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.lg-lead:hover { background: var(--n-50); }
+.lg-lead:focus-visible { outline: none; background: var(--n-50); box-shadow: inset 2px 0 0 var(--indigo-500); }
+.lg-lead + .lg-lead { border-top: 1px solid var(--n-100); }
+.lg-progress { height: 4px; border-radius: 4px; background: var(--n-100); overflow: hidden; }
+.lg-progress > i { display: block; height: 100%; background: var(--indigo-500); transition: width 0.3s; }

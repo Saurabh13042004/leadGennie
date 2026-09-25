@@ -1,14 +1,17 @@
 import { z } from "zod";
-import { AppError, ok, parseJson, withApi } from "@/lib/api";
+import { AppError, ok, parseJson } from "@/lib/api";
 import { sql } from "@/lib/db/client";
-import { extensionAuthFromRequest } from "@/lib/auth/extension-token";
+import { extensionRoute } from "@/lib/extension/route";
 
 export const dynamic = "force-dynamic";
 
-export const GET = withApi(async (request) => {
-  const auth = await extensionAuthFromRequest(request);
-  if (!auth) throw new AppError("UNAUTHENTICATED", "Unauthorized");
-  const { workspaceId } = auth;
+/**
+ * D-05: LinkedIn automation is OFF by default. With the flag off the queue is always empty — the extension keeps
+ * polling harmlessly and nothing is ever handed to it to send. The code below is retained for when it is switched on.
+ */
+export const GET = extensionRoute({}, async (_request, identity) => {
+  const { workspaceId } = identity;
+  if (!identity.scopes.includes("automation")) return ok({ items: [], automation: false });
 
   const rows = await sql`
     select
@@ -34,10 +37,8 @@ const ReportBody = z.object({
   error: z.string().max(500).optional(),
 });
 
-export const POST = withApi(async (request) => {
-  const auth = await extensionAuthFromRequest(request);
-  if (!auth) throw new AppError("UNAUTHENTICATED", "Unauthorized");
-  const { workspaceId } = auth;
+export const POST = extensionRoute({ scope: "automation" }, async (request, identity) => {
+  const { workspaceId } = identity;
 
   const { id, status, error } = await parseJson(request, ReportBody);
 
