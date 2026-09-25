@@ -1,8 +1,11 @@
-import { Sparkles } from "lucide-react";
+import { Sparkle } from "@phosphor-icons/react/ssr";
 import type { RecentRun } from "@/lib/domain/gennie/view";
+import PageHeader from "@/components/ui/PageHeader";
 import AskGennie from "./AskGennie";
+import GennieMark from "./GennieMark";
 import RecentRuns from "./RecentRuns";
 
+/** Chat-style landing: greeting, one big composer, starter prompts, then a quiet history list. */
 export default function GennieHome({
   suggestions,
   recent,
@@ -17,29 +20,26 @@ export default function GennieHome({
   canPlan: boolean;
 }) {
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl px-4 py-8 md:px-8">
-          <div className="mb-8 flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50">
-              <Sparkles className="h-5 w-5 text-indigo-600" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-neutral-900">Ask Gennie</h1>
-              <p className="text-sm text-neutral-500">
-                Describe what you want done with your leads — Gennie plans it, you approve, then it runs.
-              </p>
-            </div>
+    <div className="relative min-h-full">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(60%_100%_at_50%_0%,rgba(167,139,250,0.10),rgba(232,121,249,0.04)_45%,transparent_75%)]" />
+      <PageHeader title="Ask Gennie" icon={Sparkle} description="Plan, approve, run" className="bg-white/70" />
+
+      <div className="relative mx-auto w-full max-w-[720px] px-4 pb-16 pt-12 md:px-6 md:pt-[12vh]">
+        <div className="mb-7 flex flex-col items-center text-center">
+          <GennieMark size="lg" glow />
+          <h2 className="mt-5 text-[26px] font-semibold tracking-tight text-neutral-900 md:text-[30px]">What should we work on?</h2>
+          <p className="mt-1.5 max-w-md text-[14px] leading-relaxed text-neutral-500">
+            Describe what you want done with your leads. Gennie drafts a plan, you approve it, then it runs.
+          </p>
+        </div>
+
+        <AskGennie suggestions={suggestions} leadCount={leadCount} canPlan={canPlan} engineAvailable={engineAvailable} />
+
+        {recent.length > 0 && (
+          <div className="-mx-3 mt-12">
+            <RecentRuns runs={recent} />
           </div>
-
-          <RecentRuns runs={recent} />
-        </div>
-      </div>
-
-      <div className="shrink-0 border-t border-neutral-200 bg-white/90 backdrop-blur-md px-4 py-4 md:px-8">
-        <div className="mx-auto max-w-3xl">
-          <AskGennie suggestions={suggestions} leadCount={leadCount} canPlan={canPlan} engineAvailable={engineAvailable} />
-        </div>
+        )}
       </div>
     </div>
   );
