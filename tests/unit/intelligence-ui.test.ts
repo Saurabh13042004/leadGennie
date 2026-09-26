@@ -50,6 +50,11 @@ describe("score + status", () => {
     expect(out).toContain("Qualified");
     expect(out).toContain("some criteria are unknown");
     expect(html(h(ScoreHeader, { intel: intel({ qualified: false, icpScore: 40 }) }))).toContain("Below threshold");
+    // Mostly-unchecked criteria are not a verdict on the lead: say so instead of "Below threshold".
+    const thin = html(h(ScoreHeader, { intel: intel({ qualified: false, icpScore: 15, research: { ...research, icpConfidence: 0.49 } }) }));
+    expect(thin).toContain("Needs more evidence");
+    expect(thin).not.toContain("Below threshold");
+    expect(html(h(ScoreHeader, { intel: intel({ qualified: false, icpScore: 40, research: { ...research, icpConfidence: 0.9 } }) }))).toContain("Below threshold");
   });
 });
 

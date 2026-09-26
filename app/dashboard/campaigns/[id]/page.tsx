@@ -89,6 +89,12 @@ export default async function CampaignPage({ params, searchParams }: { params: P
           {detail.health.workerStalled && c.status === "running" && (
             <Notice tone="warn" title="The sending worker doesn't seem to be running">{detail.health.dueNow} email(s) are due but nothing has been picked up for a few minutes. Start the worker (<code>npm run worker</code>) or point a cron at <code>/api/jobs/tick</code>.</Notice>
           )}
+          {wentOut === 0 && detail.nextSendUpcoming && detail.nextSendAt && (
+            <Notice tone="info" title="Nothing has gone out yet — the first email is scheduled">
+              It&apos;s set for {new Date(detail.nextSendAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: w.timezone })} ({w.timezone}),
+              when your send window ({w.days.map((d) => DAYS[d]).join(", ")} {hh(w.startHour)}–{hh(w.endHour)}) next opens. Nothing sends before then, and it only goes out while the sending worker is running.
+            </Notice>
+          )}
           {c.status === "ready" && <Notice tone="info" title="Approved">Nothing sends until someone clicks Launch.</Notice>}
           {(c.status === "draft" || c.status === "rejected") && <Notice tone="info" title="Not submitted yet">Finish the builder and submit it for approval — nothing is sent from a draft.</Notice>}
 

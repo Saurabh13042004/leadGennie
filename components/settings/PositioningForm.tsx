@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { CheckCircle, LockKey, WarningCircle } from "@phosphor-icons/react/ssr";
-import { saveWorkspaceProfile, type WorkspaceProfileView } from "@/lib/actions/workspace-profile";
+import { saveWorkspaceProfile, suggestIcpKeywords, type WorkspaceProfileView } from "@/lib/actions/workspace-profile";
 import { parseList, type Icp } from "@/lib/domain/workspace/icp";
 import { Section } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Help, Input, Label, Textarea } from "@/components/ui/Field";
 import { Spinner } from "./bits";
-import IcpScoringSection, { type ScoringDraft } from "./IcpScoringSection";
+import IcpScoringSection, { type KeywordSuggester, type ScoringDraft } from "./IcpScoringSection";
 import IcpTestPanel from "./IcpTestPanel";
 
 const join = (l: string[]) => l.join(", ");
@@ -45,6 +45,20 @@ export default function PositioningForm({ initial, canEdit }: { initial: Workspa
   });
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
+  const [suggesting, startSuggest] = useTransition();
+  const [suggestNote, setSuggestNote] = useState<KeywordSuggester["note"]>(null);
+
+  /** Asks the model for keywords from what's typed above (saved or not) and ADDS them to any already entered. Nothing is saved. */
+  function suggestKeywords() {
+    setSuggestNote(null);
+    startSuggest(async () => {
+      const res = await suggestIcpKeywords({ positioning, companyName, industries: parseList(industries), titles: parseList(titles) });
+      if (!res.ok) return setSuggestNote({ ok: false, text: res.error.message });
+      const merged = parseList([scoring.keywords, ...res.data.keywords].join(", ")).slice(0, 20);
+      setScoring((prev) => ({ ...prev, keywords: merged.join(", ") }));
+      setSuggestNote({ ok: true, text: `Filled in from what you sell — review the list, then Save changes.` });
+    });
+  }
 
   /** The ICP as currently edited (saved or not), or a message explaining what's wrong with it. */
   function buildIcp(): Icp | string {
@@ -142,7 +156,7 @@ export default function PositioningForm({ initial, canEdit }: { initial: Workspa
         </div>
       </Section>
 
-      <IcpScoringSection value={scoring} onChange={setScoring} canEdit={canEdit} />
+      <IcpScoringSection value={scoring} onChange={setScoring} canEdit={canEdit} suggester={{ run: suggestKeywords, pending: suggesting, note: suggestNote }} />
 
       <IcpTestPanel getIcp={buildIcp} />
 

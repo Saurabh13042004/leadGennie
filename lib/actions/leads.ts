@@ -10,10 +10,12 @@ import {
   extractCriteriaRegex,
   hasStructuredCriteria,
   matchKnownCompanies,
-  normalize as normalizeCriteria,
   type FilterCriteria,
 } from "@/lib/db/lead-matching";
 import { insertLead, updateLeadFields } from "@/lib/db/leads-core";
+import { deleteLeadsWithoutHistory } from "@/lib/db/leads-bulk";
+import { measureSegment } from "@/lib/db/segment-counts";
+import { revalidateAfterLeadDelete } from "@/lib/actions/lead-paths";
 import { listLeadsPage, getLeadDetail, type LeadDetail, type LeadListPage } from "@/lib/db/leads-list";
 import { parseLeadListParams, type LeadListQuery, type RawSearchParams } from "@/lib/domain/leads/list-query";
 import { leadImportService } from "@/lib/domain/leads/import/service";
@@ -102,11 +104,10 @@ export async function getLead(id: number): Promise<LeadDetail | null> {
 }
 
 /**
- * Deleting a lead cascades to delete its campaign_sends rows (see db/migrations/0001_baseline.sql),
- * which would silently erase the record that they were ever emailed — the
- * exact history compliance tooling (cooldown, DNC audits) relies on. Block
- * deletion once that history exists; Do Not Contact is the right tool for
- * "stop contacting this person" instead.
+ * Deleting a lead cascades to its campaign_sends rows (see db/migrations/0001_baseline.sql), which for a lead that was
+ * actually emailed would silently erase the record that they ever were — the exact history compliance tooling (cooldown,
+ * DNC audits) relies on. So a lead that was contacted can't be deleted; Do Not Contact is the right tool for "stop
+ * contacting this person". A lead that was only scheduled to be emailed can: it leaves its campaigns and audiences with it.
  */
 export async function deleteLead(id: number): Promise<void> {
   const { workspaceId, userId } = await requireRole("admin");
@@ -114,19 +115,17 @@ export async function deleteLead(id: number): Promise<void> {
   const leadRows = await sql`select id from leads where id = ${id} and workspace_id = ${workspaceId}`;
   if (leadRows.length === 0) throw new Error("Lead not found");
 
-  const sendCount = await sql`select count(*)::int as count from campaign_sends where lead_id = ${id} and workspace_id = ${workspaceId}`;
-  if ((sendCount[0].count as number) > 0) {
+  const { deleted } = await deleteLeadsWithoutHistory(workspaceId, [id]);
+  if (deleted.length === 0) {
     throw new Error(
       "This lead has message history and can't be deleted — add them to Do Not Contact instead if you want to stop contacting them."
     );
   }
-
-  await sql`delete from leads where id = ${id} and workspace_id = ${workspaceId}`;
   await logActivity({
     workspaceId, actorUserId: userId, type: "lead.deleted", entityType: "lead", entityId: null,
     summary: "Deleted a lead", metadata: { lead_id: id },
   });
-  revalidatePath("/dashboard/leads");
+  revalidateAfterLeadDelete();
 }
 
 export type ImportRow = {
@@ -278,27 +277,14 @@ export async function listSegments(): Promise<SegmentSummary[]> {
 
   const segments: SegmentSummary[] = [];
   for (const r of rows) {
-    let criteria = normalizeCriteria(r.criteria as FilterCriteria);
     const prompt = r.prompt as string | null;
-    if (prompt) {
-      const knownCompanyMatches = await matchKnownCompanies(workspaceId, prompt);
-      if (knownCompanyMatches.length > 0) {
-        criteria = {
-          ...criteria,
-          companies: Array.from(new Set([...(criteria.companies ?? []), ...knownCompanyMatches])),
-        };
-      }
-    }
-    const matchedCount = await countMatchingLeads(workspaceId, criteria);
-    const estimateMethod: EstimateMethod =
-      matchedCount > 0 ? "measured" : hasStructuredCriteria(criteria) ? "no_matches" : "unmeasurable";
-
+    const { criteria, leadCount, estimateMethod } = await measureSegment(workspaceId, prompt, r.criteria);
     segments.push({
       id: r.id as number,
       name: r.name as string,
       prompt,
       criteria,
-      leadCount: matchedCount,
+      leadCount,
       estimateMethod,
       createdAt: r.created_at as string,
     });

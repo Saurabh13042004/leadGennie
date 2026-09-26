@@ -9,6 +9,8 @@ import type { LeadIntelligence } from "@/lib/intelligence/read-model";
 export default function ScoreHeader({ intel }: { intel: LeadIntelligence }) {
   const confidence = intel.research?.icpConfidence;
   const score = intel.icpScore;
+  // Most criteria unchecked (no verified evidence yet) ⇒ "below threshold" would read as a verdict on the lead it isn't.
+  const thin = confidence !== null && confidence !== undefined && confidence < 0.7;
   const bar = score === null ? "" : score >= 80 ? "bg-emerald-500" : score >= 60 ? "bg-amber-500" : "bg-neutral-400";
   return (
     <Card className="flex flex-col p-4">
@@ -21,7 +23,7 @@ export default function ScoreHeader({ intel }: { intel: LeadIntelligence }) {
               Qualified
             </Badge>
           ) : (
-            <Badge tone="neutral">Below threshold</Badge>
+            <Badge tone={thin ? "amber" : "neutral"}>{thin ? "Needs more evidence" : "Below threshold"}</Badge>
           ))}
       </div>
       <div className="mt-2 flex items-baseline gap-1.5">
@@ -35,7 +37,12 @@ export default function ScoreHeader({ intel }: { intel: LeadIntelligence }) {
       )}
       {confidence !== null && confidence !== undefined && (
         <p className="mt-2 text-xs text-neutral-500" title="Criteria we couldn't verify count as unknown, not as misses — they lower confidence, never the score.">
-          Confidence {Math.round(confidence * 100)}%{confidence < 0.7 ? " — some criteria are unknown" : ""}
+          Confidence {Math.round(confidence * 100)}%{thin ? " — some criteria are unknown" : ""}
+        </p>
+      )}
+      {thin && intel.qualified === false && (
+        <p className="mt-1 text-xs leading-snug text-neutral-500">
+          This is only what we could verify — many criteria weren&apos;t checkable yet, so it says little about fit. Run research to fill the gaps.
         </p>
       )}
       <div className="min-h-3 flex-1" />

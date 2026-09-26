@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth/workspace-context";
 import { logActivity } from "@/lib/activity";
 import { runAction, type ActionResult } from "@/lib/api/action";
 import { addLeadsToDnc, deleteLeadsWithoutHistory } from "@/lib/db/leads-bulk";
+import { revalidateAfterLeadDelete } from "@/lib/actions/lead-paths";
 
 const idsSchema = z.array(z.number().int().positive()).min(1, "Select at least one lead.").max(500, "Select at most 500 leads at a time.");
 
@@ -40,7 +41,7 @@ export async function bulkDeleteLeads(leadIds: number[]): Promise<ActionResult<B
       summary: `Deleted ${deleted.length} lead${deleted.length === 1 ? "" : "s"}${blocked.length ? ` (${blocked.length} kept: already contacted)` : ""}`,
       metadata: { deleted: deleted.length, kept: blocked.length },
     });
-    revalidatePath("/dashboard/leads");
+    revalidateAfterLeadDelete();
     return { deleted: deleted.length, keptBecauseContacted: blocked.length };
   });
 }

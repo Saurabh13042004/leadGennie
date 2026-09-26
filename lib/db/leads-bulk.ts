@@ -26,19 +26,46 @@ export async function addLeadsToDnc(
 }
 
 /**
- * Deletes leads that have no send history. A lead that was ever emailed cannot
- * be deleted — its campaign_sends rows are the record cooldown/DNC audits rely
- * on (Do Not Contact is the right tool there).
+ * Deletes leads that were never emailed. A lead that was ever contacted cannot be deleted — its campaign_sends /
+ * messages rows are the record cooldown/DNC audits rely on (Do Not Contact is the right tool there). Emails that were
+ * only SCHEDULED (pending, canceled or blocked) are not history: they go with the lead.
+ *
+ * The campaigns the lead was enrolled in are kept truthful in the same statement: their stored "enrolled"/"excluded"
+ * counters drop by the leads that just disappeared (enrollment rows and pending sends cascade with the lead).
  */
 export async function deleteLeadsWithoutHistory(
   workspaceId: number,
   leadIds: number[],
 ): Promise<{ deleted: number[]; blocked: number[] }> {
   const rows = await sql.query(
-    `delete from leads l
-     where l.workspace_id = $1 and l.id = any($2::bigint[])
-       and not exists (select 1 from campaign_sends cs where cs.lead_id = l.id)
-     returning l.id`,
+    `with gone as (
+       delete from leads l
+       where l.workspace_id = $1 and l.id = any($2::bigint[])
+         and not exists (select 1 from campaign_sends cs where cs.lead_id = l.id and cs.status not in ('pending', 'canceled', 'blocked'))
+         and not exists (select 1 from messages m where m.lead_id = l.id)
+       returning l.id
+     ),
+     lost as (
+       select x.campaign_id, count(*) filter (where not x.excluded)::int as enrolled, count(*) filter (where x.excluded)::int as excluded
+       from (
+         select cl.campaign_id, cl.lead_id, (cl.status = 'blocked') as excluded
+           from campaign_leads cl where cl.workspace_id = $1 and cl.lead_id in (select id from gone)
+         union
+         select cs.campaign_id, cs.lead_id, false
+           from campaign_sends cs
+          where cs.workspace_id = $1 and cs.lead_id in (select id from gone)
+            and not exists (select 1 from campaign_leads c2 where c2.campaign_id = cs.campaign_id and c2.lead_id = cs.lead_id)
+       ) x
+       group by x.campaign_id
+     ),
+     counted as (
+       update campaigns c
+          set total_leads = greatest(c.total_leads - lost.enrolled, 0), blocked_count = greatest(c.blocked_count - lost.excluded, 0)
+         from lost
+        where c.id = lost.campaign_id and c.workspace_id = $1
+       returning c.id
+     )
+     select id from gone`,
     [workspaceId, leadIds],
   );
   const deleted = rows.map((r) => Number(r.id));

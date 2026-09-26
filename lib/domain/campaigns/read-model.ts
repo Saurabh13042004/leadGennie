@@ -58,6 +58,8 @@ export type CampaignDetail = {
   leads: CampaignLeadRow[];
   sendCounts: Record<string, number>;
   nextSendAt: string | null;
+  /** The next scheduled send is still in the future — i.e. nothing is overdue, the campaign is just waiting for its window. */
+  nextSendUpcoming: boolean;
   lockedStepIds: number[];
   /** From `messages` (what the provider actually accepted and told us) — not from a counter. */
   messages: { sending: number; sent: number; delivered: number; bounced: number; complained: number; failed: number };
@@ -123,6 +125,7 @@ export async function getCampaignDetail(workspaceId: number, id: number, opts: {
     })),
     sendCounts: tally(sendRows),
     nextSendAt: nextRows[0]?.at && (campaign.status === "running" || campaign.status === "paused") ? new Date(String(nextRows[0].at)).toISOString() : null,
+    nextSendUpcoming: !!nextRows[0]?.at && campaign.status === "running" && new Date(String(nextRows[0].at)).getTime() > Date.now(),
     lockedStepIds: lockedRows.map((r) => Number(r.step_id)),
     messages: { sending: m.sending ?? 0, sent: m.sent ?? 0, delivered: m.delivered ?? 0, bounced: m.bounced ?? 0, complained: m.complained ?? 0, failed: m.failed ?? 0 },
     failedSends: failedRows.map((r) => ({ sendId: Number(r.id), leadName: String(r.full_name), email: (r.email as string | null) ?? null, step: Number(r.step_order), error: String(r.error_message ?? "Failed") })),

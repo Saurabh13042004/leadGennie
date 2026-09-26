@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { CircleNotch, ShieldCheck, WarningCircle } from "@phosphor-icons/react/ssr";
 import { saveCampaignBasics } from "@/lib/actions/campaign-builder";
@@ -20,6 +20,14 @@ import { useSave } from "./useSave";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const COMMON_TZ = ["UTC", "America/New_York", "America/Chicago", "America/Los_Angeles", "Europe/London", "Europe/Berlin", "Asia/Kolkata", "Asia/Singapore", "Australia/Sydney"];
+const subscribeNever = () => () => {};
+const browserTimezone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    return null;
+  }
+};
 const hour = (h: number) => `${String(h % 24).padStart(2, "0")}:00`;
 
 export default function BasicsSection({ view, mailboxes, editable, onSaved, nav }: { view: BuilderView; mailboxes: Mailbox[]; editable: boolean; onSaved: (v: BuilderView) => void; nav: BuilderNav }) {
@@ -32,10 +40,18 @@ export default function BasicsSection({ view, mailboxes, editable, onSaved, nav 
   const [days, setDays] = useState<number[]>(c.sendWindow.days);
   const [startHour, setStartHour] = useState(c.sendWindow.startHour);
   const [endHour, setEndHour] = useState(c.sendWindow.endHour);
-  const [timezone, setTimezone] = useState(c.sendWindow.timezone);
+  const [tzChoice, setTzChoice] = useState<string | null>(null);
   const [fallback, setFallback] = useState(c.allowTemplateFallback);
   const { pending, message, save } = useSave(onSaved);
   const mailbox = mailboxes.find((m) => m.id === mailboxId);
+
+  // New campaigns start in UTC, which puts a 9–5 window in the middle of the night for most people. Until the timezone has been
+  // saved as something else, offer the browser's (null on the server, so hydration matches). Only the form uses it; Save keeps it.
+  const browserTz = useSyncExternalStore(subscribeNever, browserTimezone, () => null);
+  const suggestedTz = editable && c.sendWindow.timezone === "UTC" && browserTz && browserTz !== "UTC" ? browserTz : null;
+  const timezone = tzChoice ?? suggestedTz ?? c.sendWindow.timezone;
+  const tzFromBrowser = tzChoice === null && suggestedTz !== null;
+
   const zones = COMMON_TZ.includes(timezone) ? COMMON_TZ : [timezone, ...COMMON_TZ];
 
   const submit = () =>
@@ -111,7 +127,7 @@ export default function BasicsSection({ view, mailboxes, editable, onSaved, nav 
               <div className="grid grid-cols-3 gap-3">
                 <Field label="From" htmlFor="c-start"><Select id="c-start" value={startHour} onChange={(e) => setStartHour(Number(e.target.value))}>{Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{hour(h)}</option>)}</Select></Field>
                 <Field label="Until" htmlFor="c-end"><Select id="c-end" value={endHour} onChange={(e) => setEndHour(Number(e.target.value))}>{Array.from({ length: 24 }, (_, h) => h + 1).map((h) => <option key={h} value={h}>{hour(h)}{h === 24 ? " (midnight)" : ""}</option>)}</Select></Field>
-                <Field label="Timezone" htmlFor="c-tz"><Select id="c-tz" value={timezone} onChange={(e) => setTimezone(e.target.value)}>{zones.map((z) => <option key={z} value={z}>{z}</option>)}</Select></Field>
+                <Field label="Timezone" htmlFor="c-tz" help={tzFromBrowser ? "Set to this browser's timezone — click Save to keep it." : undefined}><Select id="c-tz" value={timezone} onChange={(e) => setTzChoice(e.target.value)}>{zones.map((z) => <option key={z} value={z}>{z}</option>)}</Select></Field>
               </div>
             </div>
           </Section>

@@ -5,6 +5,9 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/workspace-context";
 import { logActivity } from "@/lib/activity";
 import { AppError, runAction, type ActionResult } from "@/lib/api";
+import { LlmError } from "@/lib/ai/client";
+import { proposeIcpKeywords } from "@/lib/ai/icp-suggest";
+import { recordUsage, type UsageItem } from "@/lib/domain/usage/record";
 import {
   getOnboardingFacts,
   getWorkspaceProfile,
@@ -64,6 +67,37 @@ export async function saveWorkspaceProfile(input: unknown): Promise<ActionResult
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/settings/positioning");
     return { positioning: parsed.positioning, companyName: parsed.companyName, icp, rescoring };
+  });
+}
+
+const suggestSchema = z.object({
+  positioning: z.string().trim().min(10, "Describe what you sell first — a sentence or two is enough.").max(2000),
+  companyName: z.string().trim().max(200).default(""),
+  industries: z.array(z.string().trim().max(80)).max(30).default([]),
+  titles: z.array(z.string().trim().max(80)).max(30).default([]),
+});
+
+/**
+ * Owner/admin: proposes "keywords that signal fit" from the (possibly unsaved) positioning on screen. Read-only — nothing
+ * is stored; the person reviews the list and saves the form.
+ */
+export async function suggestIcpKeywords(input: unknown): Promise<ActionResult<{ keywords: string[] }>> {
+  return runAction(async () => {
+    const { workspaceId, userId } = await requireRole("admin");
+    const parsed = suggestSchema.parse(input);
+    const usage: UsageItem[] = [];
+    let keywords: string[];
+    try {
+      keywords = await proposeIcpKeywords(parsed, {
+        onUsage: (u) => usage.push({ kind: "llm", provider: "openai", model: u.model, tokensIn: u.tokensIn, tokensOut: u.tokensOut }),
+      });
+    } catch (e) {
+      if (e instanceof LlmError) throw new AppError("PROVIDER_ERROR", "Couldn't get suggestions right now. Try again, or type the keywords yourself.");
+      throw e;
+    }
+    await recordUsage({ workspaceId, userId }, usage, { type: "icp_keyword_suggestion" }).catch(() => {});
+    if (keywords.length === 0) throw new AppError("PROVIDER_ERROR", "No useful keywords came back. Add more detail to what you sell and try again.");
+    return { keywords };
   });
 }
 

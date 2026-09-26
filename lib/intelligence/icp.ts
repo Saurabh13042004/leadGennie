@@ -2,6 +2,21 @@ import type { Icp } from "@/lib/domain/workspace/icp";
 import type { EngineIcp } from "./schemas";
 
 /**
+ * All keyword signals together may carry at most this much weight (against the four core criteria's ~85). Each keyword used
+ * to carry a full 10, so eight of them outweighed everything else: a perfect title match scored 15/100 because 48% of the
+ * score hung on words a company only mentions if we happen to have read the right page.
+ */
+export const KEYWORD_WEIGHT_BUDGET = 20;
+
+/** Keeps every keyword's relative weight but scales them down so their total never exceeds KEYWORD_WEIGHT_BUDGET. */
+export function budgetKeywordWeights(keywords: { keyword: string; weight: number }[]): { keyword: string; weight: number }[] {
+  const total = keywords.reduce((sum, k) => sum + Math.max(0, k.weight), 0);
+  if (total <= KEYWORD_WEIGHT_BUDGET) return keywords.map((k) => ({ keyword: k.keyword, weight: k.weight }));
+  const scale = KEYWORD_WEIGHT_BUDGET / total;
+  return keywords.map((k) => ({ keyword: k.keyword, weight: Math.round(Math.max(0, k.weight) * scale * 100) / 100 }));
+}
+
+/**
  * The workspace ICP (plain, human-editable lists + scoring weights) → the engine's weighted scoring schema.
  * Values stay free text ("India", "cto", "Tech / Software"): the engine normalizes them against its own taxonomy
  * (single implementation — nothing is duplicated here). Deterministic: same ICP ⇒ same engine ICP.
@@ -14,7 +29,7 @@ export function toEngineIcp(icp: Icp): EngineIcp {
     employee_range: range && (range.min !== null || range.max !== null) ? { min: range.min, max: range.max, weight: w.employee_range } : null,
     geographies: icp.geographies.map((value) => ({ value, weight: w.geography })),
     titles: icp.titles.length > 0 ? [{ keywords: icp.titles, weight: w.title }] : [],
-    keyword_signals: icp.scoring.keywords.map((k) => ({ keyword: k.keyword, weight: k.weight })),
+    keyword_signals: budgetKeywordWeights(icp.scoring.keywords),
     exclusions: { industries: icp.exclusions.industries, domains: icp.exclusions.domains, titles: icp.exclusions.titles },
     min_score_to_qualify: icp.scoring.min_score_to_qualify,
   };

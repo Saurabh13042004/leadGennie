@@ -1,6 +1,8 @@
 "use client";
 
+import { CircleNotch, Sparkle } from "@phosphor-icons/react/ssr";
 import { Section } from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 import { Help, Input, Label } from "@/components/ui/Field";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +20,9 @@ const WEIGHT_LABELS: [keyof ScoringDraft["weights"], string, string][] = [
 ];
 
 /** How the engine scores leads against the ICP above. Weights are relative — they are normalized to 100. */
-export default function IcpScoringSection({ value, onChange, canEdit }: { value: ScoringDraft; onChange: (v: ScoringDraft) => void; canEdit: boolean }) {
+export type KeywordSuggester = { run: () => void; pending: boolean; note: { ok: boolean; text: string } | null };
+
+export default function IcpScoringSection({ value, onChange, canEdit, suggester }: { value: ScoringDraft; onChange: (v: ScoringDraft) => void; canEdit: boolean; suggester?: KeywordSuggester }) {
   const nums = WEIGHT_LABELS.map(([k]) => Math.max(0, Number(value.weights[k]) || 0));
   const total = nums.reduce((a, b) => a + b, 0);
 
@@ -60,12 +64,25 @@ export default function IcpScoringSection({ value, onChange, canEdit }: { value:
           </div>
 
           <div>
-            <Label htmlFor="icp-keywords">Keywords that signal fit</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="icp-keywords">Keywords that signal fit</Label>
+              {suggester && canEdit && (
+                <Button size="xs" variant="secondary" onClick={suggester.run} disabled={suggester.pending} title="Suggest keywords from what you sell">
+                  {suggester.pending ? <CircleNotch className="h-3.5 w-3.5 animate-spin" weight="bold" /> : <Sparkle className="h-3.5 w-3.5" weight="fill" />}
+                  {suggester.pending ? "Suggesting…" : "Fill with AI"}
+                </Button>
+              )}
+            </div>
             <Input
               id="icp-keywords" disabled={!canEdit} placeholder="outbound, SDR, sales automation"
               value={value.keywords} onChange={(e) => onChange({ ...value, keywords: e.target.value })}
             />
-            <Help>Matched against verified evidence (a company&apos;s own pages, job listings, news). Each adds to the score if found.</Help>
+            <Help>
+              Words a good-fit <em>company</em> would mention about itself — matched against verified evidence (its own pages, job listings, news). Job titles belong in Target titles above. Together they can add up to about 20 points; a keyword we don&apos;t find is unknown, not a miss.
+            </Help>
+            {suggester?.note && (
+              <p role="status" className={cn("mt-1.5 text-xs", suggester.note.ok ? "text-emerald-600" : "text-rose-600")}>{suggester.note.text}</p>
+            )}
           </div>
 
           <div>

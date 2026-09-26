@@ -20,6 +20,9 @@ import { POST as actionRoute } from "@/app/api/campaigns/[id]/[action]/route";
 import { GET as previewRoute } from "@/app/api/campaigns/[id]/preview/route";
 import { POST as resolveRoute } from "@/app/api/campaigns/[id]/audience/resolve/route";
 import { createCampaignFromWizard } from "@/lib/actions/campaign-builder";
+import { listAudienceOptions, listSegments as listCampaignSegments } from "@/lib/actions/campaigns";
+import { deleteLead } from "@/lib/actions/leads";
+import { deleteLeadsWithoutHistory } from "@/lib/db/leads-bulk";
 
 type W = Awaited<ReturnType<typeof setup>>;
 const one = async <T>(q: PromiseLike<T[]>) => (await q)[0];
@@ -398,6 +401,44 @@ describe("editing after approval", () => {
   });
 });
 
+describe("deleting a lead", () => {
+  it("takes the lead out of a running campaign and keeps its counts true", async () => {
+    const { id } = await readyCampaign(w);
+    await launchCampaign(w.actor, id);
+    expect((await loadCampaign(w.workspaceId, id)).totalLeads).toBe(3);
+
+    await deleteLead(w.leads[0].id);
+
+    expect((await loadCampaign(w.workspaceId, id)).totalLeads).toBe(2);
+    expect(await n(sql`select count(*)::int as n from campaign_leads where campaign_id = ${id}`)).toBe(2);
+    expect(await n(sql`select count(*)::int as n from campaign_sends where campaign_id = ${id} and status = 'pending'`)).toBe(2 * STEPS.length);
+    expect((await getCampaignDetail(w.workspaceId, id)).leads.map((l) => l.leadId)).not.toContain(w.leads[0].id);
+  });
+
+  it("keeps a lead that was already emailed — and the campaign's counts", async () => {
+    const { id } = await readyCampaign(w);
+    await launchCampaign(w.actor, id);
+    await sql`update campaign_sends set status = 'sent', sent_at = now() where campaign_id = ${id} and lead_id = ${w.leads[1].id} and status = 'pending' and id = (select min(id) from campaign_sends where campaign_id = ${id} and lead_id = ${w.leads[1].id})`;
+
+    await expect(deleteLead(w.leads[1].id)).rejects.toThrow(/message history/);
+    const bulk = await deleteLeadsWithoutHistory(w.workspaceId, [w.leads[1].id, w.leads[2].id]);
+    expect(bulk.deleted).toEqual([w.leads[2].id]);
+    expect(bulk.blocked).toEqual([w.leads[1].id]);
+    expect((await loadCampaign(w.workspaceId, id)).totalLeads).toBe(2);
+  });
+
+  it("a saved audience's size is measured now, not the count stored when it was saved", async () => {
+    await sql`insert into segments (workspace_id, name, prompt, criteria, lead_count) values (${w.workspaceId}, 'Acme + Globex', null, ${JSON.stringify({ companies: ["Acme", "Globex"] })}, 2)`;
+    const count = async () => ({
+      picker: (await listAudienceOptions()).find((a) => a.name === "Acme + Globex")?.leadCount,
+      edit: (await listCampaignSegments()).find((a) => a.name === "Acme + Globex")?.lead_count,
+    });
+    expect(await count()).toEqual({ picker: 2, edit: 2 });
+    await deleteLead(w.leads[0].id);
+    expect(await count()).toEqual({ picker: 1, edit: 1 });
+  });
+});
+
 describe("pause / resume / cancel", () => {
   it("pause stops dispatch and clears next actions; resume shifts pending sends instead of bursting", async () => {
     const { id } = await readyCampaign(w);
@@ -407,6 +448,8 @@ describe("pause / resume / cancel", () => {
     expect(await n(sql`select count(*)::int as n from campaign_leads where campaign_id = ${id} and next_action_at is not null`)).toBe(0);
     expect((await runSends({ workspaceId: w.workspaceId })).sent).toBe(0);
 
+    // Sends that came due while the campaign was paused (whatever day the test happens to run on).
+    await sql`update campaign_sends set scheduled_at = now() - interval '1 hour' where campaign_id = ${id} and status = 'pending'`;
     const before = await sql`select id, scheduled_at from campaign_sends where campaign_id = ${id} and status = 'pending' order by id`;
     await sql`update campaigns set paused_at = now() - interval '2 days 3 hours' where id = ${id}`;
     await resumeCampaign(w.actor, id);
@@ -415,6 +458,18 @@ describe("pause / resume / cancel", () => {
     expect(shift).toBe(3);
     expect(await n(sql`select count(*)::int as n from campaign_leads where campaign_id = ${id} and next_action_at is not null`)).toBe(3);
     await expect(resumeCampaign(w.actor, id)).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  it("resuming when nothing came due while paused leaves every scheduled send where it was", async () => {
+    const { id } = await readyCampaign(w);
+    await launchCampaign(w.actor, id);
+    await sql`update campaign_sends set scheduled_at = now() + interval '3 days' where campaign_id = ${id} and status = 'pending'`;
+    await pauseCampaign(w.actor, id);
+    await sql`update campaigns set paused_at = now() - interval '2 hours' where id = ${id}`;
+    const before = await sql`select id, scheduled_at from campaign_sends where campaign_id = ${id} and status = 'pending' order by id`;
+    await resumeCampaign(w.actor, id);
+    const after = await sql`select id, scheduled_at from campaign_sends where campaign_id = ${id} and status = 'pending' order by id`;
+    expect(after.map((r) => new Date(String(r.scheduled_at)).getTime())).toEqual(before.map((r) => new Date(String(r.scheduled_at)).getTime()));
   });
 
   it("cancel stops every lead, cancels pending sends, and is final", async () => {

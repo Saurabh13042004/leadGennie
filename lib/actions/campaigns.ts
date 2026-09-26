@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth/workspace-context";
 import { filterCompliantLeads } from "@/lib/compliance";
 import { createApprovalRequest } from "@/lib/approvals-core";
 import { logActivity } from "@/lib/activity";
+import { measureSegment } from "@/lib/db/segment-counts";
 import { isOAuthProvider, mailboxBlockedReason } from "@/lib/domain/mailboxes/types";
 import { personalize } from "@/lib/campaigns/personalize";
 import {
@@ -60,13 +61,19 @@ export type SegmentOption = {
 export async function listSegments(): Promise<SegmentOption[]> {
   const { workspaceId } = await requireRole("viewer");
   const rows = await sql`
-    select id, name, lead_count, created_at
+    select id, name, prompt, criteria, created_at
     from segments
     where workspace_id = ${workspaceId}
     order by created_at desc
     limit 20
   `;
-  return rows as SegmentOption[];
+  // Measured now, not the count stored when the audience was saved (deleted/imported leads change it).
+  return Promise.all(
+    rows.map(async (r) => ({
+      id: Number(r.id), name: r.name as string, created_at: r.created_at as string,
+      lead_count: (await measureSegment(workspaceId, r.prompt as string | null, r.criteria)).leadCount,
+    })),
+  );
 }
 
 export type AudienceOption = {
@@ -81,7 +88,7 @@ export async function listAudienceOptions(): Promise<AudienceOption[]> {
   const { workspaceId } = await requireRole("viewer");
 
   const segmentRows = await sql`
-    select id, name, lead_count, prompt, created_at
+    select id, name, prompt, criteria, created_at
     from segments
     where workspace_id = ${workspaceId}
     order by created_at desc
@@ -93,15 +100,16 @@ export async function listAudienceOptions(): Promise<AudienceOption[]> {
   `;
   const totalLeads = (totalRows[0]?.count as number) ?? 0;
 
-  const segments: AudienceOption[] = (
-    segmentRows as (SegmentOption & { prompt: string | null })[]
-  ).map((s) => ({
-    id: s.id,
-    name: s.name,
-    leadCount: s.lead_count,
-    updatedLabel: "saved segment",
-    prompt: s.prompt,
-  }));
+  const segments: AudienceOption[] = await Promise.all(
+    segmentRows.map(async (s) => ({
+      id: Number(s.id),
+      name: s.name as string,
+      // Measured now: the stored lead_count goes stale as soon as a lead is deleted or imported.
+      leadCount: (await measureSegment(workspaceId, s.prompt as string | null, s.criteria)).leadCount,
+      updatedLabel: "saved segment",
+      prompt: s.prompt as string | null,
+    })),
+  );
 
   return [
     ...segments,

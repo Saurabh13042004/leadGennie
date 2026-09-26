@@ -204,6 +204,8 @@ export async function pauseCampaign(actor: Actor, id: number): Promise<void> {
 /**
  * Resuming shifts every pending send by the paused duration (rounded up to whole days, so each day keeps the same
  * number of sends and the daily limit still holds) — otherwise every overdue email would go out in one burst.
+ * When nothing came due while paused there is no burst to avoid, so nothing moves: pausing for a few seconds must not
+ * push a Monday send to Tuesday.
  */
 export async function resumeCampaign(actor: Actor, id: number): Promise<void> {
   const c = await loadCampaign(actor.workspaceId, id);
@@ -214,7 +216,8 @@ export async function resumeCampaign(actor: Actor, id: number): Promise<void> {
   const moved = await sql`
     update campaigns set status = 'running', updated_at = now(), paused_at = null, paused_reason = null where id = ${id} and workspace_id = ${actor.workspaceId} and status = 'paused' returning id`;
   if (moved.length === 0) throw new AppError("CONFLICT", "The campaign isn't paused any more. Reload the page.");
-  const shiftDays = Math.max(0, Math.ceil((Date.now() - pausedAt.getTime()) / 86_400_000));
+  const [due] = await sql`select count(*)::int as n from campaign_sends where campaign_id = ${id} and workspace_id = ${actor.workspaceId} and status = 'pending' and scheduled_at <= now()`;
+  const shiftDays = Number(due.n) > 0 ? Math.max(0, Math.ceil((Date.now() - pausedAt.getTime()) / 86_400_000)) : 0;
   await sql.transaction([
     sql`update campaign_sends set scheduled_at = scheduled_at + make_interval(days => ${shiftDays})
         where campaign_id = ${id} and workspace_id = ${actor.workspaceId} and status = 'pending'`,
