@@ -92,10 +92,21 @@ Private HTTP service in `services/intelligence/` (image built from its `Dockerfi
 | `INTELLIGENCE_SERVICE_TOKEN`, `INTELLIGENCE_SIGNING_SECRET` (+ `_PREVIOUS` during rotation) | engine | must match; the engine **refuses to serve** without them |
 | `INTEL_DATABASE_URL` | engine | Postgres role limited to the `intel` schema (unset ⇒ in-memory, dev only). Apply schema once with a privileged role: `python scripts/migrate.py` |
 | `OPENAI_API_KEY`, `OPENAI_MODEL` (`gpt-4o-mini`) | engine | LLM |
-| `SEARCH_PROVIDER=brave`, `BRAVE_API_KEY` | engine | web/news search (unset ⇒ first-party pages + job boards only) |
+| `SEARCH_PROVIDER=tavily`, `TAVILY_API_KEY` (or `brave` + `BRAVE_API_KEY`) | engine | web + news search (unset ⇒ first-party pages + job boards only). Tavily free plan: 1,000 credits/month, no card |
+| `NEWS_FALLBACK=gdelt`, `GDELT_LANGUAGE` | engine | optional keyless news fallback (GDELT); best-effort — slow and rate-limited. `/readyz` reports the effective search stack |
 | `FETCH_USER_AGENT`, `FETCH_HOST_RPS`, `FETCH_MAX_BYTES` | engine | politeness; the UA must link to a real bot-info page before production |
 
 Checklist before production: ≥ 2 replicas; TLS + private networking only; **egress restricted to the public internet** (block RFC1918/link-local/metadata — the SSRF guard is application-level); secrets in the platform secret manager; alerts on error rate, p95 run duration, LLM/search quota errors, fetch-block rate, budget-exhaustion rate; `intel` schema retention (30 days for runs). Local: `docker compose up engine-fake` (no keys) or `docker compose --profile real up`.
+
+### Run everything locally (engine + web app + job worker)
+
+```bash
+npm run dev:all               # engine :8000, Next.js :3000, and the job worker — Ctrl-C stops all three
+npm run dev:all -- --no-worker
+npm run dev:engine            # the engine alone (make -C services/intelligence dev)
+```
+
+Needs `.env.local` (app) and `services/intelligence/.env` (engine; copy from its `.env.example`). The **same** `INTELLIGENCE_SERVICE_TOKEN` and `INTELLIGENCE_SIGNING_SECRET` must be in both files, and `.env.local` needs `INTELLIGENCE_URL=http://localhost:8000`. A preflight (`scripts/lib/dev-env.mjs`) refuses to start on empty or mismatched secrets, a missing OpenAI/search key, or a busy port, and warns about fake mode, `SEARCH_PROVIDER=none` and the in-memory engine store — it never prints a secret. Use `OPENAI_MODEL=gpt-4o-mini`. The worker processes **every** workspace's due jobs (including campaign sends), so against a shared database make sure no campaign is `running` unless you mean it to send.
 
 ## Phase 2B rollout (lead intelligence)
 

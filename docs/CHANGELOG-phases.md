@@ -2,6 +2,24 @@
 
 Evidence log for each phase. Newest first.
 
+## Phase 2A follow-up — free search provider (D-03 decided, 2026-09-26): Tavily + GDELT fallback
+
+The engine had a Brave adapter but no key, so it did no web/news search at all; Brave's free plan is gone for new accounts. Researched current terms (Sept 2026) and chose **Tavily** (1,000 free credits/month, no card, web + news) with an opt-in **GDELT** keyless news fallback. Gemini Search grounding was rejected on its terms (see `05-decisions.md` D-03).
+
+| Piece | Where (`services/intelligence/`) |
+|---|---|
+| `TavilySearch` (web + news, error mapping incl. 432/433 = quota), `GdeltNews` (news only, spaced, non-JSON-safe), `ChainedSearch` (fallback + per-run circuit breakers, every switch a warning), `build_search`/`describe_search` | `app/sources/{tavily,gdelt,chained,registry}.py` |
+| `SearchProvider` protocol made read-only-property based; `web_available()` / `news_available()` so a news-only stack warns about web search correctly | `app/sources/search.py`, `news.py`, `pipeline/factory.py` (capabilities), `api/v1/health.py` (`/readyz` says what search stack is live) |
+| Config (all default OFF): `SEARCH_PROVIDER=tavily`, `TAVILY_API_KEY`, `NEWS_FALLBACK=gdelt`, `GDELT_LANGUAGE` | `app/config.py`, `.env.example`, `docker-compose.yml`, `docs/deployment.md` |
+
+Verified: 42 new mocked-HTTP tests (request bodies, parsing, every error class → contract code, no credit metered on failures, budget, throttle/serialization, fallback + breakers, registry, collector warnings); `make verify` green (231 tests, mypy, ruff, import-linter, OpenAPI/fixtures drift). **Live:** GDELT hit once for real — response shape confirmed, but it took ~14 s and then rate-limited every further request (so it is documented as best-effort). **Tavily not run live (no key).**
+
+**End-to-end run (2026-09-26, `npm run dev:all`, real engine + real Tavily + real `gpt-4o-mini`, throwaway workspace, then deleted):** one lead at linear.app researched through the app's own route → job queue → worker → engine → validated result stored → lead `done` (ICP 25, intent 68, not qualified). Engine trace: website, jobs, news + web search (6 Tavily searches, metered), 3 extractions, 2 evidence-validator passes, scoring, outreach prep; 8 signals (7 verified, 1 flagged unverified), 19 evidence rows over 4 source URLs; `insufficient_evidence` was set and unsupported outreach sentences were removed (the validator failing closed). All 10 LLM calls were `gpt-4o-mini` (≈17k in / 3.5k out tokens ≈ $0.005). The worker also drained 4 stale `campaign_send` jobs as `skipped: send_canceled` — nothing was emailed (16 messages before and after). Not exercised: the rendered lead page (the dev stack was stopped by an environment reset before that step; covered earlier by the Phase 2B render tests).
+
+New: `npm run dev:all` / `dev:engine` (`scripts/dev-all.mjs`, preflight `scripts/lib/dev-env.mjs`, 8 tests) — see `deployment.md` → "Run everything locally".
+
+Also fixed: `app/llm/client.py` pricing table had a duplicated `"gpt-4o-mini"` key (the model-default commit renamed the `"gpt-4o"` row) — it failed `ruff` and therefore `make verify`; the later key won, so cost estimates were unaffected.
+
 ## Mailbox OAuth (D-04) — Gmail / Microsoft 365 as the primary sending path (code complete 2026-09-26; verified hermetically + in the built app against a Google stub; migration 0014 not yet on Neon; no real Google/Microsoft credentials exercised)
 
 Decision taken: **D-04** option A for Google *and* Microsoft, Resend kept (owner, 2026-09-26). Design + setup: [`mailboxes.md`](mailboxes.md).

@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:all": "node scripts/dev-all.mjs",
+    "dev:engine": "make -C services/intelligence dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
