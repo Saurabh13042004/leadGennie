@@ -52,12 +52,27 @@ class SearchHit:
 
 
 class SearchProvider(Protocol):
-    name: str
-    available: bool
+    # Read-only on purpose: a plain class attribute satisfies this, and so does a provider that COMPUTES it
+    # (ChainedSearch is available when its primary or its news fallback is).
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def available(self) -> bool: ...
 
     async def search(self, ctx: PipelineContext, query: str, count: int) -> list[SearchHit]: ...
 
     async def news(self, ctx: PipelineContext, query: str, count: int) -> list[SearchHit]: ...
+
+
+def web_available(p: SearchProvider) -> bool:
+    """Whether `p` can answer WEB search. Providers that only do news set `web_available = False`; every other
+    provider is judged by `available` (so plain providers and test fakes keep working unchanged)."""
+    return bool(getattr(p, "web_available", p.available))
+
+
+def news_available(p: SearchProvider) -> bool:
+    return bool(getattr(p, "news_available", p.available))
 
 
 class NullSearch:
@@ -192,7 +207,7 @@ class WebSearchCollector:
         self._provider, self._fetcher, self._queries, self._max_docs = provider, fetcher, queries, max_docs
 
     async def collect(self, ctx: PipelineContext, query: CollectQuery) -> list[RawDocument]:
-        if not self._provider.available:
+        if not web_available(self._provider):
             ctx.warn("web_search_unavailable: no search provider configured")
             return []
         hits: list[SearchHit] = []

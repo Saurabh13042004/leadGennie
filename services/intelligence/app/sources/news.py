@@ -6,7 +6,7 @@ from app.errors import EngineError
 from app.pipeline.context import BudgetExhausted, PipelineContext
 from app.sources.base import CollectQuery
 from app.sources.fetch import Fetcher
-from app.sources.search import SearchHit, SearchProvider, fetch_hits, usable_hits
+from app.sources.search import SearchHit, SearchProvider, fetch_hits, news_available, usable_hits
 
 _PRESS_HOSTS = ("prnewswire.com", "businesswire.com", "globenewswire.com", "einpresswire.com", "prweb.com")
 
@@ -20,7 +20,7 @@ class NewsCollector:
         self._provider, self._fetcher, self._queries, self._max_docs = provider, fetcher, queries, max_docs
 
     async def collect(self, ctx: PipelineContext, query: CollectQuery) -> list[RawDocument]:
-        if not self._provider.available:
+        if not news_available(self._provider):
             ctx.warn("news_unavailable: no search provider configured")
             return []
         hits: list[SearchHit] = []

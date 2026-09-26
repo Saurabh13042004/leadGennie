@@ -27,8 +27,13 @@ class Settings(BaseSettings):
     openai_model_entailment: str = ""
 
     # search / news (D-03)
-    search_provider: Literal["none", "brave"] = "none"
+    search_provider: Literal["none", "brave", "tavily"] = "none"
     brave_api_key: str = ""
+    tavily_api_key: str = ""
+    # Keyless news fallback (GDELT): used when the primary's news fails/has none, or ALONE when no primary is set.
+    # Off by default so a deployment never calls a third party it did not opt into.
+    news_fallback: Literal["none", "gdelt"] = "none"
+    gdelt_language: str = "english"  # "" = any language
 
     # fetching
     fetch_user_agent: str = "LeadGennieBot/1.0 (+https://leadgennie.com/bot)"

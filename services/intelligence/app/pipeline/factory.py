@@ -18,14 +18,9 @@ from app.pipeline.context import PipelineContext
 from app.pipeline.research import ResearchPipeline
 from app.pipeline.service import Executor
 from app.sources.fetch import Fetcher, FetchError
-from app.sources.search import BraveSearch, NullSearch, SearchProvider
+from app.sources.registry import build_search
+from app.sources.search import news_available, web_available
 from app.store.base import Store
-
-
-def build_search(settings: Settings) -> SearchProvider:
-    if settings.search_provider == "brave" and settings.brave_api_key:
-        return BraveSearch(settings)
-    return NullSearch()
 
 
 def make_validate_fn(
@@ -100,13 +95,13 @@ def build_real_pipeline(
         {"name": "jobs", "available": True},
         {
             "name": "web_search",
-            "available": search.available,
-            "reason": None if search.available else "SEARCH_PROVIDER not configured",
+            "available": web_available(search),
+            "reason": None if web_available(search) else "SEARCH_PROVIDER not configured",
         },
         {
             "name": "news",
-            "available": search.available,
-            "reason": None if search.available else "SEARCH_PROVIDER not configured",
+            "available": news_available(search),
+            "reason": None if news_available(search) else "SEARCH_PROVIDER / NEWS_FALLBACK not configured",
         },
         {
             "name": "llm",

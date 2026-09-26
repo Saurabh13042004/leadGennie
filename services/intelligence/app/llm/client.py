@@ -23,7 +23,7 @@ T = TypeVar("T", bound=BaseModel)
 
 # USD per 1M tokens (input, output). Estimates for budgets/credits; refine from real invoices.
 _PRICING: dict[str, tuple[float, float]] = {
-    "gpt-4o-mini": (2.50, 10.00),
+    "gpt-4o": (2.50, 10.00),
     "gpt-4o-mini": (0.15, 0.60),
 }
 _DEFAULT_PRICING = (2.50, 10.00)

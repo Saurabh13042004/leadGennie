@@ -37,5 +37,7 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       SEARCH_PROVIDER: ${SEARCH_PROVIDER:-none}
       BRAVE_API_KEY: ${BRAVE_API_KEY:-}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      NEWS_FALLBACK: ${NEWS_FALLBACK:-none}
     ports: ["8000:8000"]
     depends_on: { engine-migrate: { condition: service_completed_successfully } }

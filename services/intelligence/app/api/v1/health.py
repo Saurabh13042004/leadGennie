@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from app.api.deps import get_container
 from app.container import Container
 from app.contracts.capabilities import HealthResponse
+from app.sources.registry import describe_search
 
 router = APIRouter(tags=["health"])
 
@@ -21,11 +22,7 @@ async def readyz(c: Container = Depends(get_container)) -> JSONResponse:
     s = c.settings
     if not s.engine_fake_mode:
         checks["llm"] = "ok" if s.openai_api_key else "missing OPENAI_API_KEY"
-        checks["search"] = (
-            "ok"
-            if s.search_provider != "none" and s.brave_api_key
-            else "no search provider (website+jobs only)"
-        )
+        checks["search"] = describe_search(s)
     hard = [k for k in ("store", "llm") if k in checks and checks[k] not in ("ok",)]
     ready = not hard
     body = HealthResponse(status="ok" if ready else "degraded", checks=checks)
